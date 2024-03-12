@@ -1,8 +1,7 @@
 
 package lisa.hol
-import lisa.maths.settheory.types.TypeSystem.{`*` => _,  *}
-import lisa.maths.settheory.types.TypeLib
-import lisa.maths.settheory.types.TypeLib.{𝔹 => _, *}
+import lisa.maths.settheory.types.TypeSystem.{`*` => _, *}
+import lisa.maths.settheory.types.TypeLib.*
 import TypeChecker.*
 import lisa.maths.settheory.SetTheory.{pair, ∅}
 
@@ -318,7 +317,6 @@ object VarsAndFunctions {
   }
 
   def typedvar(using name: sourcecode.Name)(typ: Type): TypedVar = new TypedVar(Identifier(name.value), typ)
-
 
   ///////////////////////////////////////
   ///////// Lambda Abstractions /////////

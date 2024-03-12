@@ -16,7 +16,6 @@ import sourcecode.Name
 import lisa.utils.Serialization.termLabelToString
 import lisa.utils.unification.UnificationUtils.matchTerm
 import lisa.maths.settheory.types.TypeSystem
-import lisa.hol.VarsAndFunctions.TypingTheorem
 
 object HOLImport extends lisa.HOL {
 
