@@ -30,6 +30,9 @@ object ADTExample extends lisa.Main {
   // List
   val define(list: ADT[1], constructors(nil, cons)) = A --> () | (A, list)
 
+  //Binary Trees
+  val define(tree: ADT[1], constructors(leaf, node)) = A --> A | (bool |=> tree)
+
   // Nothing
   val define(nothing, constructors()) = |
 

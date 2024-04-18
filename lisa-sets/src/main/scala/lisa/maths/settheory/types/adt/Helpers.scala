@@ -281,6 +281,13 @@ private[adt] object ADTDefinitions {
   case class GroundType(t: Term) extends ConstructorArgument
 
   /**
+   * Syntactic representation of a function from a term to a self-reference
+   * 
+   * @param from the domain of the function
+   */
+  case class FunctionType(from: Term) extends ConstructorArgument
+
+  /**
    * Shorthand for the union of the range of a function.
    *
    * @param f the function

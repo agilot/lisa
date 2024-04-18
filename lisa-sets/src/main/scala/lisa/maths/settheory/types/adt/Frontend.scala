@@ -114,10 +114,18 @@ object ADTSyntax {
     override def apply(a: ADT[N]): ConstructorBuilder = ConstructorBuilder(Seq(Self))
   }
 
+  given fun_to_const: ConstructorConverter[FunctionType] with {
+
+    /**
+     * Converts a function from a term to this ADT into a constructor taking one inductive argument.
+     */
+    override def apply(f: FunctionType): ConstructorBuilder = ConstructorBuilder(Seq(f))
+  }
+
   given adt_tuple_to_const[N <: Arity, T <: Tuple](using ConstructorConverter[T]): ConstructorConverter[ADT[N] *: T] with {
 
     /**
-     * Converts a tuple prepended with a type into a constructor taking an argument and whose other arguments are deduced from
+     * Converts a tuple prepended with an adt into a constructor taking an argument and whose other arguments are deduced from
      * applying recursively the conversion to the tuple.
      */
     override def apply(t: ADT[N] *: T): ConstructorBuilder =
@@ -134,6 +142,25 @@ object ADTSyntax {
     override def apply(t: H *: T): ConstructorBuilder =
       any_to_const(t.head) ++ any_to_const(t.tail)
   }
+
+  given fun_tuple_to_const[T <: Tuple](using ConstructorConverter[T]): ConstructorConverter[FunctionType *: T] with {
+
+    /**
+     * Converts a tuple prepended with a function type into a constructor taking an argument and whose other arguments are deduced from
+     * applying recursively the conversion to the tuple.
+     */
+    override def apply(t: FunctionType *: T): ConstructorBuilder =
+      any_to_const(t.head) ++ any_to_const(t.tail)
+  }
+
+  extension (from: Term)
+    /**
+     * Converts a function from a term to this ADT into a function type.
+     *
+     * @param from the domain of the function
+     * @param to the codomain of the function
+     */
+    infix def |=>[N <: Arity](to: ADT[N]): FunctionType = FunctionType(from)
 
   extension [T1](left: T1)(using c1: ConstructorConverter[T1])
     /**
@@ -401,16 +428,26 @@ object ADTSyntax {
     inline def unapply(u: Unit): (ADT[0], constructors[0]) = unapply(unit_to_const(u))
 
     /**
+      * Returns an ADT isomorphic to a function from a set to this ADT. It has only
+      * one constructor.
+      * Needs to be inline in order to fetch the name of the ADT and the constructor.
+      *
+      * @param f function given by the user
+      */
+    inline def unapply(f: FunctionType): (ADT[0], constructors[0]) = unapply(fun_to_const(f))
+
+    /**
       * Returns a product type (also known as tuple). This is an ADT containing only one constructor.
       * Generally its arguments are non inductive as the opposite would lead to the empty type.
       * Needs to be inline in order to fetch the name of the ADT and the constructor.
       *
       * @param t user specification of the tuple
       */
-    inline def unapply[N <: Arity, T <: Tuple](t: (ADT[N] | Term) *: T)(using ConstructorConverter[T]): (ADT[0], constructors[0]) = 
+    inline def unapply[N <: Arity, T <: Tuple](t: ((ADT[N] | Term) | FunctionType) *: T)(using ConstructorConverter[T]): (ADT[0], constructors[0]) = 
       t.head match
         case a: ADT[N] => unapply(adt_tuple_to_const(a *: t.tail))
         case term: Term => unapply(any_to_const(term *: t.tail))
+        case f: FunctionType => unapply(fun_tuple_to_const(f *: t.tail))
   }
 
   /**
