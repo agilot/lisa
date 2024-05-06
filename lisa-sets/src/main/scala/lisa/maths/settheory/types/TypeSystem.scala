@@ -12,15 +12,16 @@ import lisa.kernel.proof.SequentCalculus.SCProofStep
 import lisa.maths.settheory.SetTheory.functional
 import lisa.prooflib.OutputManager
 import lisa.maths.settheory.SetTheory.{singleton, app}
+import lisa.maths.settheory.SetTheory.setOfFunctions
 
 object TypeLib extends lisa.Main {
 
   import TypeSystem.*
 
-  val |=> : ConstantFunctionLabel[2] = ConstantFunctionLabel.infix("|=>", 2)
-  private inline def  temp = |=>
+  val |=> : ConstantFunctionLabel[2] = setOfFunctions//ConstantFunctionLabel.infix("|=>", 2)
+  // private inline def  temp = |=>
   extension (t:Term) {
-    def |=>(o:Term): Term = TypeLib.temp(t, o)
+    def |=>(o:Term): Term = setOfFunctions(t, o)
   }
   val app: ConstantFunctionLabel[2] = lisa.maths.settheory.SetTheory.app
   addSymbol(|=>)

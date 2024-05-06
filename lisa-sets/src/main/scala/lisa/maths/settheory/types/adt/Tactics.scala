@@ -7,6 +7,7 @@ package lisa.maths.settheory.types.adt
 import lisa.maths.settheory.SetTheory.{*, given}
 import ADTDefinitions.*
 import Helpers.*
+import lisa.maths.settheory.types.TypeLib.{ |=>}
 
 /**
   * Tactic performing a structural induction proof over an algebraic data type.
@@ -55,12 +56,17 @@ class Induction[M <: Arity](expectedVar: Option[Variable], expectedADT: Option[A
         val accRight: Formula = acc2.statement.right.head
         ty match 
           case Self => 
-            have((acc2.statement -<? prop(v)).left |- prop(v) ==> accRight) by Weakening(acc2)
-            thenHave((lastStep.statement -<? (v :: instTerm)).left |- v :: instTerm ==> (prop(v) ==> accRight)) by Weakening
+            have((acc2.statement -<? prop(v)).left |- prop(v) ==> accRight) by RightImplies(acc2)
+            thenHave((lastStep.statement -<? (v :: instTerm)).left |- v :: instTerm ==> (prop(v) ==> accRight)) by RightImplies
             thenHave(lastStep.statement.left |- forall(v, v :: instTerm ==> (prop(v) ==> accRight))) by RightForall
           case GroundType(t)=> 
-            thenHave((acc2.statement -<? (v :: t)).left |- v :: t ==> accRight) by Weakening
+            thenHave((acc2.statement -<? (v :: t)).left |- v :: t ==> accRight) by RightImplies
             thenHave(lastStep.statement.left |- forall(v, v :: t ==> accRight)) by RightForall
+          case f: FunctionType => 
+            val inductionHypothesis = forallSeq(f.variables, f.wellTypedDomains ==> prop(appSeq(v)(f.variables)))
+            have((acc2.statement -<? inductionHypothesis).left |- inductionHypothesis ==> accRight) by RightImplies(acc2)
+            thenHave((lastStep.statement -<? (v :: f.getOrElse(instTerm))).left |- v :: f.getOrElse(instTerm) ==> inductionHypothesis) by RightImplies
+            thenHave(lastStep.statement.left |- forall(v, v :: f.getOrElse(instTerm) ==> inductionHypothesis)) by RightForall
       )
       acc.statement.right.head match 
         case Implies(trueInd, rest) => 

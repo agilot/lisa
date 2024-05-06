@@ -1,5 +1,8 @@
 package lisa.maths.settheory.types.adt
 
+import lisa.maths.settheory.types.TypeLib
+import lisa.maths.settheory.types.adt.Helpers.forallSeq
+
 /**
  * This object provides a DSL for defining algebraic data types (ADTs) and functions over ADT in Lisa.
  * For usage examples, please refer to the documentation of the package or the reference manual.
@@ -160,7 +163,8 @@ object ADTSyntax {
      * @param from the domain of the function
      * @param to the codomain of the function
      */
-    infix def |=>[N <: Arity](to: ADT[N]): FunctionType = FunctionType(from)
+    infix def |=>[N <: Arity](to: ADT[N]): FunctionType = FunctionType(from, Self)
+    infix def |=>(to: FunctionType): FunctionType = FunctionType(from, to)
 
   extension [T1](left: T1)(using c1: ConstructorConverter[T1])
     /**
@@ -551,9 +555,15 @@ object ADTSyntax {
       val subst = adtVar -> consTerm
 
       val assumptions = 
-        (wellTypedSet(cons.underlying.semanticSignature(vars).map(p => (p._1, p._2.substitute(cons.underlying.typeVariablesSeq.zip(args).map(SubstPair(_, _)) : _*))))
+        wellTypedSet(cons.underlying.semanticSignature(vars).map(p => (p._1, p._2.substitute(cons.underlying.typeVariablesSeq.zip(args).map(SubstPair(_, _)) : _*))))
         ++ 
-        cons.underlying.syntacticSignature(vars).filter(_._2 == Self).map((v, _) => prop.substitute(adtVar -> v)))
+        cons.underlying.syntacticSignature(vars).map({
+          case (v, Self) => prop.substitute(adtVar -> v)
+          case (v, GroundType(t)) => True
+          case (v, f: FunctionType) => 
+            val z = Variable("z")
+            forallSeq(f.variables, f.wellTypedDomains ==> prop.substitute(adtVar -> appSeq(v)(f.variables)))
+        })
 
       //val botWithAssumptions = bot.substitute(subst) ++ ((assumptions ++ proof.getAssumptions) |- ())
       val botWithAssumptions = bot.substitute(subst) ++ (assumptions |- ())

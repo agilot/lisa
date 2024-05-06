@@ -196,5 +196,6 @@ package object adt {
   export ADTSyntax.{ |, define, constructors, adt_to_term, fun_to_term, constructor_to_term, Case, fun, -->, |=>}
   export ADTSyntax.ADTBuilder.|
   export lisa.maths.settheory.types.TypeSystem.*
+  export lisa.maths.settheory.types.TypeLib.{|=>}
 }
 

@@ -1,5 +1,8 @@
 package lisa.maths.settheory.types.adt
 
+import lisa.prooflib.BasicStepTactic.LeftSubstEq
+import lisa.prooflib.BasicStepTactic.RightSubstEq
+
 /**
   * Tactic that proves every goal of the form:
   *
@@ -93,14 +96,14 @@ private [adt] object Helpers {
     * @param f the block of code to benchmark
     * @return the result of the block of code and prints how long it took to execute
     */
-  def benchmark[T](name: String)(f: => T): T = {
+  def benchmark[T](using name: sourcecode.Name)(f: => T): T = {
     val before = System.nanoTime
 
     val res = f
 
     val totalTime = (System.nanoTime - before) / 1000000
 
-    println(s"$name time: $totalTime ms")
+    println(s"${name.value} time: $totalTime ms")
 
     res
   }
@@ -113,6 +116,9 @@ private [adt] object Helpers {
   // *********************
   // * FIRST ORDER LOGIC *
   // *********************
+
+  val A = variable
+  val B = variable
 
   val a = variable
   val b = variable
@@ -146,6 +152,7 @@ private [adt] object Helpers {
   val Q = predicate[1]
   val P = predicate[1]
   val P2 = predicate[2]
+  val F = predicate[2]
   val schemPred = predicate[1]
 
   /**
@@ -239,14 +246,15 @@ private [adt] object Helpers {
   */
 private[adt] object ADTDefinitions {
 
-  import lisa.maths.settheory.SetTheory.*
+  import lisa.maths.settheory.SetTheory.{*, given}
   import lisa.maths.settheory.types.TypeSystem.*
-  import Helpers.{/\}
+  import lisa.maths.settheory.types.TypeLib.{|=>}
+  import Helpers.{/\, x, y, z}
 
   /**
    * The specification of a constructor can either contain terms or a self reference, i.e. a reference to the ADT itself.
    */
-  trait ConstructorArgument {
+  sealed trait ConstructorArgument {
     /**
      * Returns the term associated to a constructor argument, or in case it is a self reference, returns the term associated to the ADT.
      *
@@ -257,6 +265,7 @@ private[adt] object ADTDefinitions {
       this match {
         case Self => adt
         case GroundType(term) => term
+        case FunctionType(from, to) => from |=> to.getOrElse(adt)
       }
     
     /**
@@ -266,6 +275,7 @@ private[adt] object ADTDefinitions {
       this match
         case Self => Self
         case GroundType(t) => GroundType(t.substitute(p : _*))
+        case FunctionType(from, to) => FunctionType(from.substitute(p : _*), to.substitute(p : _*))
   }
   
   /**
@@ -281,11 +291,40 @@ private[adt] object ADTDefinitions {
   case class GroundType(t: Term) extends ConstructorArgument
 
   /**
-   * Syntactic representation of a function from a term to a self-reference
+   * Syntactic representation of a function from a term to another type
    * 
-   * @param from the domain of the function
+   * @param from the domain of this function
+   * @param to the type of the codomain of this function
    */
-  case class FunctionType(from: Term) extends ConstructorArgument
+  case class FunctionType(from: Term, to: ConstructorArgument) extends ConstructorArgument {
+
+    val domains: List[Term] = to match
+      case Self => List(from)
+      case GroundType(t) => throw IllegalArgumentException("A function type cannot have a ground type as codomain")
+      case f: FunctionType => from :: f.domains
+    
+    val variables = for i <- 0 until domains.size yield Variable(s"z${i}")
+
+    val signature = variables.zip(domains)
+    
+    val wellTypedDomains = wellTypedFormula(signature)
+    
+
+    val monotonicity: THM = Lemma(subset(y, z) |- subset(getOrElse(y), getOrElse(z))) {
+      to match
+        case Self => 
+          have(thesis) by Restate.from(ADTHelperTheorems.functionSpaceRightMonotonic of (x := from))
+        case GroundType(t) =>
+          have(thesis) by Restate.from(subsetReflexivity of (x := getOrElse(y)))
+        case f: FunctionType =>
+          have(thesis) by Cut(
+            f.monotonicity,
+            ADTHelperTheorems.functionSpaceRightMonotonic of (x := from, y := f.getOrElse(y), z := f.getOrElse(z))
+          )
+      
+    }
+
+  }
 
   /**
    * Shorthand for the union of the range of a function.
@@ -381,8 +420,10 @@ private [adt] object ADTHelperTheorems {
   import lisa.maths.settheory.SetTheory.{*, given}
   import lisa.maths.Quantifiers.{existentialEquivalenceDistribution, equalityInExistentialQuantifier,
     existentialConjunctionWithClosedFormula, equalityTransitivity}
+  import lisa.maths.settheory.orderings.Ordinals.{ordinal}
   import ADTDefinitions.*
   import Helpers.*
+  import lisa.maths.settheory.types.TypeLib.{|=>}
   //import lisa.maths.Quantifiers.*
 
   // TODO: Remove
@@ -476,13 +517,86 @@ private [adt] object ADTHelperTheorems {
     sorry
   }
 
-  // *******************
-  // * NATURAL NUMBERS *
-  // *******************
+  // ************
+  // * ORDINALS *
+  // ************
+
+
+
+  val successorOrdinal = DEF(n) --> ordinal(n) /\ exists(m, n === successor(m))
+  val nonsuccessorOrdinal = DEF(n) --> ordinal(n) /\ !exists(m, n === successor(m))
+  val limitOrdinal = DEF(n) --> nonsuccessorOrdinal(n) /\ !(n === emptySet)
+
+
+
+  val successorOrdinalIsOrdinal = Lemma(successorOrdinal(n) |- ordinal(n)) {
+    sorry
+  }
+
+  val nonsuccessorOrdinalIsOrdinal = Lemma(nonsuccessorOrdinal(n) |- ordinal(n)) {
+    sorry
+  }
+
+  val limitOrdinalIsOrdinal = Lemma(limitOrdinal(n) |- ordinal(n)) {
+    sorry
+  }
+
+  val nonsuccessorOrdinalIsNotSuccessorOrdinal = Lemma((ordinal(n), nonsuccessorOrdinal(n)) |- !successorOrdinal(n)) {
+    sorry
+  }
+
+  val successorIsOrdinalImpliesOrdinal = Lemma(ordinal(successor(n)) |- ordinal(n)) {
+    sorry
+  }
+
+  val successorIsSuccessorOrdinal = Lemma(ordinal(n) |- successorOrdinal(successor(n))) {
+    sorry
+  }
+  
+  val successorIsSuccessorOrdinal2 = Lemma(ordinal(successor(n)) |- successorOrdinal(successor(n))) {
+    sorry
+  }
+
+  val nonsuccessorOrdinalIsInductive = Lemma((nonsuccessorOrdinal(n), in(m, n)) |- in(successor(m), n)) {
+    sorry
+  }
+
+  val limitOrdinalIsInductive = Lemma((limitOrdinal(n), in(m, n)) |- in(successor(m), n)) {
+    sorry
+  }
+
+  val leqOrdinal = Lemma((ordinal(n), subset(m, n)) |- in(m, n) \/ (m === n)) {
+    sorry
+  }
+
+  val leqOrdinalDef = Lemma(ordinal(n) |- subset(m, n) <=> m ∈ successor(n)) {
+    sorry
+  }
+
+  val leImpliesLeq = Lemma((ordinal(n), in(m, n)) |- subset(m, n)) {
+    sorry
+  }
+
+  val leIsOrdinal = Lemma((ordinal(n), in(m, n)) |- ordinal(m)) {
+    sorry
+  }
+
+  val intersectionInOrdinal = Lemma((ordinal(n), in(m, n)) |- m ∩ n === m) {
+    sorry
+  }
+
+  val successorOrNonsuccessorOrdinal = Lemma(ordinal(n) |- successorOrdinal(n) \/ nonsuccessorOrdinal(n)) {
+    sorry
+  }
+
+
 
   // Natural numbers
   val N = Constant("N")
   addSymbol(N)
+
+  val domainIsOrdinal = Axiom(ordinal(N))
+
 
   /**
    * Lemma --- 0 is a natural number.
@@ -498,8 +612,8 @@ private [adt] object ADTHelperTheorems {
    *
    *   `N != ∅`
    */
-  val natNotEmpty = Lemma(!(N === emptySet)) {
-    have(thesis) by Cut(zeroIsNat, setWithElementNonEmpty of (y := emptySet, x := N))
+  val natNotEmpty = Lemma(N === emptySet |- ()) {
+    have(!(N === emptySet)) by Cut(zeroIsNat, setWithElementNonEmpty of (y := emptySet, x := N))
   }
 
   /**
@@ -525,7 +639,7 @@ private [adt] object ADTHelperTheorems {
    *
    *  `n ∈ N <=> n + 1 ∈ N`
    */
-  val successorIsNat = Lemma(in(n, N) <=> in(successor(n), N)) {
+  val successorIsNat = Lemma(in(n, N) |- in(successor(n), N)) {
     sorry
   }
 
@@ -562,38 +676,20 @@ private [adt] object ADTHelperTheorems {
   }
 
   /**
-   * Lemma --- A number is smaller or equal than another number if and only if it is strictly smaller than its successor.
-   *
-   *    `m <= n <=> m < n + 1`
-   */
-  val natSubset = Lemma(in(n, N) |- subset(m, n) <=> in(m, successor(n))) {
-    sorry
-  }
+    * Lemma --- If a number is smaller or equal than a natural number, then it is also a natural number.
+    *
+    *     `m < n, n ∈ N |- m ∈ N`
+    */
+   val natTransitivity = Lemma((in(a, b), in(b, N)) |- in(a, N)) {
+     sorry
+   }
 
   /**
-   * Lemma --- The intersection of a natural number with the set of natural numbers is the number itself.
-   *
-   *    `n ∩ N = n`
-   */
-  val intersectionNat = Lemma(in(n, N) |- setIntersection(n, N) === n) {
-    sorry
-  }
-
-  /**
-   * Lemma --- If a number is smaller or equal than a natural number, then it is also a natural number.
-   *
-   *     `m <= n, n ∈ N |- m ∈ N`
-   */
-  val subsetIsNat = Lemma(subset(a, b) |- in(b, N) ==> in(a, N)) {
-    sorry
-  }
-
-  /**
-   * Lemma --- Induction principle for natural numbers
+   * Lemma --- Transfinite induction principle for natural numbers
    *
    *     `P(0), ∀n ∈ N. P(n) => P(n + 1) |- ∀n ∈ N. P(n)`
    */
-  val natInduction = Lemma((P(emptySet), forall(m, in(m, N) ==> (P(m) ==> P(successor(m))))) |- forall(n, in(n, N) ==> P(n))) {
+  val natInduction = Lemma(forall(n, in(n, N) ==> (forall(m, in(m, n) ==> P(m)) ==> P(n))) |- forall(n, in(n, N) ==> P(n))) {
     sorry
   }
 
@@ -634,6 +730,14 @@ private [adt] object ADTHelperTheorems {
    *     `functional(f) |- functional(f|x)`
    */
   val functionalRestrictedFunction = Lemma(functional(f) |- functional(restrictedFunction(f, x))) {
+    sorry
+  }
+
+  val inRange = Lemma((functional(f), in(x, relationDomain(f))) |- in(app(f, x), relationRange(f))) {
+    sorry
+  }
+
+  val inRestrictedFunctionRange = Lemma((functional(f), in(x, d ∩ relationDomain(f))) |- in(app(f, x), relationRange(restrictedFunction(f, d)))) {
     sorry
   }
 
@@ -818,6 +922,28 @@ private [adt] object ADTHelperTheorems {
   // * MONOTONICITY *
   // ****************
 
+  val subsetAxiomForward = Lemma((subset(x, y), in(z, x)) |- in(z, y)) {
+    have(subset(x, y) |- forall(z, in(z, x) ==> in(z, y))) by Cut(
+      subsetAxiom,
+      equivalenceApply of (p1 := subset(x, y), p2 := forall(z, in(z, x) ==> in(z, y)))
+    )
+    thenHave(subset(x, y) |- in(z, x) ==> in(z, y)) by InstantiateForall(z)
+  }
+
+  val subsetAxiomBackward = Lemma(forall(z, in(z, x) ==> in(z, y)) |- subset(x, y)) {
+    have(thesis) by Cut(subsetAxiom, equivalenceRevApply of (p2 := subset(x, y), p1 := forall(z, in(z, x) ==> in(z, y))))
+  }
+
+
+  /**
+   * Lemma --- Function spaces are monotonic on the right.
+   *
+   *     `y ⊆ z |- x |=> y ⊆ x |=> z`
+   */
+  val functionSpaceRightMonotonic = Lemma(subset(y, z) |- subset(x |=> y, x |=> z)) {
+    sorry
+  }
+
   /**
    * Lemma --- Union is a monotonic operation with respect to set inclusion.
    *
@@ -884,15 +1010,18 @@ private [adt] object ADTHelperTheorems {
   // * SPECIFIC LEMMAS *
   // *******************
 
+  val inSetSubsetUnion = Lemma(in(x, y) |- subset(x, union(y))) {
+    sorry
+  }
+
+
   /**
-   * Lemma --- Characterization of the union of the range of a cumulative function restricted to the successor of a natural number.
+   * Lemma --- Characterization of the union of the range of a monotonic function restricted to the successor of a natural number.
    *
-   *     `cumulative(h) and Dom(h) = N |- ∪ Im(h|n + 1) = h(n)`
+   *     `monotonic(h) and Dom(h) = N |- ∪ Im(h|n + 1) = h(n)`
    */
   val unionRangeCumulativeRestrictedFunction =
-    Lemma((functional(h), relationDomain(h) === N, in(n, N), ∀(m, subset(m, n) ==> subset(app(h, m), app(h, n)))) |- unionRange(restrictedFunction(h, successor(n))) === app(h, n)) {
-
-      val domainSubset = have(in(n, N) |- setIntersection(successor(n), N) === successor(n)) by Apply(intersectionNat).on(equivalenceApply of (p1 := in(n, N)), successorIsNat.asInstanceOf)
+    Lemma((functional(h), ordinal(relationDomain(h)), in(successor(n), relationDomain(h)), ∀(m, subset(m, n) ==> subset(app(h, m), app(h, n)))) |- unionRange(restrictedFunction(h, successor(n))) === app(h, n)) {
 
       have(functional(h) |- (y ∈ restrRange(h, successor(n)) /\ z ∈ y) <=> ∃(m, m ∈ (successor(n) ∩ relationDomain(h)) /\ (app(restrictedFunction(h, successor(n)), m) === y)) /\ z ∈ y) by Cut(
         restrictedFunctionRangeMembership of (f := h, d := successor(n)),
@@ -900,55 +1029,36 @@ private [adt] object ADTHelperTheorems {
       )
 
       thenHave(
-        (functional(h), relationDomain(h) === N) |- (y ∈ restrRange(h, successor(n)) /\ z ∈ y) <=> ∃(m, m ∈ (successor(n) ∩ N) /\ (app(restrictedFunction(h, successor(n)), m) === y)) /\ z ∈ y
+        (functional(h), successor(n) ∩ relationDomain(h) === successor(n)) |- (y ∈ restrRange(h, successor(n)) /\ z ∈ y) <=> 
+                                                                              ∃(m, m ∈ successor(n) /\ (app(restrictedFunction(h, successor(n)), m) === y)) /\ z ∈ y
       ) by RightSubstEq.withParametersSimple(
-        List((relationDomain(h), N)),
-        lambda(s, (y ∈ restrRange(h, successor(n)) /\ z ∈ y) <=> ∃(m, m ∈ (successor(n) ∩ s) /\ (app(restrictedFunction(h, successor(n)), m) === y)) /\ z ∈ y)
-      )
-
-      thenHave(
-        (functional(h), in(n, N), relationDomain(h) === N, successor(n) ∩ N === successor(n)) |- (y ∈ restrRange(h, successor(n)) /\ z ∈ y) <=> ∃(
-          m,
-          m ∈ (successor(n) ∩ N) /\ (app(restrictedFunction(h, successor(n)), m) === y)
-        ) /\ z ∈ y
-      ) by Weakening
-
-      thenHave(
-        (functional(h), in(n, N), relationDomain(h) === N, successor(n) ∩ N === successor(n)) |- (y ∈ restrRange(h, successor(n)) /\ z ∈ y) <=> ∃(
-          m,
-          m ∈ successor(n) /\ (app(restrictedFunction(h, successor(n)), m) === y)
-        ) /\ z ∈ y
-      ) by RightSubstEq.withParametersSimple(
-        List((successor(n) ∩ N, successor(n))),
+        List((successor(n) ∩ relationDomain(h), successor(n))),
         lambda(s, (y ∈ restrRange(h, successor(n)) /\ z ∈ y) <=> ∃(m, m ∈ s /\ (app(restrictedFunction(h, successor(n)), m) === y)) /\ z ∈ y)
       )
 
       have(
-        (functional(h), in(n, N), relationDomain(h) === N) |- (y ∈ restrRange(h, successor(n)) /\ z ∈ y) <=> ∃(m, m ∈ successor(n) /\ (app(restrictedFunction(h, successor(n)), m) === y)) /\ z ∈ y
-      ) by Cut(domainSubset, lastStep)
+        (functional(h), ordinal(relationDomain(h)), in(successor(n), relationDomain(h))) |- (y ∈ restrRange(h, successor(n)) /\ z ∈ y) <=> 
+                                                                                            ∃(m, m ∈ successor(n) /\ (app(restrictedFunction(h, successor(n)), m) === y)) /\ z ∈ y
+      ) by Cut(intersectionInOrdinal of (m := successor(n), n := relationDomain(h)), lastStep)
 
       have(
-        (functional(h), in(n, N), relationDomain(h) === N) |- (y ∈ restrRange(h, successor(n)) /\ z ∈ y) <=> ∃(m, m ∈ successor(n) /\ (app(restrictedFunction(h, successor(n)), m) === y) /\ z ∈ y)
+        (functional(h), ordinal(relationDomain(h)), in(successor(n), relationDomain(h))) |- (y ∈ restrRange(h, successor(n)) /\ z ∈ y) <=> 
+                                                                                            ∃(m, m ∈ successor(n) /\ (app(restrictedFunction(h, successor(n)), m) === y) /\ z ∈ y)
       ) by Apply(equivalenceRewriting).on(
         lastStep,
         existentialConjunctionWithClosedFormula of (P := lambda(m, m ∈ successor(n) /\ (app(restrictedFunction(h, successor(n)), m) === y)), p := z ∈ y)
       )
 
       thenHave(
-        (functional(h), in(n, N), relationDomain(h) === N) |- ∀(
-          y,
-          (y ∈ restrRange(h, successor(n)) /\ z ∈ y) <=> ∃(m, m ∈ successor(n) /\ (app(restrictedFunction(h, successor(n)), m) === y) /\ z ∈ y)
-        )
+        (functional(h), ordinal(relationDomain(h)), in(successor(n), relationDomain(h))) |- ∀(y, (y ∈ restrRange(h, successor(n)) /\ z ∈ y) <=> 
+                                                                                                 ∃(m, m ∈ successor(n) /\ (app(restrictedFunction(h, successor(n)), m) === y) /\ z ∈ y))
       ) by RightForall
 
       have(
-        (functional(h), in(n, N), relationDomain(h) === N) |- ∃(y, y ∈ restrRange(h, successor(n)) /\ z ∈ y) <=> ∃(
-          y,
-          ∃(m, m ∈ successor(n) /\ (app(restrictedFunction(h, successor(n)), m) === y) /\ z ∈ y)
-        )
+        (functional(h), ordinal(relationDomain(h)), in(successor(n), relationDomain(h))) |- ∃(y, y ∈ restrRange(h, successor(n)) /\ z ∈ y) <=> 
+                                                                                            ∃(y, ∃(m, m ∈ successor(n) /\ (app(restrictedFunction(h, successor(n)), m) === y) /\ z ∈ y))
       ) by Cut(
-        lastStep,
-        existentialEquivalenceDistribution of (
+        lastStep, existentialEquivalenceDistribution of (
           P := lambda(y, y ∈ restrRange(h, successor(n)) /\ z ∈ y),
           Q := lambda(y, ∃(m, m ∈ successor(n) /\ (app(restrictedFunction(h, successor(n)), m) === y) /\ z ∈ y))
         )
@@ -956,10 +1066,8 @@ private [adt] object ADTHelperTheorems {
 
       val introM =
         thenHave(
-          (functional(h), in(n, N), relationDomain(h) === N) |- ∃(y, y ∈ restrRange(h, successor(n)) /\ z ∈ y) <=> ∃(
-            m,
-            ∃(y, m ∈ successor(n) /\ z ∈ y /\ (app(restrictedFunction(h, successor(n)), m) === y))
-          )
+          (functional(h), ordinal(relationDomain(h)), in(successor(n), relationDomain(h))) |- ∃(y, y ∈ restrRange(h, successor(n)) /\ z ∈ y) <=> 
+                                                                                              ∃(m, ∃(y, m ∈ successor(n) /\ z ∈ y /\ (app(restrictedFunction(h, successor(n)), m) === y)))
         ) by Tableau
 
       have((∃(y, m ∈ successor(n) /\ z ∈ y /\ (app(restrictedFunction(h, successor(n)), m) === y))) <=> (m ∈ successor(n) /\ z ∈ app(restrictedFunction(h, successor(n)), m))) by Exact(
@@ -977,15 +1085,11 @@ private [adt] object ADTHelperTheorems {
           lambda(p, (∃(y, m ∈ successor(n) /\ z ∈ y /\ (app(restrictedFunction(h, successor(n)), m) === y))) <=> (p /\ z ∈ app(h, m)))
         )
 
-      have(in(n, N) |- (∃(y, m ∈ successor(n) /\ z ∈ y /\ (app(restrictedFunction(h, successor(n)), m) === y))) <=> (subset(m, n) /\ z ∈ app(h, m))) by Cut(natSubset, lastStep)
+      have(ordinal(n) |- (∃(y, m ∈ successor(n) /\ z ∈ y /\ (app(restrictedFunction(h, successor(n)), m) === y))) <=> (subset(m, n) /\ z ∈ app(h, m))) by Cut(leqOrdinalDef, lastStep)
 
-      thenHave(
-        in(n, N) |- ∀(m, (∃(y, m ∈ successor(n) /\ z ∈ y /\ (app(restrictedFunction(h, successor(n)), m) === y))) <=> (subset(m, n) /\ z ∈ app(h, m)))
-      ) by RightForall
+      thenHave(ordinal(n) |- ∀(m, (∃(y, m ∈ successor(n) /\ z ∈ y /\ (app(restrictedFunction(h, successor(n)), m) === y))) <=> (subset(m, n) /\ z ∈ app(h, m)))) by RightForall
 
-      have(
-        in(n, N) |- ∃(m, (∃(y, m ∈ successor(n) /\ z ∈ y /\ (app(restrictedFunction(h, successor(n)), m) === y)))) <=> ∃(m, subset(m, n) /\ z ∈ app(h, m))
-      ) by Cut(
+      have(ordinal(n) |- ∃(m, (∃(y, m ∈ successor(n) /\ z ∈ y /\ (app(restrictedFunction(h, successor(n)), m) === y)))) <=> ∃(m, subset(m, n) /\ z ∈ app(h, m))) by Cut(
         lastStep,
         existentialEquivalenceDistribution of (
           P := lambda(m, ∃(y, m ∈ successor(n) /\ z ∈ y /\ (app(restrictedFunction(h, successor(n)), m) === y))),
@@ -993,45 +1097,371 @@ private [adt] object ADTHelperTheorems {
         )
       )
 
-      have((functional(h), in(n, N), relationDomain(h) === N) |- ∃(y, y ∈ restrRange(h, successor(n)) /\ z ∈ y) <=> ∃(m, subset(m, n) /\ z ∈ app(h, m))) by Apply(equivalenceRewriting).on(
-        introM,
-        lastStep
-      )
-
-      val unionIsExists =
-        have((functional(h), in(n, N), relationDomain(h) === N) |- z ∈ unionRange(restrictedFunction(h, successor(n))) <=> ∃(m, subset(m, n) /\ z ∈ app(h, m))) by Apply(equivalenceRewriting).on(
-          lastStep,
-          unionAxiom.asInstanceOf
+      thenHave((ordinal(n), ∃(y, y ∈ restrRange(h, successor(n)) /\ z ∈ y) <=> ∃(m, (∃(y, m ∈ successor(n) /\ z ∈ y /\ (app(restrictedFunction(h, successor(n)), m) === y))))) |- 
+        ∃(y, y ∈ restrRange(h, successor(n)) /\ z ∈ y) <=> ∃(m, subset(m, n) /\ z ∈ app(h, m))) by RightSubstIff.withParametersSimple(
+          List((∃(y, y ∈ restrRange(h, successor(n)) /\ z ∈ y), ∃(m, (∃(y, m ∈ successor(n) /\ z ∈ y /\ (app(restrictedFunction(h, successor(n)), m) === y)))))),
+          lambda(p, p <=> ∃(m, subset(m, n) /\ z ∈ app(h, m)))
         )
 
-      val cumulativeAssumption = ∀(m, subset(m, n) ==> subset(app(h, m), app(h, n)))
+      have((functional(h), ordinal(n), ordinal(relationDomain(h)), in(successor(n), relationDomain(h))) |- 
+        ∃(y, y ∈ restrRange(h, successor(n)) /\ z ∈ y) <=> ∃(m, subset(m, n) /\ z ∈ app(h, m))) by Cut(introM, lastStep)
 
-      have(cumulativeAssumption |- ∃(m, subset(m, n) /\ z ∈ app(h, m)) <=> z ∈ app(h, n)) subproof {
+      have((functional(h), ordinal(successor(n)), ordinal(relationDomain(h)), in(successor(n), relationDomain(h))) |- 
+        ∃(y, y ∈ restrRange(h, successor(n)) /\ z ∈ y) <=> ∃(m, subset(m, n) /\ z ∈ app(h, m))) by Cut(successorIsOrdinalImpliesOrdinal, lastStep)
+      
+      have((functional(h), ordinal(relationDomain(h)), in(successor(n), relationDomain(h))) |- 
+        ∃(y, y ∈ restrRange(h, successor(n)) /\ z ∈ y) <=> ∃(m, subset(m, n) /\ z ∈ app(h, m))) by Cut(leIsOrdinal of (m := successor(n), n := relationDomain(h)), lastStep)
+
+      val unionIsExists =
+        have((functional(h), ordinal(relationDomain(h)), in(successor(n), relationDomain(h))) |- z ∈ unionRange(restrictedFunction(h, successor(n))) <=> 
+                                                                                                 ∃(m, subset(m, n) /\ z ∈ app(h, m))) by 
+          Apply(equivalenceRewriting).on(lastStep, unionAxiom.asInstanceOf)
+
+      val monotonicity = ∀(m, subset(m, n) ==> subset(app(h, m), app(h, n)))
+
+      have(monotonicity |- ∃(m, subset(m, n) /\ z ∈ app(h, m)) <=> z ∈ app(h, n)) subproof {
         val seq1 = have(z ∈ app(h, n) |- z ∈ app(h, n)) by Hypothesis
         have(z ∈ app(h, n) |- subset(n, n) /\ z ∈ app(h, n)) by RightAnd(seq1, subsetReflexivity of (x := n))
         thenHave(z ∈ app(h, n) |- ∃(m, subset(m, n) /\ z ∈ app(h, m))) by RightExists
-        val backward = thenHave(cumulativeAssumption |- z ∈ app(h, n) ==> ∃(m, subset(m, n) /\ z ∈ app(h, m))) by Weakening
+        val backward = thenHave(monotonicity |- z ∈ app(h, n) ==> ∃(m, subset(m, n) /\ z ∈ app(h, m))) by Weakening
 
-        have(cumulativeAssumption |- cumulativeAssumption) by Hypothesis
-        thenHave(cumulativeAssumption |- subset(m, n) ==> subset(app(h, m), app(h, n))) by InstantiateForall(m)
-        have((cumulativeAssumption, subset(m, n), z ∈ app(h, m)) |- forall(z, z ∈ app(h, m) ==> z ∈ app(h, n))) by Apply(equivalenceApply).on(
+        have(monotonicity |- monotonicity) by Hypothesis
+        thenHave(monotonicity |- subset(m, n) ==> subset(app(h, m), app(h, n))) by InstantiateForall(m)
+        have((monotonicity, subset(m, n), z ∈ app(h, m)) |- forall(z, z ∈ app(h, m) ==> z ∈ app(h, n))) by Apply(equivalenceApply).on(
           lastStep,
           subsetAxiom
         )
-        thenHave((cumulativeAssumption, subset(m, n) /\ z ∈ app(h, m)) |- z ∈ app(h, n)) by InstantiateForall(z)
-        thenHave((cumulativeAssumption, ∃(m, subset(m, n) /\ z ∈ app(h, m))) |- z ∈ app(h, n)) by LeftExists
-        val forward = thenHave(cumulativeAssumption |- ∃(m, subset(m, n) /\ z ∈ app(h, m)) ==> z ∈ app(h, n)) by RightImplies
+        thenHave((monotonicity, subset(m, n) /\ z ∈ app(h, m)) |- z ∈ app(h, n)) by InstantiateForall(z)
+        thenHave((monotonicity, ∃(m, subset(m, n) /\ z ∈ app(h, m))) |- z ∈ app(h, n)) by LeftExists
+        val forward = thenHave(monotonicity |- ∃(m, subset(m, n) /\ z ∈ app(h, m)) ==> z ∈ app(h, n)) by RightImplies
 
         have(thesis) by RightIff(forward, backward)
       }
 
-      have((functional(h), in(n, N), relationDomain(h) === N, cumulativeAssumption) |- (z ∈ unionRange(restrictedFunction(h, successor(n)))) <=> z ∈ app(h, n)) by Apply(equivalenceRewriting).on(
+      have((functional(h), ordinal(relationDomain(h)), in(successor(n), relationDomain(h)), monotonicity) |- (z ∈ unionRange(restrictedFunction(h, successor(n)))) <=> z ∈ app(h, n)) by Apply(equivalenceRewriting).on(
         unionIsExists,
         lastStep
       )
-      thenHave((functional(h), in(n, N), relationDomain(h) === N, cumulativeAssumption) |- ∀(z, z ∈ unionRange(restrictedFunction(h, successor(n))) <=> z ∈ app(h, n))) by RightForall
+      thenHave((functional(h), ordinal(relationDomain(h)), in(successor(n), relationDomain(h)), monotonicity) |- ∀(z, z ∈ unionRange(restrictedFunction(h, successor(n))) <=> z ∈ app(h, n))) by RightForall
 
       have(thesis) by Apply(equivalenceApply).on(lastStep, extensionalityAxiom.asInstanceOf)
     }
+
+  def fixpointClassFunction(h: Term)(c: PredicateLabel[2]) =
+    functional(h) /\ ordinal(relationDomain(h)) /\ 
+    forall(n, in(n, relationDomain(h)) ==> 
+      forall(x, in(x, app(h, n)) <=> 
+        ((successorOrdinal(n) ==> c(x, unionRange(restrictedFunction(h, n)))) /\
+        (!successorOrdinal(n) ==> in(x, unionRange(restrictedFunction(h, n)))))
+      )
+    )
+
+  def classFunctionCumulative(c: PredicateLabel[2]) = forall(n, forall(x, in(x, n) ==> c(x, n)))
+  def classFunctionMonotonic(c: PredicateLabel[2]) = forall(m, forall(n, subset(m, n) ==> forall(x, c(x, m) ==> c(x, n))))
+
+  val inFixpointFunctionDomain = Lemma((fixpointClassFunction(h)(P2), in(n, relationDomain(h))) |- ordinal(n)) {
+    sorry
+  }
+
+  val subsetElemFixpointFunctionDomain = Lemma((fixpointClassFunction(h)(P2), in(n, relationDomain(h)), subset(m, n)) |- in(m,  relationDomain(h))) {
+      sorry
+  }
+
+  val successorElemFixpointFunctionDomain = Lemma((fixpointClassFunction(h)(P2), in(successor(n), relationDomain(h))) |- in(n,  relationDomain(h))) {
+      sorry
+  }
+
+
+  val fixpointFunctionSuccessorUnfold = Lemma((fixpointClassFunction(h)(P2), in(successor(n), relationDomain(h))) |- in(x, app(h, successor(n))) <=> P2(x, unionRange(restrictedFunction(h, successor(n))))) {
+
+    // Caching
+    def funBody(n: Term) = in(x, app(h, n)) <=> 
+      ((successorOrdinal(n) ==> P2(x, unionRange(restrictedFunction(h, n)))) /\
+      (!successorOrdinal(n) ==> in(x, unionRange(restrictedFunction(h, n)))))
+    val funBodySucc = funBody(successor(n))
+    val funApplicationDef = forall(n, in(n, relationDomain(h)) ==> forall(x, funBody(n)))
+
+    // Nothing fancy, just instantiations and restates
+    have(funApplicationDef |- funApplicationDef) by Hypothesis
+    thenHave(funApplicationDef |- in(successor(n), relationDomain(h)) ==> forall(x,funBodySucc)) by InstantiateForall(successor(n))
+    thenHave((funApplicationDef, in(successor(n), relationDomain(h))) |- forall(x, funBodySucc)) by Restate
+    thenHave((funApplicationDef, in(successor(n), relationDomain(h))) |- funBodySucc) by InstantiateForall(x)
+    thenHave((fixpointClassFunction(h)(P2), in(successor(n), relationDomain(h)), successorOrdinal(successor(n))) |- in(x, app(h, successor(n))) <=> P2(x, unionRange(restrictedFunction(h, successor(n))))) by Tautology
+    have((fixpointClassFunction(h)(P2), in(successor(n), relationDomain(h)), ordinal(successor(n))) |- in(x, app(h, successor(n))) <=> P2(x, unionRange(restrictedFunction(h, successor(n))))) by Cut(successorIsSuccessorOrdinal2, lastStep)
+    have(thesis) by Cut(inFixpointFunctionDomain of (n := successor(n)), lastStep)
+  }
+
+  val fixpointFunctionNonsuccessorUnfold = Lemma((fixpointClassFunction(h)(P2), in(n, relationDomain(h)), nonsuccessorOrdinal(n)) |- app(h, n) === unionRange(restrictedFunction(h, n))) {
+
+    // Caching
+    def funBody = in(x, app(h, n)) <=> 
+      ((successorOrdinal(n) ==> P2(x, unionRange(restrictedFunction(h, n)))) /\
+      (!successorOrdinal(n) ==> in(x, unionRange(restrictedFunction(h, n)))))
+    val funApplicationDef = forall(n, in(n, relationDomain(h)) ==> forall(x, funBody))
+
+    // Nothing fancy, just instantiations and restates
+    have(funApplicationDef |- funApplicationDef) by Hypothesis
+    thenHave(funApplicationDef |- in(n, relationDomain(h)) ==> forall(x,funBody)) by InstantiateForall(n)
+    thenHave((funApplicationDef, in(n, relationDomain(h))) |- forall(x, funBody)) by Restate
+    thenHave((funApplicationDef, in(n, relationDomain(h))) |- funBody) by InstantiateForall(x)
+    thenHave((fixpointClassFunction(h)(P2), in(n, relationDomain(h)), !successorOrdinal(n)) |- in(x, app(h, n)) <=> in(x, unionRange(restrictedFunction(h, n)))) by Tautology
+    have((fixpointClassFunction(h)(P2), in(n, relationDomain(h)), ordinal(n), nonsuccessorOrdinal(n)) |- in(x, app(h, n)) <=> in(x, unionRange(restrictedFunction(h, n)))) by Cut(nonsuccessorOrdinalIsNotSuccessorOrdinal, lastStep)
+    have((fixpointClassFunction(h)(P2), in(n, relationDomain(h)), nonsuccessorOrdinal(n)) |- in(x, app(h, n)) <=> in(x, unionRange(restrictedFunction(h, n)))) by Cut(inFixpointFunctionDomain, lastStep)
+    thenHave((fixpointClassFunction(h)(P2), in(n, relationDomain(h)), nonsuccessorOrdinal(n)) |- forall(x, in(x, app(h, n)) <=> in(x, unionRange(restrictedFunction(h, n))))) by RightForall
+    thenHave((fixpointClassFunction(h)(P2), in(n, relationDomain(h)), nonsuccessorOrdinal(n), (app(h, n) === unionRange(restrictedFunction(h, n))) <=> forall(x, in(x, app(h, n)) <=> in(x, unionRange(restrictedFunction(h, n))))) |- app(h, n) === unionRange(restrictedFunction(h, n))) by RightSubstIff.withParametersSimple(
+      List((forall(x, in(x, app(h, n)) <=> in(x, unionRange(restrictedFunction(h, n)))), app(h, n) === unionRange(restrictedFunction(h, n)))),
+      lambda(p, p)
+    )
+    have(thesis) by Cut(extensionalityAxiom of (x := app(h, n), y := unionRange(restrictedFunction(h, n))), lastStep)
+    
+  }
+  
+  val fixpointFunctionMonotonicity = benchmark(Lemma((classFunctionMonotonic(P2), classFunctionCumulative(P2), fixpointClassFunction(h)(P2), in(n, relationDomain(h)), subset(m, n)) |- subset(app(h, m), app(h, n))) {
+
+    val succCase = have((classFunctionMonotonic(P2), classFunctionCumulative(P2), fixpointClassFunction(h)(P2), in(n, relationDomain(h)), subset(m, n), successorOrdinal(n)) |- subset(app(h, m), app(h, n))) subproof {
+
+      val unionRangeRestrMon = have(subset(m, n) |- subset(unionRange(restrictedFunction(h, m)), unionRange(restrictedFunction(h, n)))) by Cut(
+          restrictedFunctionDomainMonotonic of (x := m, y := n, f := h), 
+          unionRangeMonotonic of (f := restrictedFunction(h, m), g := restrictedFunction(h, n))
+        )
+
+      val succSuccCase = have((classFunctionMonotonic(P2), fixpointClassFunction(h)(P2), in(successor(b), relationDomain(h)), subset(m, successor(b)), successorOrdinal(m)) |- subset(app(h, m), app(h, successor(b)))) subproof {
+
+        have(classFunctionMonotonic(P2) |- classFunctionMonotonic(P2)) by Hypothesis
+        
+        thenHave(classFunctionMonotonic(P2) |- forall(n, subset(unionRange(restrictedFunction(h, successor(a))), n) ==> forall(x, P2(x, unionRange(restrictedFunction(h, successor(a)))) ==> P2(x, n)))) by InstantiateForall(unionRange(restrictedFunction(h, successor(a))))
+        
+        thenHave(classFunctionMonotonic(P2) |- subset(unionRange(restrictedFunction(h, successor(a))), unionRange(restrictedFunction(h, successor(b)))) ==> forall(x, P2(x, unionRange(restrictedFunction(h, successor(a)))) ==> P2(x, unionRange(restrictedFunction(h, successor(b)))))) by InstantiateForall(unionRange(restrictedFunction(h, successor(b))))
+
+        thenHave((classFunctionMonotonic(P2), subset(unionRange(restrictedFunction(h, successor(a))), unionRange(restrictedFunction(h, successor(b))))) |- forall(x, P2(x, unionRange(restrictedFunction(h, successor(a)))) ==> P2(x, unionRange(restrictedFunction(h, successor(b)))))) by Restate
+
+        have((classFunctionMonotonic(P2), subset(successor(a), successor(b))) |- forall(x, P2(x, unionRange(restrictedFunction(h, successor(a)))) ==> P2(x, unionRange(restrictedFunction(h, successor(b)))))) by Cut(unionRangeRestrMon of (m := successor(a), n := successor(b)), lastStep)
+
+        thenHave((classFunctionMonotonic(P2), subset(successor(a), successor(b))) |- P2(x, unionRange(restrictedFunction(h, successor(a)))) ==> P2(x, unionRange(restrictedFunction(h, successor(b))))) by InstantiateForall(x)
+
+        thenHave((classFunctionMonotonic(P2), subset(successor(a), successor(b)), in(x, app(h, successor(a))) <=> P2(x, unionRange(restrictedFunction(h, successor(a))))) |- in(x, app(h, successor(a))) ==> P2(x, unionRange(restrictedFunction(h, successor(b))))) by RightSubstIff.withParametersSimple(
+          List((in(x, app(h, successor(a))), P2(x, unionRange(restrictedFunction(h, successor(a)))))),
+          lambda(p, p ==> P2(x, unionRange(restrictedFunction(h, successor(b)))))
+        )
+
+        have((classFunctionMonotonic(P2), fixpointClassFunction(h)(P2), in(successor(a), relationDomain(h)), subset(successor(a), successor(b))) |- in(x, app(h, successor(a))) ==> P2(x, unionRange(restrictedFunction(h, successor(b))))) by Cut(fixpointFunctionSuccessorUnfold of (n := a), lastStep)
+
+        thenHave((classFunctionMonotonic(P2), fixpointClassFunction(h)(P2), in(successor(a), relationDomain(h)), subset(successor(a), successor(b)), in(x, app(h, successor(b))) <=> P2(x, unionRange(restrictedFunction(h, successor(b))))) |- in(x, app(h, successor(a))) ==> in(x, app(h, successor(b)))) by 
+        RightSubstIff.withParametersSimple(
+          List((in(x, app(h, successor(b))), P2(x, unionRange(restrictedFunction(h, successor(b)))))),
+          lambda(p, in(x, app(h, successor(a))) ==> p)
+        )
+
+        have((classFunctionMonotonic(P2), fixpointClassFunction(h)(P2), in(successor(a), relationDomain(h)), in(successor(b), relationDomain(h)), subset(successor(a), successor(b))) |- in(x, app(h, successor(a))) ==> in(x, app(h, successor(b)))) by 
+        Cut(fixpointFunctionSuccessorUnfold of (n := b), lastStep) 
+
+        thenHave((classFunctionMonotonic(P2), fixpointClassFunction(h)(P2), in(successor(a), relationDomain(h)), in(successor(b), relationDomain(h)), subset(successor(a), successor(b))) |- forall(x, in(x, app(h, successor(a))) ==> in(x, app(h, successor(b))))) by RightForall
+
+        have((classFunctionMonotonic(P2), fixpointClassFunction(h)(P2), in(successor(a), relationDomain(h)), in(successor(b), relationDomain(h)), subset(successor(a), successor(b))) |- subset(app(h, successor(a)), app(h, successor(b)))) by Cut(lastStep, subsetAxiomBackward of (x := app(h, successor(a)), y := app(h, successor(b))))
+
+        have((classFunctionMonotonic(P2), fixpointClassFunction(h)(P2), in(successor(b), relationDomain(h)), subset(successor(a), successor(b))) |- subset(app(h, successor(a)), app(h, successor(b)))) by Cut(subsetElemFixpointFunctionDomain of (m := successor(a), n := successor(b)), lastStep)
+
+        thenHave((m === successor(a), classFunctionMonotonic(P2), fixpointClassFunction(h)(P2), in(successor(b), relationDomain(h)), subset(successor(a), successor(b))) |- subset(app(h, m), app(h, successor(b)))) by RightSubstEq.withParametersSimple(
+          List((m, successor(a))),
+          lambda(m , subset(app(h, m), app(h, successor(b))))
+        )
+
+        thenHave((m === successor(a), classFunctionMonotonic(P2), fixpointClassFunction(h)(P2), in(successor(b), relationDomain(h)), subset(m, successor(b))) |- subset(app(h, m), app(h, successor(b)))) by LeftSubstEq.withParametersSimple(
+          List((m, successor(a))),
+          lambda(m, subset(m, successor(b)))
+        )
+
+        thenHave((exists(a, m === successor(a)), classFunctionMonotonic(P2), fixpointClassFunction(h)(P2), in(successor(b), relationDomain(h)), subset(m, successor(b))) |- subset(app(h, m), app(h, successor(b)))) by LeftExists
+
+        thenHave((ordinal(m) /\ exists(a, m === successor(a)), classFunctionMonotonic(P2), fixpointClassFunction(h)(P2), in(successor(b), relationDomain(h)), subset(m, successor(b))) |- subset(app(h, m), app(h, successor(b)))) by Weakening
+
+        thenHave((successorOrdinal(m) <=> ordinal(m) /\ exists(a, m === successor(a)), successorOrdinal(m), classFunctionMonotonic(P2), fixpointClassFunction(h)(P2), in(successor(b), relationDomain(h)), subset(m, successor(b))) |- subset(app(h, m), app(h, successor(b)))) by LeftSubstIff.withParametersSimple(
+          List((successorOrdinal(m), ordinal(m) /\ exists(a, m === successor(a)))),
+          lambda(p, p)
+        )
+
+        have(thesis) by Cut(successorOrdinal.definition of (n := m), lastStep)
+
+      }
+
+      val succNonSuccCase = have((classFunctionCumulative(P2), fixpointClassFunction(h)(P2), in(successor(b), relationDomain(h)), subset(m, successor(b)), nonsuccessorOrdinal(m)) |- subset(app(h, m), app(h, successor(b)))) subproof {
+
+        have(classFunctionCumulative(P2) |- classFunctionCumulative(P2)) by Hypothesis
+        thenHave(classFunctionCumulative(P2) |- forall(x, in(x, unionRange(restrictedFunction(h, successor(b)))) ==> P2(x, unionRange(restrictedFunction(h, successor(b)))))) by InstantiateForall(unionRange(restrictedFunction(h, successor(b))))
+        thenHave(classFunctionCumulative(P2) |- in(x, unionRange(restrictedFunction(h, successor(b)))) ==> P2(x, unionRange(restrictedFunction(h, successor(b))))) by InstantiateForall(x)
+        thenHave((classFunctionCumulative(P2), in(x, unionRange(restrictedFunction(h, successor(b))))) |- P2(x, unionRange(restrictedFunction(h, successor(b))))) by Restate
+        thenHave((classFunctionCumulative(P2), in(x, unionRange(restrictedFunction(h, successor(b)))), in(x, app(h, successor(b))) <=> P2(x, unionRange(restrictedFunction(h, successor(b))))) |- in(x, app(h, successor(b)))) by RightSubstIff.withParametersSimple(
+          List((in(x, app(h, successor(b))), P2(x, unionRange(restrictedFunction(h, successor(b)))))),
+          lambda(p, p)
+        )
+        have((classFunctionCumulative(P2), fixpointClassFunction(h)(P2), in(successor(b), relationDomain(h)), in(x, unionRange(restrictedFunction(h, successor(b))))) |- in(x, app(h, successor(b)))) by Cut(fixpointFunctionSuccessorUnfold of (n := b), lastStep)
+        have((classFunctionCumulative(P2), fixpointClassFunction(h)(P2), in(successor(b), relationDomain(h)), subset(unionRange(restrictedFunction(h, m)), unionRange(restrictedFunction(h, successor(b)))), in(x, unionRange(restrictedFunction(h, m)))) |- in(x, app(h, successor(b)))) by Cut(
+          subsetAxiomForward of (x := unionRange(restrictedFunction(h, m)), y := unionRange(restrictedFunction(h, successor(b))), z := x),
+          lastStep
+        )
+        have((classFunctionCumulative(P2), fixpointClassFunction(h)(P2), in(successor(b), relationDomain(h)), subset(m, successor(b)), in(x, unionRange(restrictedFunction(h, m)))) |- in(x, app(h, successor(b)))) by Cut(unionRangeRestrMon of (n := successor(b)), lastStep)
+        thenHave((classFunctionCumulative(P2), fixpointClassFunction(h)(P2), in(successor(b), relationDomain(h)), subset(m, successor(b))) |- in(x, unionRange(restrictedFunction(h, m))) ==> in(x, app(h, successor(b)))) by RightImplies
+        thenHave((classFunctionCumulative(P2), fixpointClassFunction(h)(P2), in(successor(b), relationDomain(h)), subset(m, successor(b))) |- forall(x, in(x, unionRange(restrictedFunction(h, m))) ==> in(x, app(h, successor(b))))) by RightForall
+        have((classFunctionCumulative(P2), fixpointClassFunction(h)(P2), in(successor(b), relationDomain(h)), subset(m, successor(b))) |- subset(unionRange(restrictedFunction(h, m)), app(h, successor(b)))) by Cut(lastStep, subsetAxiomBackward of (x := unionRange(restrictedFunction(h, m)), y := app(h, successor(b))))
+        thenHave((classFunctionCumulative(P2), fixpointClassFunction(h)(P2), in(successor(b), relationDomain(h)), subset(m, successor(b)), app(h, m) === unionRange(restrictedFunction(h, m))) |- subset(app(h, m), app(h, successor(b)))) by RightSubstEq.withParametersSimple(
+          List((app(h, m), unionRange(restrictedFunction(h, m)))),
+          lambda(t, subset(t, app(h, successor(b))))
+        )
+        have((classFunctionCumulative(P2), fixpointClassFunction(h)(P2), in(successor(b), relationDomain(h)), subset(m, successor(b)), nonsuccessorOrdinal(m), in(m, relationDomain(h))) |- subset(app(h, m), app(h, successor(b)))) by Cut(fixpointFunctionNonsuccessorUnfold of (n := m), lastStep)
+        have((classFunctionCumulative(P2), fixpointClassFunction(h)(P2), in(successor(b), relationDomain(h)), subset(m, successor(b)), nonsuccessorOrdinal(m)) |- subset(app(h, m), app(h, successor(b)))) by Cut(subsetElemFixpointFunctionDomain of (n := successor(b)), lastStep)
+      }
+
+      have((classFunctionMonotonic(P2), classFunctionCumulative(P2), fixpointClassFunction(h)(P2), in(successor(b), relationDomain(h)), subset(m, successor(b)), successorOrdinal(m) \/ nonsuccessorOrdinal(m)) |- subset(app(h, m), app(h, successor(b)))) by LeftOr(succSuccCase, succNonSuccCase)
+
+      have((classFunctionMonotonic(P2), classFunctionCumulative(P2), fixpointClassFunction(h)(P2), in(successor(b), relationDomain(h)), subset(m, successor(b)), ordinal(m)) |- subset(app(h, m), app(h, successor(b)))) by Cut(successorOrNonsuccessorOrdinal of (n := m), lastStep)
+
+      have((classFunctionMonotonic(P2), classFunctionCumulative(P2), fixpointClassFunction(h)(P2), in(successor(b), relationDomain(h)), subset(m, successor(b)), in(m, relationDomain(h))) |- subset(app(h, m), app(h, successor(b)))) by Cut(inFixpointFunctionDomain of (n := m), lastStep)
+
+      have((classFunctionMonotonic(P2), classFunctionCumulative(P2), fixpointClassFunction(h)(P2), in(successor(b), relationDomain(h)), subset(m, successor(b))) |- subset(app(h, m), app(h, successor(b)))) by Cut(subsetElemFixpointFunctionDomain of (n := successor(b)), lastStep)
+
+      thenHave((classFunctionMonotonic(P2), classFunctionCumulative(P2), fixpointClassFunction(h)(P2), in(successor(b), relationDomain(h)), subset(m, successor(b)), n === successor(b)) |- subset(app(h, m), app(h, n))) by RightSubstEq.withParametersSimple(
+        List((n, successor(b))),
+        lambda(n, subset(app(h, m), app(h, n)))
+      )
+
+      thenHave((classFunctionMonotonic(P2), classFunctionCumulative(P2), fixpointClassFunction(h)(P2), in(successor(b), relationDomain(h)), subset(m, n), n === successor(b)) |- subset(app(h, m), app(h, n))) by LeftSubstEq.withParametersSimple(
+        List((n, successor(b))),
+        lambda(n, subset(m, n))
+      )
+
+      thenHave((classFunctionMonotonic(P2), classFunctionCumulative(P2), fixpointClassFunction(h)(P2), in(n, relationDomain(h)), subset(m, n), n === successor(b)) |- subset(app(h, m), app(h, n))) by LeftSubstEq.withParametersSimple(
+        List((n, successor(b))),
+        lambda(n, in(n, relationDomain(h)))
+      )
+
+      thenHave((classFunctionMonotonic(P2), classFunctionCumulative(P2), fixpointClassFunction(h)(P2), in(n, relationDomain(h)), subset(m, n), exists(b, n === successor(b))) |- subset(app(h, m), app(h, n))) by LeftExists
+
+      thenHave((classFunctionMonotonic(P2), classFunctionCumulative(P2), fixpointClassFunction(h)(P2), in(n, relationDomain(h)), subset(m, n), ordinal(n) /\ exists(b, n === successor(b))) |- subset(app(h, m), app(h, n))) by Weakening
+
+      thenHave((classFunctionMonotonic(P2), classFunctionCumulative(P2), fixpointClassFunction(h)(P2), in(n, relationDomain(h)), subset(m, n), successorOrdinal(n) <=> ordinal(n) /\ exists(b, n === successor(b)), successorOrdinal(n)) |- subset(app(h, m), app(h, n))) by LeftSubstIff.withParametersSimple(
+        List((successorOrdinal(n), ordinal(n) /\ exists(b, n === successor(b)))),
+        lambda(p, p)
+      )
+
+      have(thesis) by Cut(successorOrdinal.definition, lastStep)
+    }
+
+    val nonSuccCase = have((fixpointClassFunction(h)(P2), in(n, relationDomain(h)), subset(m, n), nonsuccessorOrdinal(n)) |- subset(app(h, m), app(h, n))) subproof {
+      have((functional(h), in(m, n), n ∩ relationDomain(h) === n) |- in(app(h, m), relationRange(restrictedFunction(h, n)))) by LeftSubstEq.withParametersSimple(
+        List((n ∩ relationDomain(h), n)),
+        lambda(s, in(m, s))
+      )(inRestrictedFunctionRange of (f := h, x := m, d := n))
+
+      have((ordinal(relationDomain(h)), functional(h), in(m, n), in(n, relationDomain(h))) |- in(app(h, m), relationRange(restrictedFunction(h, n)))) by Cut(intersectionInOrdinal of (m := n, n := relationDomain(h)), lastStep)
+
+      have((ordinal(relationDomain(h)), functional(h), in(m, n), in(n, relationDomain(h))) |- subset(app(h, m), unionRange(restrictedFunction(h, n)))) by Cut(lastStep, inSetSubsetUnion of (x := app(h, m), y := relationRange(restrictedFunction(h, n))))
+
+      thenHave((fixpointClassFunction(h)(P2), in(m, n), in(n, relationDomain(h)), nonsuccessorOrdinal(n)) |- subset(app(h, m), unionRange(restrictedFunction(h, n)))) by Weakening
+
+      thenHave((fixpointClassFunction(h)(P2), in(m, n), in(n, relationDomain(h)), nonsuccessorOrdinal(n), unionRange(restrictedFunction(h, n)) === app(h, n)) |- subset(app(h, m), app(h, n))) by RightSubstEq.withParametersSimple(
+        List((unionRange(restrictedFunction(h, n)), app(h, n))),
+        lambda(s, subset(app(h, m), s))
+      )
+
+      val nonSuccCaseIn = have((fixpointClassFunction(h)(P2), in(m, n), in(n, relationDomain(h)), nonsuccessorOrdinal(n)) |- subset(app(h, m), app(h, n))) by Cut(fixpointFunctionNonsuccessorUnfold, lastStep)
+
+      have(m === n |- subset(app(h, m), app(h, n))) by RightSubstEq.withParametersSimple(
+        List((m, n)),
+        lambda(s, subset(app(h, m), app(h, s)))
+      )(subsetReflexivity of (x := app(h, m)))
+
+      have((fixpointClassFunction(h)(P2), in(m, n) \/ (m === n), in(n, relationDomain(h)), nonsuccessorOrdinal(n)) |- subset(app(h, m), app(h, n))) by LeftOr(nonSuccCaseIn, lastStep)
+      have((fixpointClassFunction(h)(P2), ordinal(n), subset(m, n), in(n, relationDomain(h)), nonsuccessorOrdinal(n)) |- subset(app(h, m), app(h, n))) by Cut(leqOrdinal, lastStep)
+      have(thesis) by Cut(nonsuccessorOrdinalIsOrdinal, lastStep)
+    }
+
+    have((classFunctionMonotonic(P2), classFunctionCumulative(P2), fixpointClassFunction(h)(P2), in(n, relationDomain(h)), subset(m, n), successorOrdinal(n) \/ nonsuccessorOrdinal(n)) |- subset(app(h, m), app(h, n))) by LeftOr(succCase, nonSuccCase)
+
+    have((classFunctionMonotonic(P2), classFunctionCumulative(P2), fixpointClassFunction(h)(P2), in(n, relationDomain(h)), subset(m, n), ordinal(n)) |- subset(app(h, m), app(h, n))) by Cut(successorOrNonsuccessorOrdinal, lastStep)
+
+    have(thesis) by Cut(inFixpointFunctionDomain, lastStep)
+
+  })
+  
+  val fixpointFunctionSuccessor = Lemma((classFunctionMonotonic(P2), classFunctionCumulative(P2), fixpointClassFunction(h)(P2), in(successor(n), relationDomain(h))) |- in(x, app(h, successor(n))) <=> P2(x, app(h, n))) {
+    
+    have(((classFunctionMonotonic(P2), classFunctionCumulative(P2), fixpointClassFunction(h)(P2), in(n, relationDomain(h))) |- subset(m, n) ==> subset(app(h, m), app(h, n)))) by RightImplies(fixpointFunctionMonotonicity)
+    thenHave(((classFunctionMonotonic(P2), classFunctionCumulative(P2), fixpointClassFunction(h)(P2), in(n, relationDomain(h))) |- forall(m, subset(m, n) ==> subset(app(h, m), app(h, n))))) by RightForall
+    have(((classFunctionMonotonic(P2), classFunctionCumulative(P2), fixpointClassFunction(h)(P2), in(successor(n), relationDomain(h))) |- forall(m, subset(m, n) ==> subset(app(h, m), app(h, n))))) by Cut(successorElemFixpointFunctionDomain, lastStep)
+    have((functional(h), ordinal(relationDomain(h)), classFunctionMonotonic(P2), classFunctionCumulative(P2), fixpointClassFunction(h)(P2), in(successor(n), relationDomain(h))) |- unionRange(restrictedFunction(h, successor(n))) === app(h, n)) by Cut(lastStep, unionRangeCumulativeRestrictedFunction)
+    val unionRangeSucc = thenHave((classFunctionMonotonic(P2), classFunctionCumulative(P2), fixpointClassFunction(h)(P2), in(successor(n), relationDomain(h))) |- unionRange(restrictedFunction(h, successor(n))) === app(h, n)) by Restate
+    
+    have((fixpointClassFunction(h)(P2), in(successor(n), relationDomain(h)), unionRange(restrictedFunction(h, successor(n))) === app(h, n)) |- in(x, app(h, successor(n))) <=> P2(x, app(h, n))) by RightSubstEq.withParametersSimple(
+      List((unionRange(restrictedFunction(h, successor(n))), app(h, n))),
+      lambda(s, in(x, app(h, successor(n))) <=> P2(x, s))
+    )(fixpointFunctionSuccessorUnfold)
+
+    have(thesis) by Cut(unionRangeSucc, lastStep)
+  }
+
+  def fixpointClassFunctionWithDomain(h: Term)(c: PredicateLabel[2])(d: Term) = fixpointClassFunction(h)(c) /\ (d === relationDomain(h))
+
+  val fixpointClassFunctionWithDomainOrdinal = Lemma(fixpointClassFunctionWithDomain(h)(P2)(d) |- ordinal(d)) {
+    sorry
+  }
+
+  val fixpointClassFunctionWithDomainUniqueness = Lemma(ordinal(d) |- existsOne(h, fixpointClassFunctionWithDomain(h)(P2)(d))) {
+    sorry
+  }
+
+  val fixpointClassFunctionWithDomainExistence = Lemma(ordinal(d) |- exists(h, fixpointClassFunctionWithDomain(h)(P2)(d))) {
+    have(thesis) by Cut(fixpointClassFunctionWithDomainUniqueness, lisa.maths.Quantifiers.existsOneImpliesExists of (P := lambda(h, fixpointClassFunctionWithDomain(h)(P2)(d))))
+  }
+
+  /**
+   * Lemma --- If two functions are the height function then they are the same.
+   *
+   *     `f = height /\ h = height => f = h`
+   */
+  val fixpointClassFunctionWithDomainUniqueness2 = Lemma((fixpointClassFunctionWithDomain(f)(P2)(d), fixpointClassFunctionWithDomain(h)(P2)(d)) |- f === h) {
+    have((ordinal(d), fixpointClassFunctionWithDomain(f)(P2)(d), fixpointClassFunctionWithDomain(h)(P2)(d)) |- f === h) by Cut(fixpointClassFunctionWithDomainUniqueness, existsOneUniqueness of (P := lambda(h, fixpointClassFunctionWithDomain(h)(P2)(d)), x := f, y := h))
+    have(thesis) by Cut(fixpointClassFunctionWithDomainOrdinal, lastStep)
+  }
+
+  def fixpointDescription(c: PredicateLabel[2])(d: Term)(fix: Term) = forall(t, in(t, fix) <=> forall(h, fixpointClassFunctionWithDomain(h)(c)(d) ==> in(t, unionRange(h))))
+
+  val fixpointUniqueness = Lemma(ordinal(d) |- existsOne(z, fixpointDescription(P2)(d)(z))) {
+    // STEP 0: Caching
+        val fixpointDefinitionRight = forall(h, fixpointClassFunctionWithDomain(h)(P2)(d) ==> in(t, unionRange(h)))
+        val inUnionRangeF = in(t, unionRange(f))
+
+        // STEP 1: Prove that there exists a term satisfying the definition of this ADT.
+        // Specifically, this term is the union of all the terms with a height.
+        have(ordinal(d) |- exists(z, fixpointDescription(P2)(d)(z))) subproof {
+
+          // STEP 1.1: Prove the forward implication of the definition, using the uniqueness of the height function
+          have(inUnionRangeF |- inUnionRangeF) by Hypothesis
+          thenHave((f === h, inUnionRangeF) |- in(t, unionRange(h))) by RightSubstEq.withParametersSimple(
+            List((f, h)),
+            lambda(f, inUnionRangeF)
+          )
+          have((fixpointClassFunctionWithDomain(f)(P2)(d), fixpointClassFunctionWithDomain(h)(P2)(d), inUnionRangeF) |- in(t, unionRange(h))) by Cut(fixpointClassFunctionWithDomainUniqueness2, lastStep)
+          thenHave((fixpointClassFunctionWithDomain(f)(P2)(d), inUnionRangeF) |- fixpointClassFunctionWithDomain(h)(P2)(d) ==> in(t, unionRange(h))) by RightImplies
+          thenHave((fixpointClassFunctionWithDomain(f)(P2)(d), inUnionRangeF) |- fixpointDefinitionRight) by RightForall
+          val forward = thenHave(fixpointClassFunctionWithDomain(f)(P2)(d) |- inUnionRangeF ==> fixpointDefinitionRight) by RightImplies
+
+          // STEP 1.2: Prove the backward implication of the definition
+          have(fixpointDefinitionRight |- fixpointDefinitionRight) by Hypothesis
+          thenHave(fixpointDefinitionRight |- fixpointClassFunctionWithDomain(f)(P2)(d) ==> inUnionRangeF) by InstantiateForall(f)
+          val backward = thenHave(fixpointClassFunctionWithDomain(f)(P2)(d) |- fixpointDefinitionRight ==> inUnionRangeF) by Restate
+
+          // STEP 1.3: Use the existence of the height function to prove the existence of this ADT
+          have(fixpointClassFunctionWithDomain(f)(P2)(d) |- inUnionRangeF <=> fixpointDefinitionRight) by RightIff(forward, backward)
+          thenHave(fixpointClassFunctionWithDomain(f)(P2)(d) |- forall(t, inUnionRangeF <=> fixpointDefinitionRight)) by RightForall
+
+          thenHave(fixpointClassFunctionWithDomain(f)(P2)(d) |- exists(z, forall(t, in(t, z) <=> fixpointDefinitionRight))) by RightExists
+          thenHave(exists(f, fixpointClassFunctionWithDomain(f)(P2)(d)) |- exists(z, forall(t, in(t, z) <=> fixpointDefinitionRight))) by LeftExists
+          have(thesis) by Cut(fixpointClassFunctionWithDomainExistence, lastStep)
+        }
+
+        // STEP 2: Conclude using the extension by definition
+
+        have(thesis) by Cut(lastStep, uniqueByExtension of (schemPred := lambda(t, fixpointDefinitionRight)))
+  }
 
 }

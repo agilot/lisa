@@ -21,17 +21,28 @@ object ADTExample extends lisa.Main {
   // Boolean
   val define(bool: ADT[0], constructors(tru, fals)) = () | ()
 
+  println("---------------")
+
   // Nat
   val define(nat: ADT[0], constructors(zero, succ)) = () | nat
+
+  println("---------------")
 
   // Option
   val define(option: ADT[1], constructors(none, some)) = A --> () | A
 
+  println("---------------")
+
   // List
   val define(list: ADT[1], constructors(nil, cons)) = A --> () | (A, list)
 
+  println("---------------")
+
   //Binary Trees
-  val define(tree: ADT[1], constructors(leaf, node)) = A --> A | (bool |=> tree)
+  val define(tree: ADT[1], constructors(leaf, node)) = A --> A | (A, nat |=> tree)
+
+  
+  println("---------------")
 
   // Nothing
   val define(nothing, constructors()) = |
@@ -44,6 +55,7 @@ object ADTExample extends lisa.Main {
   show(nil.injectivity)
   show(cons.injectivity)
   show(list.injectivity(nil, cons))
+  show(tree.induction)
 
   // Introduction rules
   show(nil.intro)
@@ -52,7 +64,7 @@ object ADTExample extends lisa.Main {
   Lemma(nil(A) :: list(A)){
     have(thesis) by TypeChecker.prove
   } 
-  Lemma((x :: A, l :: list(A)) |- cons(A) * x * l :: list(A)){
+  Lemma(cons(nat) * (succ * zero) * nil(nat) :: list(nat)){
     have(thesis) by TypeChecker.prove
   } 
 
