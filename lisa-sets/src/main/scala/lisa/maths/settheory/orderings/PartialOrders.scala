@@ -3,7 +3,12 @@ package lisa.maths.settheory.orderings
 import lisa.automation.settheory.SetTheoryTactics.*
 import lisa.maths.Quantifiers.*
 import lisa.maths.settheory.SetTheory.*
+import lisa.prooflib.SimpleDeducedSteps.InstantiateForall
+import lisa.prooflib.SimpleDeducedSteps.InstantiateForall
 
+/**
+ * Linear and Partial Ordering
+ */
 object PartialOrders extends lisa.Main {
 
   // var defs
@@ -20,6 +25,8 @@ object PartialOrders extends lisa.Main {
 
   // relation and function symbols
   private val r = variable
+  private val r1 = variable
+  private val r2 = variable
   private val p = variable
   private val q = variable
   private val f = variable
@@ -32,324 +39,658 @@ object PartialOrders extends lisa.Main {
   private val schemPred = predicate[1]
 
   /**
-   * Linear and Partial Ordering
-   */
-
-  /**
-   * (Strict) Partial Order --- `p` is a partial order on `x` if it is a pair `(x, r)`,
-   * and `r` is an [[antiReflexive]], [[antiSymmetric]], and [[transitive]] binary
-   * [[relation]] on `x`.
-   */
-  val partialOrder =
-    DEF(p) --> relationBetween(secondInPair(p), firstInPair(p), firstInPair(p)) /\ antiSymmetric(secondInPair(p), firstInPair(p)) /\ antiReflexive(secondInPair(p), firstInPair(p)) /\ transitive(
-      secondInPair(p),
-      firstInPair(p)
-    )
-
-  /**
-   * Linear Order --- a partial order `p = (r, x)` is called a linear order if
-   * `r` is [[total]] as a [[relation]] on `x`.
-   */
-  val totalOrder = DEF(p) --> partialOrder(p) /\ total(secondInPair(p), firstInPair(p))
-
-  /**
-   * Properties of elements under partial orders
-   */
-
-  /**
-   * Maximal Element --- `a` is a maximal element of `y` with respect to `r`,
-   * where `p = (r, x)` is a partial order on `x`, and `y ⊆ x`.
+   * Definition --- Strict Partial Order
    *
-   *    `∀ b ∈ y. ! a r b`
+   * A strict partial order is a relation that is irreflexive and transitive.
    */
-  val maximalElement = DEF(a, y, p) --> partialOrder(p) /\ subset(y, firstInPair(p)) /\ in(a, y) /\ ∀(b, in(b, y) ==> (!in(pair(a, b), secondInPair(p))))
+  val strictPartialOrder = DEF(r, x) --> irreflexive(r, x) /\ transitive(r, x)
 
   /**
-   * Minimal Element --- `a` is a minimal element of `y` with respect to `r`,
-   * where `p = (r, x)` is a partial order on `x`, and `y ⊆ x`.
+   * Theorem --- Strict partial order introduction rule
    *
-   *    `∀ b ∈ y. ! b r a`
+   *   `r ⊆ x × x, irreflexive(r, x), transitive(r, x) ⊢ strictPartialOrder(r, x)`
    */
-  val minimalElement = DEF(a, y, p) --> partialOrder(p) /\ subset(y, firstInPair(p)) /\ in(a, y) /\ ∀(b, in(b, y) ==> (!in(pair(b, a), secondInPair(p))))
-
-  /**
-   * Greatest Element --- `a` is the greatest element of `y` with respect to
-   * `r`, where `p = (r, x)` is a partial order on `x`, and `y ⊆ x`.
-   *
-   *    `∀ b ∈ y. b r a ⋁ b = a`
-   */
-  val greatestElement = DEF(a, y, p) --> partialOrder(p) /\ subset(y, firstInPair(p)) /\ in(a, y) /\ ∀(b, in(b, y) ==> (in(pair(b, a), secondInPair(p)) \/ (a === b)))
-
-  /**
-   * Least Element --- `a` is the least element of `y` with respect to `r`,
-   * where `p = (r, x)` is a partial order on `x`, and `y ⊆ x`.
-   *
-   *    `∀ b ∈ y. a r b ⋁ b = a`
-   */
-  val leastElement = DEF(a, y, p) --> partialOrder(p) /\ subset(y, firstInPair(p)) /\ in(a, y) /\ ∀(b, in(b, y) ==> (in(pair(a, b), secondInPair(p)) \/ (a === b)))
-
-  /**
-   * Upper Bound --- `a` is an upper bound on `y` with respect to `r`, where `p
-   * = (r, x)` is a partial order on `x`, and `y ⊆ x`.
-   *
-   *    `∀ b ∈ y. b r a ⋁ b = a`
-   *
-   * Note that as opposed to the greatest element, `a` is not enforced to be an
-   * element of `y`.
-   */
-  val upperBound = DEF(a, y, p) --> partialOrder(p) /\ subset(y, firstInPair(p)) /\ ∀(b, in(b, y) ==> (in(pair(b, a), secondInPair(p)) \/ (a === b)))
-
-  /**
-   * Lower Bound --- `a` is a lower bound on `y` with respect to `r`, where `p =
-   * (r, x)` is a partial order on `x`, and `y ⊆ x`.
-   *
-   *    `∀ b ∈ y. a r b ⋁ b = a`
-   *
-   * Note that as opposed to the least element, `a` is not enforced to be an
-   * element of `y`
-   */
-  val lowerBound = DEF(a, y, p) --> partialOrder(p) /\ subset(y, firstInPair(p)) /\ ∀(b, in(b, y) ==> (in(pair(a, b), secondInPair(p)) \/ (a === b)))
-
-  val setOfLowerBoundsUniqueness = Theorem(
-    () |- ∃!(z, ∀(t, in(t, z) <=> (in(t, secondInPair(p)) /\ lowerBound(t, y, p))))
-  ) {
-    have(thesis) by UniqueComprehension(secondInPair(p), lambda(t, lowerBound(t, y, p)))
+  val strictPartialOrderIntro = Lemma((irreflexive(r, x), transitive(r, x)) |- strictPartialOrder(r, x)) {
+    have(thesis) by Weakening(strictPartialOrder.definition)
   }
 
   /**
-   * The set of all lower bounds of a set `y` under a partial order `p`. Used to define [[greatestLowerBound]]
-   */
-  val setOfLowerBounds = DEF(y, p) --> The(z, ∀(t, in(t, z) <=> (in(t, secondInPair(p)) /\ lowerBound(t, y, p))))(setOfLowerBoundsUniqueness)
-
-  /**
-   * Greatest Lower Bound --- `a` is the greatest lower bound on `y ⊆ x`
-   * under a partial order `p = (r, x)` if it is the greatest element in the
-   * [[setOfLowerBounds]] of `y` under `p`.
-   */
-  val greatestLowerBound = DEF(a, y, p) --> greatestElement(a, setOfLowerBounds(y, p), p)
-
-  /**
-   * Alias for [[greatestLowerBound]]
-   */
-  val infimum = greatestLowerBound
-
-  val setOfUpperBoundsUniqueness = Theorem(
-    () |- ∃!(z, ∀(t, in(t, z) <=> (in(t, secondInPair(p)) /\ upperBound(t, y, p))))
-  ) {
-    have(thesis) by UniqueComprehension(secondInPair(p), lambda(t, upperBound(t, y, p)))
-  }
-
-  /**
-   * The set of all upper bounds of a set `y` under a partial order `p`. Used to define [[leastUpperBound]]
-   */
-  val setOfUpperBounds = DEF(y, p) --> The(z, ∀(t, in(t, z) <=> (in(t, secondInPair(p)) /\ upperBound(t, y, p))))(setOfUpperBoundsUniqueness)
-
-  /**
-   * Least Upper Bound --- `a` is the least upper bound on `y ⊆ x` under
-   * a partial order `p = (r, x)` if it is the least element in the
-   * [[setOfUpperBounds]] of `y` under `p`.
-   */
-  val greatestUpperBound = DEF(a, y, p) --> leastElement(a, setOfUpperBounds(y, p), p)
-
-  /**
-   * Alias for [[greatestUpperBound]]
-   */
-  val supremum = greatestUpperBound
-
-  val predecessor = DEF(p, x, y) --> totalOrder(p) /\ in(x, firstInPair(p)) /\ in(y, firstInPair(p)) /\ in(pair(x, y), secondInPair(p)) /\ forall(
-    z,
-    !(in(pair(x, z), secondInPair(p)) /\ in(pair(z, y), secondInPair(p)))
-  )
-
-  val limitElement = DEF(p, x) --> totalOrder(p) /\ in(x, firstInPair(p)) /\ !exists(y, predecessor(p, y, x))
-
-  val successorElement = DEF(p, x) --> totalOrder(p) /\ in(x, firstInPair(p)) /\ exists(y, predecessor(p, y, x))
-
-  val everyElemInTotalOrderLimitOrSuccessor = Lemma(
-    totalOrder(p) /\ in(x, firstInPair(p)) |- (limitElement(p, x) \/ successorElement(p, x))
-  ) {
-    // limit and successor are just negation of each other
-    have(thesis) by Tautology.from(successorElement.definition, limitElement.definition)
-  }
-
-  val initialSegmentUnionForLimitElementsIsComplete = Lemma(
-    totalOrder(p) /\ limitElement(p, x) |- in(pair(t, x), secondInPair(p)) <=> exists(y, in(pair(t, y), secondInPair(p)) /\ in(pair(y, x), secondInPair(p)))
-  ) {
-    assume(totalOrder(p))
-    assume(limitElement(p, x))
-
-    val p1 = firstInPair(p)
-    val p2 = secondInPair(p)
-
-    val fwd = have(in(pair(t, x), p2) |- exists(y, in(pair(t, y), p2) /\ in(pair(y, x), p2))) subproof {
-      assume(in(pair(t, x), p2))
-      assume(forall(y, !(in(pair(t, y), p2) /\ in(pair(y, x), p2)))) // assume negated
-
-      have(forall(y, !predecessor(p, y, x))) by Tautology.from(limitElement.definition)
-      thenHave(!predecessor(p, t, x)) by InstantiateForall(t)
-      val notInp1 = have(!in(t, p1)) by Tautology.from(lastStep, limitElement.definition, predecessor.definition of (x -> t, y -> x)) // y is free here, so instantiate it to x
-
-      val inst = have(!(in(pair(t, y), p2) /\ in(pair(y, x), p2))) by InstantiateForall
-
-      have(in(t, p1)) subproof {
-        have(relationBetween(p2, p1, p1)) by Tautology.from(totalOrder.definition, partialOrder.definition)
-        have(subset(p2, cartesianProduct(p1, p1))) by Tautology.from(lastStep, relationBetween.definition of (r -> p2, a -> p1, b -> p1))
-        have(forall(z, in(z, p2) ==> in(z, cartesianProduct(p1, p1)))) by Tautology.from(lastStep, subsetAxiom of (x -> p2, y -> cartesianProduct(p1, p1)))
-        thenHave(in(pair(t, x), cartesianProduct(p1, p1))) by InstantiateForall(pair(t, x))
-        have(in(t, p1)) by Tautology.from(lastStep, pairInCartesianProduct of (a -> t, b -> x, x -> p1, y -> p1))
-      }
-
-      have(bot) by Tautology.from(lastStep, notInp1)
-    }
-
-    val bwd = have(exists(y, in(pair(t, y), p2) /\ in(pair(y, x), p2)) |- in(pair(t, x), p2)) subproof {
-      have(in(pair(t, y), p2) /\ in(pair(y, x), p2) |- in(pair(t, x), p2)) subproof {
-        // total orders are transitive
-        have(forall(t, forall(y, forall(x, (in(pair(t, y), p2) /\ in(pair(y, x), p2)) ==> in(pair(t, x), p2))))) by Tautology.from(
-          totalOrder.definition,
-          partialOrder.definition,
-          transitive.definition of (r -> p2, x -> p1)
-        )
-        thenHave(thesis) by InstantiateForall(t, y, x)
-      }
-
-      thenHave(thesis) by LeftExists
-    }
-
-    have(thesis) by Tautology.from(fwd, bwd)
-  }
-  show
-
-  val initialSegmentUnionForSuccessorElementsIsIncomplete = Lemma(
-    totalOrder(p) /\ successorElement(p, x) |- in(pair(t, x), secondInPair(p)) <=> (predecessor(p, t, x) \/ exists(y, in(pair(t, y), secondInPair(p)) /\ in(pair(y, x), secondInPair(p))))
-  ) {
-    assume(totalOrder(p))
-    assume(successorElement(p, x))
-
-    val p1 = firstInPair(p)
-    val p2 = secondInPair(p)
-
-    val fwd = have(in(pair(t, x), p2) |- (predecessor(p, t, x) \/ exists(y, in(pair(t, y), p2) /\ in(pair(y, x), p2)))) subproof {
-      assume(in(pair(t, x), p2))
-
-      // t < x means t, x \in p1
-      val txInp1 = have(in(t, p1) /\ in(x, p1)) subproof {
-        have(relationBetween(p2, p1, p1)) by Tautology.from(totalOrder.definition, partialOrder.definition)
-        have(subset(p2, cartesianProduct(p1, p1))) by Tautology.from(lastStep, relationBetween.definition of (r -> p2, a -> p1, b -> p1))
-        have(forall(z, in(z, p2) ==> in(z, cartesianProduct(p1, p1)))) by Tautology.from(lastStep, subsetAxiom of (x -> p2, y -> cartesianProduct(p1, p1)))
-        thenHave(in(pair(t, x), cartesianProduct(p1, p1))) by InstantiateForall(pair(t, x))
-        have(thesis) by Tautology.from(lastStep, pairInCartesianProduct of (a -> t, b -> x, x -> p1, y -> p1))
-      }
-
-      have(predecessor(p, y, x) |- (predecessor(p, t, x) \/ exists(y, in(pair(t, y), secondInPair(p)) /\ in(pair(y, x), secondInPair(p))))) subproof {
-        assume(predecessor(p, y, x))
-
-        have(forall(z, !(in(pair(y, z), p2) /\ in(pair(z, x), p2)))) by Tautology.from(predecessor.definition of (x -> y, y -> x))
-        thenHave(!(in(pair(y, t), p2) /\ in(pair(t, x), p2))) by InstantiateForall(t)
-        val yNLTt = thenHave(!in(pair(y, t), p2)) by Tautology
-
-        have(forall(y, forall(t, (in(y, p1) /\ in(t, p1)) ==> (in(pair(y, t), p2) \/ in(pair(t, y), p2) \/ (y === t))))) by Tautology.from(
-          totalOrder.definition,
-          total.definition of (r -> p2, x -> p1)
-        )
-        thenHave((in(y, p1) /\ in(t, p1)) ==> (in(pair(y, t), p2) \/ in(pair(t, y), p2) \/ (y === t))) by InstantiateForall(y, t)
-        val cases = have(in(pair(t, y), p2) \/ (y === t)) by Tautology.from(lastStep, predecessor.definition of (x -> y, y -> x), txInp1, yNLTt)
-
-        val ltCase = have(in(pair(t, y), p2) |- (predecessor(p, t, x) \/ exists(y, in(pair(t, y), p2) /\ in(pair(y, x), p2)))) subproof {
-          have(in(pair(t, y), p2) |- in(pair(t, y), p2) /\ in(pair(y, x), p2)) by Tautology.from(predecessor.definition of (x -> y, y -> x))
-          thenHave(in(pair(t, y), p2) |- exists(y, in(pair(t, y), p2) /\ in(pair(y, x), p2))) by RightExists
-          thenHave(thesis) by Weakening
-        }
-
-        val eqCase = have((y === t) |- (predecessor(p, t, x) \/ exists(y, in(pair(t, y), p2) /\ in(pair(y, x), p2)))) subproof {
-          have(predecessor(p, y, x)) by Restate
-          thenHave((y === t) |- predecessor(p, t, x)) by Substitution.ApplyRules(y === t)
-          thenHave(thesis) by Weakening
-        }
-
-        have(thesis) by Tautology.from(cases, ltCase, eqCase)
-      }
-
-      thenHave(exists(y, predecessor(p, y, x)) |- (predecessor(p, t, x) \/ exists(y, in(pair(t, y), secondInPair(p)) /\ in(pair(y, x), secondInPair(p))))) by LeftExists
-      have(thesis) by Tautology.from(lastStep, successorElement.definition)
-    }
-
-    val bwd = have((predecessor(p, t, x) \/ exists(y, in(pair(t, y), p2) /\ in(pair(y, x), p2))) |- in(pair(t, x), p2)) subproof {
-      val predCase = have(predecessor(p, t, x) |- in(pair(t, x), p2)) by Tautology.from(predecessor.definition of (x -> t, y -> x))
-      have(in(pair(t, y), p2) /\ in(pair(y, x), p2) |- in(pair(t, x), p2)) subproof {
-        // transitivity of p
-        have(forall(t, forall(y, forall(x, (in(pair(t, y), p2) /\ in(pair(y, x), p2)) ==> in(pair(t, x), p2))))) by Tautology.from(
-          totalOrder.definition,
-          partialOrder.definition,
-          transitive.definition of (r -> p2, x -> p1)
-        )
-        thenHave(thesis) by InstantiateForall(t, y, x)
-      }
-      thenHave(exists(y, in(pair(t, y), p2) /\ in(pair(y, x), p2)) |- in(pair(t, x), p2)) by LeftExists
-
-      have(thesis) by LeftOr(lastStep, predCase)
-    }
-
-    have(thesis) by Tautology.from(fwd, bwd)
-  }
-  show
-
-  /**
-   * Properties of functions under partial orders
-   */
-
-  /**
-   * Order Preserving Function --- a function `f` between `P` and `Q` such that
-   * `p = (P, <_p)` and `q = (Q, <_q)` are partially ordered is order-preserving
-   * if
+   * Theorem --- A strict partial order is irreflexive
    *
-   * `∀ x y. x <_p y ⟹ f(x) <_q f(y)`
+   *   `strictPartialOrder(r, x) ⊢ irreflexive(r, x)`
    */
-  val orderPreserving = DEF(f, p, q) --> partialOrder(p) /\ partialOrder(q) /\ functionFrom(f, firstInPair(p), firstInPair(q)) /\ ∀(
-    x,
-    ∀(y, in(pair(x, y), secondInPair(p)) ==> in(pair(app(f, x), app(f, y)), secondInPair(q)))
-  )
-
-  /**
-   * Increasing Function --- an order preserving function ([[orderPreserving]])
-   * between two partially ordered sets is increasing if the two sets are
-   * linearly ordered ([[totalOrder]]).
-   */
-  val increasing = DEF(f, p, q) --> totalOrder(p) /\ totalOrder(q) /\ orderPreserving(f, p, q)
-
-  /**
-   * Isomorphism of Partially Ordered Sets --- a function `f` is an isomorphism
-   * between two partially ordered sets `p = (P, <_p)` and `q = (Q, <_q)` if it
-   * is an [[injective]] function from `P` to `Q`, and both `f` and `f^-1` are
-   * [[orderPreserving]].
-   */
-  // val isomorphismOfPartialOrders = DEF (f, p, q) --> injective(f, firstInPair(p), firstInPair(q)) /\ orderPreserving(f, p, q) /\ orderPreserving(inverseFunction(f), p, q)
-
-  private val pA = variable // order
-  private val pB = variable // order
-  val orderIsomorphism = DEF(pA, pB, f) --> {
-    val A = firstInPair(pA)
-    val B = firstInPair(pB)
-    val `<A` = secondInPair(pA)
-    val `<B` = secondInPair(pB)
-    partialOrder(pA) /\ partialOrder(pB) /\ bijective(f, A, B) /\
-      ∀(
-        x,
-        in(x, A) ==> ∀(
-          y,
-          in(y, A) ==>
-            (in(pair(x, y), `<A`) <=> in(pair(app(f, x), app(f, y)), `<B`)) // f(x) <B f(y)
-        )
-      )
+  val strictPartialOrderIrreflexive = Lemma(
+    strictPartialOrder(r, x) |- irreflexive(r, x)
+  ) {
+    have(thesis) by Weakening(strictPartialOrder.definition)
   }
 
-  val partialOrderSubset = Lemma(
-    partialOrder(p) /\ subset(c, firstInPair(p)) /\ subset(d, secondInPair(p)) |- partialOrder(pair(c, d))
+  /**
+   * Theorem --- A strict partial order is transitive
+   *
+   *   `strictPartialOrder(r, x) ⊢ transitive(r, x)`
+   */
+  val strictPartialOrderTransitive = Lemma(
+    strictPartialOrder(r, x) |- transitive(r, x)
   ) {
-    assume(partialOrder(p))
-    assume(subset(c, firstInPair(p)))
-    assume(subset(d, secondInPair(p)))
+    have(thesis) by Weakening(strictPartialOrder.definition)
+  }
 
+  /**
+   * Theorem --- A strict partial order is a relation
+   *
+   *   `strictPartialOrder(r, x) ⊢ relationBetween(r, x, x)`
+   */
+  val strictPartialOrderIsRelation = Lemma(
+    strictPartialOrder(r, x) |- relationBetween(r, x, x)
+  ) {
+    have(thesis) by Cut(strictPartialOrderIrreflexive, antiReflexiveRelationIsRelation)
+  }
+
+  /**
+   * Theorem --- The empty relation is a strict partial order on any set
+   *
+   *   `strictPartialOrder(∅, x)`
+   */
+  val emptyStrictPartialOrder = Lemma(
+    strictPartialOrder(emptySet, x)
+  ) {
+    have((transitive(emptySet, x)) |- strictPartialOrder(emptySet, x)) by Cut(emptyRelationIrreflexive of (a := x), strictPartialOrderIntro of (r -> emptySet))
+    have(thesis) by Cut(emptyRelationTransitive of (a := x), lastStep)
+  }
+
+  /**
+   * Theorem --- The empty relation is a strict partial order on the empty set
+   *
+   *   `strictPartialOrder(∅, ∅)`
+   */
+  val emptySetStrictPartialOrder = Lemma(
+    strictPartialOrder(emptySet, emptySet)
+  ) {
+    have(thesis) by Restate.from(emptyStrictPartialOrder of (x := emptySet))
+  }
+
+  /**
+   * Theorem --- The restriction of a strict partial order remains a strict partial order
+   *
+   *   `strictPartialOrder(r, x), y ⊆ x |- strictPartialOrder(relationRestriction(r, y, y), y)`
+   */
+  val relationRestrictionStrictPartialOrder = Lemma(
+    (strictPartialOrder(r, x), subset(y, x)) |- strictPartialOrder(relationRestriction(r, y, y), y)
+  ) {
+    have((irreflexive(r, x), transitive(relationRestriction(r, y, y), y), subset(y, x)) |- strictPartialOrder(relationRestriction(r, y, y), y)) by
+      Cut(relationRestrictionIrreflexive, strictPartialOrderIntro of (r := relationRestriction(r, y, y), x := y))
+    have((irreflexive(r, x), transitive(r, x), subset(y, x)) |- strictPartialOrder(relationRestriction(r, y, y), y)) by
+      Cut(relationRestrictionTransitive, lastStep)
+    have((strictPartialOrder(r, x), transitive(r, x), subset(y, x)) |- strictPartialOrder(relationRestriction(r, y, y), y)) by
+      Cut(strictPartialOrderIrreflexive, lastStep)
+    have(thesis) by Cut(strictPartialOrderTransitive, lastStep)
+  }
+
+  /**
+   * Definition --- Least Element of a Set in a Strict Partial Order
+   *
+   * An element is a least element of a subset of a strict partial order if it is in the subset and is below all other elements
+   * that belong to the subset.
+   *
+   *   `strictPartialOrder(r, x) ∧ y ⊆ x ∧ a ∈ y ∧ (∀ b ∈ y. (a, b) ∈ r ∨ a = b)`
+   */
+  val isLeastElement = DEF(a, y, r, x) --> strictPartialOrder(r, x) /\ subset(y, x) /\ in(a, y) /\ ∀(b, in(b, y) ==> (in(pair(a, b), r) \/ (a === b)))
+
+  /**
+   * Theorem --- Least element introduction rule
+   *
+   *   `strictPartialOrder(r, x), y ⊆ x, a ∈ y, ∀ b ∈ y. (a, b) ∈ r ∨ a = b ⊢ isLeastElement(a, y, r, x)`
+   */
+  val isLeastElementIntro = Lemma((strictPartialOrder(r, x), subset(y, x), in(a, y), forall(b, in(b, y) ==> (in(pair(a, b), r) \/ (a === b)))) |- isLeastElement(a, y, r, x)) {
+    have(thesis) by Weakening(isLeastElement.definition)
+  }
+
+  /**
+   * Theorem --- Least element elimination rule
+   *
+   *   `isLeastElement(a, y, r, x), b ∈ y ⊢ (a, b) ∈ r ∨ a = b`
+   */
+  val isLeastElementElim = Lemma((isLeastElement(a, y, r, x), in(b, y)) |- in(pair(a, b), r) \/ (a === b)) {
+    have(isLeastElement(a, y, r, x) |- forall(b, in(b, y) ==> (in(pair(a, b), r) \/ (a === b)))) by Weakening(isLeastElement.definition)
+    thenHave(thesis) by InstantiateForall(b)
+  }
+
+  /**
+   * Theorem --- The least element of a subset is in the subset
+   *
+   *   `isLeastElement(a, y, r, x) ⊢ a ∈ y`
+   */
+  val isLeastElementInSubset = Lemma(isLeastElement(a, y, r, x) |- in(a, y)) {
+    have(isLeastElement(a, y, r, x) |- in(a, y)) by Weakening(isLeastElement.definition)
+  }
+
+  /**
+   * Theorem --- The least element of a subset is in a subset of the domain
+   *
+   *   `isLeastElement(a, y, r, x) ⊢ y ⊆ x`
+   */
+  val isLeastElementInducesSubset = Lemma(isLeastElement(a, y, r, x) |- subset(y, x)) {
+    have(isLeastElement(a, y, r, x) |- subset(y, x)) by Weakening(isLeastElement.definition)
+  }
+
+  /**
+   * Theorem --- The least element of a subset is in the domain of the relation
+   *
+   *   `isLeastElement(a, y, r, x) ⊢ a ∈ x`
+   */
+  val isLeastElementInDomain = Lemma(isLeastElement(a, y, r, x) |- in(a, x)) {
+    have((isLeastElement(a, y, r, x), subset(y, x)) |- in(a, x)) by Cut(isLeastElementInSubset, subsetElim of (z := a, x := y, y := x))
+    have(thesis) by Cut(isLeastElementInducesSubset, lastStep)
+  }
+
+  /**
+   * Theorem --- The least element of a subset in a strict partial order makes sense in a strict partial order only
+   *
+   *  `isLeastElement(a, y, r, x) ⊢ strictPartialOrder(r, x)`
+   */
+  val isLeastElementInStrictPartialOrder = Lemma(isLeastElement(a, y, r, x) |- strictPartialOrder(r, x)) {
+    have(isLeastElement(a, y, r, x) |- strictPartialOrder(r, x)) by Weakening(isLeastElement.definition)
+  }
+
+  /**
+    * Theorem --- An element that is below the least element of a subset is not in the subset
+    * 
+    *   `isLeastElement(a, y, r, x), (a, b) ∈ r ⊢ b ∉ y`
+    */
+  val belowLeastElement = Lemma((isLeastElement(a, y, r, x), in(pair(b, a), r)) |- !in(b, y)) {
     sorry
   }
+
+  /**
+   * Theorem --- Least elements are preserved under relation restriction
+   *
+   *   `isLeastElement(a, z, r, x), z ⊆ y ⊆ x |- isLeastElement(a, z, relationRestriction(r, y, y), y)`
+   */
+  val relationRestrictionLeastElement = Lemma(
+    (isLeastElement(a, z, r, x), subset(z, y), subset(y, x)) |- isLeastElement(a, z, relationRestriction(r, y, y), y)
+  ) {
+    have((in(pair(a, b), r) \/ (a === b), in(a, y), in(b, y)) |- in(pair(a, b), relationRestriction(r, y, y)) \/ (a === b)) by Tautology.from(relationRestrictionIntro of (x := y))
+    have((isLeastElement(a, z, r, x), in(b, z), in(a, y), in(b, y)) |- in(pair(a, b), relationRestriction(r, y, y)) \/ (a === b)) by Cut(isLeastElementElim of (y := z), lastStep)
+    have((isLeastElement(a, z, r, x), subset(z, y), in(a, y), in(b, z)) |- in(pair(a, b), relationRestriction(r, y, y)) \/ (a === b)) by Cut(subsetElim of (z := b, x := z), lastStep)
+    have((isLeastElement(a, z, r, x), subset(z, y), in(a, z), in(b, z)) |- in(pair(a, b), relationRestriction(r, y, y)) \/ (a === b)) by Cut(subsetElim of (z := a, x := z), lastStep)
+    have((isLeastElement(a, z, r, x), subset(z, y), in(b, z)) |- in(pair(a, b), relationRestriction(r, y, y)) \/ (a === b)) by Cut(isLeastElementInSubset of (y := z), lastStep)
+    thenHave((isLeastElement(a, z, r, x), subset(z, y)) |- in(b, z) ==> (in(pair(a, b), relationRestriction(r, y, y)) \/ (a === b))) by RightImplies
+    thenHave((isLeastElement(a, z, r, x), subset(z, y)) |- forall(b, in(b, z) ==> (in(pair(a, b), relationRestriction(r, y, y)) \/ (a === b)))) by RightForall
+    have((isLeastElement(a, z, r, x), strictPartialOrder(relationRestriction(r, y, y), y), subset(z, y), in(a, z)) |- isLeastElement(a, z, relationRestriction(r, y, y), y)) by Cut(
+      lastStep,
+      isLeastElementIntro of (r := relationRestriction(r, y, y), x := y, y := z)
+    )
+    have((isLeastElement(a, z, r, x), strictPartialOrder(relationRestriction(r, y, y), y), subset(z, y)) |- isLeastElement(a, z, relationRestriction(r, y, y), y)) by Cut(
+      isLeastElementInSubset of (y := z),
+      lastStep
+    )
+    have((isLeastElement(a, z, r, x), strictPartialOrder(r, x), subset(y, x), subset(z, y)) |- isLeastElement(a, z, relationRestriction(r, y, y), y)) by Cut(
+      relationRestrictionStrictPartialOrder,
+      lastStep
+    )
+    have(thesis) by Cut(isLeastElementInStrictPartialOrder of (y := z), lastStep)
+  }
+
+  /**
+   * Definition --- Strict Total Order
+   *
+   * A strict total order is a strict partial order that is connected.
+   */
+  val strictTotalOrder = DEF(r, x) --> strictPartialOrder(r, x) /\ connected(r, x)
+
+  /**
+   * Theorem --- Strict total order introduction rule
+   *
+   *   `strictPartialOrder(r, x), connected(r, x) ⊢ strictTotalOrder(r, x)`
+   */
+  val strictTotalOrderIntro = Lemma((strictPartialOrder(r, x), connected(r, x)) |- strictTotalOrder(r, x)) {
+    have(thesis) by Weakening(strictTotalOrder.definition)
+  }
+
+  /**
+   * Theorem --- A strict total order is a strict partial order
+   *
+   *   `strictTotalOrder(r, x) ⊢ strictPartialOrder(r, x)`
+   */
+  val strictTotalOrderIsPartial = Lemma(
+    strictTotalOrder(r, x) |- strictPartialOrder(r, x)
+  ) {
+    have(thesis) by Weakening(strictTotalOrder.definition)
+  }
+
+  /**
+   * Theorem --- A strict total order is irreflexive
+   *
+   *   `strictTotalOrder(r, x) ⊢ irreflexive(r, x)`
+   */
+  val strictTotalOrderIrreflexive = Lemma(
+    strictTotalOrder(r, x) |- irreflexive(r, x)
+  ) {
+    have(thesis) by Cut(strictTotalOrderIsPartial, strictPartialOrderIrreflexive)
+  }
+
+  /**
+   * Theorem --- A strict total order is transitive
+   *
+   *   `strictTotalOrder(r, x) ⊢ transitive(r, x)`
+   */
+  val strictTotalOrderTransitive = Lemma(
+    strictTotalOrder(r, x) |- transitive(r, x)
+  ) {
+    have(thesis) by Cut(strictTotalOrderIsPartial, strictPartialOrderTransitive)
+  }
+
+  /**
+   * Theorem --- A strict total order is connected
+   *
+   *   `strictTotalOrder(r, x) ⊢ connected(r, x)`
+   */
+  val strictTotalOrderConnected = Lemma(
+    strictTotalOrder(r, x) |- connected(r, x)
+  ) {
+    have(thesis) by Weakening(strictTotalOrder.definition)
+  }
+
+  /**
+   * Theorem --- A strict total order is a relation
+   *
+   *   `strictTotalOrder(r, x) ⊢ relationBetween(r, x, x)`
+   */
+  val strictTotalOrderIsRelation = Lemma(
+    strictTotalOrder(r, x) |- relationBetween(r, x, x)
+  ) {
+    have(thesis) by Cut(strictTotalOrderIsPartial, strictPartialOrderIsRelation)
+  }
+
+  /**
+   * Theorem --- The empty relation is a strict total order on the empty set
+   *
+   *   `strictTotalOrder(∅, ∅)`
+   */
+  val emptySetStrictTotalOrder = Lemma(
+    strictTotalOrder(emptySet, emptySet)
+  ) {
+    have(total(emptySet, emptySet) |- strictTotalOrder(emptySet, emptySet)) by Cut(emptySetStrictPartialOrder, strictTotalOrderIntro of (r -> emptySet, x -> emptySet))
+    have(thesis) by Cut(emptyRelationTotalOnItself, lastStep)
+  }
+
+  /**
+   * Theorem --- The restriction of a strict total order remains a strict total order
+   *
+   *   `strictTotalOrder(r, x), y ⊆ x |- strictTotalOrder(relationRestriction(r, y, y), y)`
+   */
+  val relationRestrictionStrictTotalOrder = Lemma(
+    (strictTotalOrder(r, x), subset(y, x)) |- strictTotalOrder(relationRestriction(r, y, y), y)
+  ) {
+    have((strictPartialOrder(r, x), connected(relationRestriction(r, y, y), y), subset(y, x)) |- strictTotalOrder(relationRestriction(r, y, y), y)) by
+      Cut(relationRestrictionStrictPartialOrder, strictTotalOrderIntro of (r := relationRestriction(r, y, y), x := y))
+    have((strictPartialOrder(r, x), connected(r, x), subset(y, x)) |- strictTotalOrder(relationRestriction(r, y, y), y)) by
+      Cut(relationRestrictionConnected, lastStep)
+    have((strictTotalOrder(r, x), connected(r, x), subset(y, x)) |- strictTotalOrder(relationRestriction(r, y, y), y)) by
+      Cut(strictTotalOrderIsPartial, lastStep)
+    have(thesis) by Cut(strictTotalOrderConnected, lastStep)
+  }
+
+  /**
+   * Definition --- Predecessor
+   *
+   * An element is predecessor of another element in a strict partial order if the former is below the latter
+   * and if there is no element between them.
+   *
+   *   `strictTotalOrder(r, x) ∧ (a, b) ∈ r ∧ (∀ c. (a, c) ∉ r ∨ (c, b) ∉ r)`
+   */
+  val isPredecessor = DEF(a, b, r, x) --> strictTotalOrder(r, x) /\ in(pair(a, b), r) /\ forall(c, !in(pair(a, c), r) \/ !in(pair(c, b), r))
+
+  /**
+   * Theorem --- Predecessor introduction rule
+   *
+   *   `strictTotalOrder(r, x), (a, b) ∈ r, (∀ c. (a, c) ∉ r ∨ (c, b) ∉ r) ⊢ isPredecessor(a, b, r, x)`
+   */
+  val isPredecessorIntro = Lemma((strictTotalOrder(r, x), in(pair(a, b), r), forall(c, !in(pair(a, c), r) \/ !in(pair(c, b), r))) |- isPredecessor(a, b, r, x)) {
+    have(thesis) by Weakening(isPredecessor.definition)
+  }
+
+  /**
+   * Theorem --- Predecessor is below its successor
+   *
+   *   `isPredecessor(a, b, r, x) ⊢ in(pair(a, b), r)`
+   */
+  val isPredecessorBelow = Lemma(
+    isPredecessor(a, b, r, x) |- in(pair(a, b), r)
+  ) {
+    have(thesis) by Weakening(isPredecessor.definition)
+  }
+
+  /**
+   * Theorem --- Predecessor is in a strict total order
+   *
+   *   `isPredecessor(a, b, r, x) ⊢ strictTotalOrder(r, x)`
+   */
+  val isPredecessorInStrictTotalOrder = Lemma(
+    isPredecessor(a, b, r, x) |- strictTotalOrder(r, x)
+  ) {
+    have(thesis) by Weakening(isPredecessor.definition)
+  }
+
+  /**
+   * Definition --- Limit Element
+   *
+   * An element is a limit element in a strict total order if it is has no predecessor.
+   *
+   *    `strictTotalOrder(r, x) ∧ a ∈ x ∧ ¬∃ b. isPredecessor(b, a, r, x)`
+   */
+  val isLimitElement = DEF(a, r, x) --> strictTotalOrder(r, x) /\ in(a, x) /\ !exists(b, isPredecessor(b, a, r, x))
+
+  /**
+   * Definition --- Successor Element
+   *
+   * An element is a successor element in a strict total order if it has a predecessor.
+   *
+   *   `∃ b. isPredecessor(b, a, r, x)`
+   */
+  val isSuccessorElement = DEF(a, r, x) --> exists(b, isPredecessor(b, a, r, x))
+
+  /**
+   * Theorem --- Limit element introduction rule
+   *
+   *   `strictTotalOrder(r, x), a ∈ x, ∀ b. ¬isPredecessor(b, a, r, x) ⊢ isLimitElement(a, r, x)`
+   */
+  val isLimitElementIntro = Lemma((strictTotalOrder(r, x), in(a, x), forall(b, !isPredecessor(b, a, r, x))) |- isLimitElement(a, r, x)) {
+    have(thesis) by Weakening(isLimitElement.definition)
+  }
+
+  /**
+   * Theorem --- Limit element elimination rule
+   *
+   *   `isLimitElement(a, r, x) ⊢ ¬isPredecessor(b, a, r, x)`
+   */
+  val isLimitElementElim = Lemma(isLimitElement(a, r, x) |- !isPredecessor(b, a, r, x)) {
+    have(isLimitElement(a, r, x) |- forall(b, !isPredecessor(b, a, r, x))) by Weakening(isLimitElement.definition)
+    thenHave(thesis) by InstantiateForall(b)
+  }
+
+  /**
+   * Theorem --- Limit elements belong to strict total orders
+   *
+   *   `isLimitElement(a, r, x) ⊢ strictTotalOrder(r, x)`
+   */
+  val isLimitElementStrictTotalOrder = Lemma(isLimitElement(a, r, x) |- strictTotalOrder(r, x)) {
+    have(thesis) by Weakening(isLimitElement.definition)
+  }
+
+  /**
+   * Theorem --- Limit elements are defined within strict total orders
+   *
+   *   `isLimitElement(a, r, x) ⊢ strictTotalOrder(r, x) `
+   */
+  val isLimitElementImpliesStrictTotalOrder = Lemma(isLimitElement(a, r, x) |- strictTotalOrder(r, x)) {
+    have(thesis) by Weakening(isLimitElement.definition)
+  }
+
+  /**
+   * Theorem --- Limit elements are in the domain of strict total orders
+   *
+   *   `isLimitElement(a, r, x) ⊢ a ∈ x`
+   */
+  val isLimitElementImpliesInDomain = Lemma(isLimitElement(a, r, x) |- in(a, x)) {
+    have(thesis) by Weakening(isLimitElement.definition)
+  }
+
+  /**
+   * Theorem --- Successor element introduction rule
+   *
+   *   `isPredecessor(b, a, r, x) ⊢ isSuccessorElement(a, r, x)`
+   */
+  val isSuccessorElementIntro = Lemma(isPredecessor(b, a, r, x) |- isSuccessorElement(a, r, x)) {
+    have(isPredecessor(b, a, r, x) |- isPredecessor(b, a, r, x)) by Hypothesis
+    thenHave(isPredecessor(b, a, r, x) |- exists(b, isPredecessor(b, a, r, x))) by RightExists
+    thenHave(thesis) by Substitution.ApplyRules(isSuccessorElement.definition)
+  }
+
+  val isSuccessorElementElim = Lemma(isLimitElement(a, r, x) |- !isPredecessor(b, a, r, x)) {
+    have(isLimitElement(a, r, x) |- forall(b, !isPredecessor(b, a, r, x))) by Weakening(isLimitElement.definition)
+    thenHave(thesis) by InstantiateForall(b)
+  }
+
+  /**
+   * Theorem --- Elements of strict total orders are either limit or successors
+   *
+   *   `strictTotalOrder(r, x), a ∈ x ⊢ isLimitElement(a, r, x) ∨ isSuccessorElement(a, r, x)`
+   */
+  val everyElemInStrictTotalOrderLimitOrSuccessor = Lemma(
+    (strictTotalOrder(r, x), in(a, x)) |- isLimitElement(a, r, x) \/ isSuccessorElement(a, r, x)
+  ) {
+    have((strictTotalOrder(r, x), in(a, x)) |- (strictTotalOrder(r, x) /\ in(a, x) /\ !exists(b, isPredecessor(b, a, r, x))) \/ exists(b, isPredecessor(b, a, r, x))) by Restate
+    thenHave((strictTotalOrder(r, x), in(a, x)) |- isLimitElement(a, r, x) \/ exists(b, isPredecessor(b, a, r, x))) by Substitution.ApplyRules(isLimitElement.definition)
+    thenHave(thesis) by Substitution.ApplyRules(isSuccessorElement.definition)
+  }
+
+  /**
+   * Theorem --- There is always an element between a limit element and any other element
+   *
+   *   `isLimitElement(a, r, x), (c, a) ∈ r ⊢ ∃ b. (c, b) ∈ r ∧ (b, a) ∈ r`
+   */
+  val belowLimitElement = Lemma(
+    (isLimitElement(a, r, x), in(pair(c, a), r)) |- exists(b, in(pair(c, b), r) /\ in(pair(b, a), r))
+  ) {
+    have((isLimitElement(a, r, x), in(pair(c, a), r), forall(b, !in(pair(c, b), r) \/ !in(pair(b, a), r))) |- isPredecessor(c, a, r, x)) by Cut(
+      isLimitElementStrictTotalOrder,
+      isPredecessorIntro of (a -> c, b -> a)
+    )
+    have((isLimitElement(a, r, x), in(pair(c, a), r), forall(b, !in(pair(c, b), r) \/ !in(pair(b, a), r))) |- isPredecessor(c, a, r, x) /\ !isPredecessor(c, a, r, x)) by RightAnd(
+      lastStep,
+      isLimitElementElim of (b -> c)
+    )
+  }
+
+  /**
+   * Definition --- Strict Well-Order
+   *
+   * A strict well-order is a strict total order where every non-empty subset has a least element.
+   *
+   *   `strictTotalOrder(r, x) ∧ ∀ ∅ ≠ y ⊆ x. ∃ a. isLeastElement(a, y, r, x)`
+   */
+  val strictWellOrder = DEF(r, x) -->
+    strictTotalOrder(r, x) /\ forall(y, (subset(y, x) /\ !(y === emptySet)) ==> exists(a, isLeastElement(a, y, r, x)))
+
+  /**
+   * Theorem --- Strict well-order introduction rule
+   *
+   *  `strictTotalOrder(r, x), ∀ ∅ ≠ y ⊆ x. ∃ a. isLeastElement(a, y, r, x) ⊢ strictWellOrder(r, x)`
+   */
+  val strictWellOrderIntro = Lemma(
+    (strictTotalOrder(r, x), forall(y, (subset(y, x) /\ !(y === emptySet)) ==> exists(a, isLeastElement(a, y, r, x)))) |- strictWellOrder(r, x)
+  ) {
+    have(thesis) by Weakening(strictWellOrder.definition)
+  }
+
+  /**
+   * Theorem --- Strict well-order elimination rule
+   *
+   *   `strictWellOrder(r, x), y ⊆ x, y ≠ ∅ ⊢ ∃ a. isLeastElement(a, y, r, x)`
+   */
+  val strictWellOrderElim = Lemma(
+    (strictWellOrder(r, x), subset(y, x), !(y === emptySet)) |- exists(a, isLeastElement(a, y, r, x))
+  ) {
+    have(strictWellOrder(r, x) |- forall(y, (subset(y, x) /\ !(y === emptySet)) ==> exists(a, isLeastElement(a, y, r, x)))) by Weakening(strictWellOrder.definition)
+    thenHave(thesis) by InstantiateForall(y)
+  }
+
+  /**
+   * Theorem --- A strict well-order is a strict total order
+   *
+   *   `strictWellOrder(r, x) ⊢ strictTotalOrder(r, x)`
+   */
+  val strictWellOrderTotal = Lemma(
+    strictWellOrder(r, x) |- strictTotalOrder(r, x)
+  ) {
+    have(thesis) by Weakening(strictWellOrder.definition)
+  }
+
+  /**
+   * Theorem --- A strict well-order is irreflexive
+   *
+   *   `strictWellOrder(r, x) ⊢ irreflexive(r, x)`
+   */
+
+  val strictWellOrderIrreflexive = Lemma(
+    strictWellOrder(r, x) |- irreflexive(r, x)
+  ) {
+    have(thesis) by Cut(strictWellOrderTotal, strictTotalOrderIrreflexive)
+  }
+
+  /**
+   * Theorem --- A strict well-order is transitive
+   *
+   *  `strictWellOrder(r, x) ⊢ transitive(r, x)`
+   */
+  val strictWellOrderTransitive = Lemma(
+    strictWellOrder(r, x) |- transitive(r, x)
+  ) {
+    have(thesis) by Cut(strictWellOrderTotal, strictTotalOrderTransitive)
+  }
+
+  /**
+   * Theorem --- A strict well-order is connected
+   *
+   *   `strictWellOrder(r, x) ⊢ connected(r, x)`
+   */
+  val strictWellOrderConnected = Lemma(
+    strictWellOrder(r, x) |- connected(r, x)
+  ) {
+    have(thesis) by Cut(strictWellOrderTotal, strictTotalOrderConnected)
+  }
+
+  /**
+   * Theorem --- A strict well-order is a relation
+   *
+   *   `strictWellOrder(r, x) ⊢ relationBetween(r, x, x)`
+   */
+  val strictWellOrderIsRelation = Lemma(
+    strictWellOrder(r, x) |- relationBetween(r, x, x)
+  ) {
+    have(thesis) by Cut(strictWellOrderTotal, strictTotalOrderIsRelation)
+  }
+
+  /**
+   * Theorem --- the empty set is well ordered by the empty relation.
+   */
+  val emptyStrictWellOrder = Lemma(
+    strictWellOrder(emptySet, emptySet)
+  ) {
+    have((subset(y, emptySet) /\ !(y === emptySet)) ==> exists(a, isLeastElement(a, y, emptySet, emptySet))) by Weakening(emptySetIsItsOwnOnlySubset of (x := y))
+    thenHave(forall(y, (subset(y, emptySet) /\ !(y === emptySet)) ==> exists(a, isLeastElement(a, y, emptySet, emptySet)))) by RightForall
+    have(strictTotalOrder(emptySet, emptySet) |- strictWellOrder(emptySet, emptySet)) by Cut(lastStep, strictWellOrderIntro of (r -> emptySet, x -> emptySet))
+    have(thesis) by Cut(emptySetStrictTotalOrder, lastStep)
+  }
+
+  /**
+   * Theorem --- Strict well orders are preserved under relation restriction
+   *
+   *   `strictWellOrder(r, x), y ⊆ x |- strictWellOrder(relationRestriction(r, y, y), y)`
+   */
+  val relationRestrictionStrictWellOrder = Lemma(
+    (strictWellOrder(r, x), subset(y, x)) |- strictWellOrder(relationRestriction(r, y, y), y)
+  ) {
+    have((isLeastElement(a, z, r, x), subset(z, y), subset(y, x)) |- exists(a, isLeastElement(a, z, relationRestriction(r, y, y), y))) by RightExists(relationRestrictionLeastElement)
+    thenHave((exists(a, isLeastElement(a, z, r, x)), subset(z, y), subset(y, x)) |- exists(a, isLeastElement(a, z, relationRestriction(r, y, y), y))) by LeftExists
+    have((strictWellOrder(r, x), subset(z, x), !(z === emptySet), subset(z, y), subset(y, x)) |- exists(a, isLeastElement(a, z, relationRestriction(r, y, y), y))) by Cut(
+      strictWellOrderElim of (y := z),
+      lastStep
+    )
+    have((strictWellOrder(r, x), !(z === emptySet), subset(z, y), subset(y, x)) |- exists(a, isLeastElement(a, z, relationRestriction(r, y, y), y))) by Cut(
+      subsetTransitivity of (a := z, b := y, c := x),
+      lastStep
+    )
+    thenHave((strictWellOrder(r, x), subset(z, y) /\ !(z === emptySet), subset(y, x)) |- exists(a, isLeastElement(a, z, relationRestriction(r, y, y), y))) by LeftAnd
+    thenHave((strictWellOrder(r, x), subset(y, x)) |- (subset(z, y) /\ !(z === emptySet)) ==> exists(a, isLeastElement(a, z, relationRestriction(r, y, y), y))) by RightImplies
+    thenHave((strictWellOrder(r, x), subset(y, x)) |- forall(z, (subset(z, y) /\ !(z === emptySet)) ==> exists(a, isLeastElement(a, z, relationRestriction(r, y, y), y)))) by RightForall
+    have((strictWellOrder(r, x), subset(y, x), strictTotalOrder(relationRestriction(r, y, y), y)) |- strictWellOrder(relationRestriction(r, y, y), y)) by Cut(
+      lastStep,
+      strictWellOrderIntro of (r := relationRestriction(r, y, y), x := y)
+    )
+    have((strictWellOrder(r, x), subset(y, x), strictTotalOrder(r, x)) |- strictWellOrder(relationRestriction(r, y, y), y)) by Cut(relationRestrictionStrictTotalOrder, lastStep)
+    have(thesis) by Cut(strictWellOrderTotal, lastStep)
+  }
+
+  // /**
+  //  * Properties of functions under partial orders
+  //  */
+
+  val relationIsomorphism = DEF(f, r1, x, r2, y) --> bijective(f, x, y) /\ relationBetween(r1, x, x) /\ relationBetween(r2, y, y) /\
+    forall(a, forall(b, (in(a, x) /\ in(b, x)) ==> (in(pair(a, b), r1) <=> in(pair(app(f, a), app(f, b)), r2))))
+
+  val relationIsomorphismIntro = Lemma(
+    (
+      bijective(f, x, y),
+      relationBetween(r1, x, x),
+      relationBetween(r2, y, y),
+      forall(a, forall(b, (in(a, x) /\ in(b, x)) ==> (in(pair(a, b), r1) <=> in(pair(app(f, a), app(f, b)), r2))))
+    ) |- relationIsomorphism(f, r1, x, r2, y)
+  ) {
+    have(thesis) by Weakening(relationIsomorphism.definition)
+  }
+
+  val relationIsomorphismBijective = Lemma(relationIsomorphism(f, r1, x, r2, y) |- bijective(f, x, y)) {
+    have(thesis) by Weakening(relationIsomorphism.definition)
+  }
+
+  val relationIsmorphismDomainIsRelation = Lemma(relationIsomorphism(f, r1, x, r2, y) |- relationBetween(r1, x, x)) {
+    have(thesis) by Weakening(relationIsomorphism.definition)
+  }
+
+  val relationIsomorphismElim = Lemma((relationIsomorphism(f, r1, x, r2, y), in(a, x), in(b, x)) |- in(pair(a, b), r1) <=> in(pair(app(f, a), app(f, b)), r2)) {
+    have(relationIsomorphism(f, r1, x, r2, y) |- forall(a, forall(b, (in(a, x) /\ in(b, x)) ==> (in(pair(a, b), r1) <=> in(pair(app(f, a), app(f, b)), r2))))) by Weakening(
+      relationIsomorphism.definition
+    )
+    thenHave(relationIsomorphism(f, r1, x, r2, y) |- forall(b, (in(a, x) /\ in(b, x)) ==> (in(pair(a, b), r1) <=> in(pair(app(f, a), app(f, b)), r2)))) by InstantiateForall(a)
+    thenHave(thesis) by InstantiateForall(b)
+  }
+
+  val relationIsomorphismElimForward = Lemma((relationIsomorphism(f, r1, x, r2, y), in(pair(a, b), r1)) |- in(pair(app(f, a), app(f, b)), r2)) {
+    have((relationIsomorphism(f, r1, x, r2, y), in(a, x), in(b, x), in(pair(a, b), r1)) |- in(pair(app(f, a), app(f, b)), r2)) by Weakening(relationIsomorphismElim)
+    thenHave((relationIsomorphism(f, r1, x, r2, y), in(a, x) /\ in(b, x), in(pair(a, b), r1)) |- in(pair(app(f, a), app(f, b)), r2)) by LeftAnd
+    have((relationIsomorphism(f, r1, x, r2, y), relationBetween(r1, x, x), in(pair(a, b), r1)) |- in(pair(app(f, a), app(f, b)), r2)) by Cut(
+      relationBetweenElimPair of (r := r1, x := a, y := b, a := x, b := x),
+      lastStep
+    )
+    have(thesis) by Cut(relationIsmorphismDomainIsRelation, lastStep)
+  }
+
+  val relationIsomorphismElimBackward = Lemma((relationIsomorphism(f, r1, x, r2, y), in(a, x), in(b, x), in(pair(app(f, a), app(f, b)), r2)) |- in(pair(a, b), r1)) {
+    have(thesis) by Weakening(relationIsomorphismElim)
+  }
+
+  val strictWellOrderIsomorphismIntro = Lemma(
+    (
+      bijective(f, x, y),
+      strictWellOrder(r1, x),
+      strictWellOrder(r2, y),
+      forall(a, forall(b, (in(a, x) /\ in(b, x)) ==> (in(pair(a, b), r1) <=> in(pair(app(f, a), app(f, b)), r2))))
+    ) |- relationIsomorphism(f, r1, x, r2, y)
+  ) {
+    have(
+      (
+        bijective(f, x, y),
+        strictWellOrder(r1, x),
+        relationBetween(r2, y, y),
+        forall(a, forall(b, (in(a, x) /\ in(b, x)) ==> (in(pair(a, b), r1) <=> in(pair(app(f, a), app(f, b)), r2))))
+      ) |- relationIsomorphism(f, r1, x, r2, y)
+    ) by Cut(strictWellOrderIsRelation of (r := r1), relationIsomorphismIntro)
+    have(thesis) by Cut(strictWellOrderIsRelation of (r := r2, x := y), lastStep)
+  }
+
+  val relationIsomorphismAppInCodomain = Lemma(
+    (relationIsomorphism(f, r1, x, r2, y), in(a, x)) |- in(app(f, a), y)
+  ) {
+    have(relationIsomorphism(f, r1, x, r2, y) |- functionFrom(f, x, y)) by Cut(relationIsomorphismBijective, bijectiveIsFunction)
+    have(thesis) by Cut(lastStep, functionFromAppInCodomain)
+  }
+
+  // val inverseRelationIsomorphismIsIsomorphism = Lemma(
+    
+  // ) {
+  //   have((in(a, y), in(b, y)) |- (in(pair(a, b), r2) <=> in(pair(app(inverseRelation(f), a), app(inverseRelation(f), b)), r1)))
+  // }
 }

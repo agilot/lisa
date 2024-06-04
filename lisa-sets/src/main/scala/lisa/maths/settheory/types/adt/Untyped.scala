@@ -16,12 +16,14 @@ import Helpers.*
 import Helpers.{/\, \/, ===}
 import ADTDefinitions.*
 import ADTHelperTheorems as ADTThm
-import ADTThm.{N, pair, pairExtensionality, successorOrdinal}
+import ADTThm.{N, successorOrdinal}
 import lisa.maths.settheory.types.TypeLib.{ |=>}
 import lisa.maths.settheory.types.TypeSystem.{ :: }
-import lisa.maths.Quantifiers.{universalEquivalenceDistribution}
+import lisa.maths.Quantifiers.{universalEquivalenceDistribution, equalityTransitivity}
 import lisa.fol.FOL.Variable
 import lisa.maths.settheory.types.TypeLib.funcspaceAxiom
+import lisa.maths.settheory.orderings.Ordinals.{successor}
+import lisa.maths.settheory.orderings.Ordinals
 
 /**
  * Helpers for constructors
@@ -183,14 +185,10 @@ private class SyntacticConstructor(
             val subsubterm2 = subterm(updatedRemainingVars2)
 
             have(
-              (pair(v1, subsubterm1) === pair(v2, subsubterm2)) <=>
-                ((v1 === v2) /\ (subsubterm1 === subsubterm2))
-            ) by Restate.from(pairExtensionality of (a := v1, b := subsubterm1, c := v2, d := subsubterm2))
-            have(
               ((pulledVars1 === pulledVars2) /\ (pair(v1, subsubterm1) === pair(v2, subsubterm2))) <=>
                 ((pulledVars1 === pulledVars2) /\ (v1 === v2) /\ (subsubterm1 === subsubterm2))
             ) by Cut(
-              lastStep,
+              pairExtensionality of (a := v1, b := subsubterm1, c := v2, d := subsubterm2),
               ADTThm.rightAndEquivalence of (p := pulledVars1 === pulledVars2, p1 := pair(v1, subsubterm1) === pair(v2, subsubterm2), p2 := (v1 === v2) /\ (subsubterm1 === subsubterm2))
             )
             val newFact = have(
@@ -279,7 +277,7 @@ private class SyntacticADT[N <: Arity](using line: sourcecode.Line, file: source
         val chainInjectivity = thenHave(!(toTerm(maxTag - minTag) === emptySet) |- !(tagTerm1 === tagTerm2)) by Restate
 
         // STEP 1.3: Conclude using the fact that 0 is not the successor of any number
-        have(!(toTerm(maxTag - minTag) === emptySet)) by Exact(ADTThm.zeroIsNotSucc)
+        have(!(toTerm(maxTag - minTag) === emptySet)) by Exact(Ordinals.successorNonEmpty)
         have(thesis) by Cut(lastStep, chainInjectivity)
       }
 
@@ -373,10 +371,10 @@ private class SyntacticADT[N <: Arity](using line: sourcecode.Line, file: source
           val andSeq =
             for (v, ty) <- c.signature2 yield 
               ty match
-                case Self => have((subsetST, varsWellTypedS) |- in(v, t)) by Weakening(ADTThm.subsetAxiomForward of (x := s, y := t, z := v))
+                case Self => have((subsetST, varsWellTypedS) |- in(v, t)) by Weakening(subsetElim of (x := s, y := t, z := v))
                 case GroundType(term) => have((subsetST, varsWellTypedS) |- in(v, term)) by Restate
                 case f: FunctionType =>
-                  have((subsetST, in(v, f.getOrElse(s))) |- in(v, f.getOrElse(t))) by Cut(f.monotonicity of (y := s, z := t), ADTThm.subsetAxiomForward of (x := f.getOrElse(s), y := f.getOrElse(t), z := v))
+                  have((subsetST, in(v, f.getOrElse(s))) |- in(v, f.getOrElse(t))) by Cut(f.monotonicity of (y := s, z := t), subsetElim of (x := f.getOrElse(s), y := f.getOrElse(t), z := v))
                   thenHave((subsetST, varsWellTypedS) |- in(v, f.getOrElse(t))) by Weakening
               
               
@@ -574,8 +572,7 @@ private class SyntacticADT[N <: Arity](using line: sourcecode.Line, file: source
 
       // STEP 1.1 : Forward implication
       have(forall(h, hIsTheHeightFunction ==> in(x, unionRange(h))) |- forall(h, hIsTheHeightFunction ==> in(x, unionRange(h)))) by Hypothesis
-      thenHave(forall(h, hIsTheHeightFunction ==> in(x, unionRange(h))) |- hIsTheHeightFunction ==> in(x, unionRange(h))) by InstantiateForall(h)
-      thenHave((forall(h, hIsTheHeightFunction ==> in(x, unionRange(h))), hIsTheHeightFunction) |- in(x, unionRange(h))) by Restate
+      thenHave((forall(h, hIsTheHeightFunction ==> in(x, unionRange(h))), hIsTheHeightFunction) |- in(x, unionRange(h))) by InstantiateForall(h)
       have((hIsTheHeightFunction, in(x, term)) |- in(x, unionRange(h))) by Cut(termDescrForward, lastStep)
       val forward = thenHave(hIsTheHeightFunction |- in(x, term) ==> in(x, unionRange(h))) by RightImplies
 
@@ -628,7 +625,7 @@ private class SyntacticADT[N <: Arity](using line: sourcecode.Line, file: source
   private val heightSubsetTerm = benchmark(Lemma((hIsTheHeightFunction, in(n, N)) |- subset(app(h, n), term)) {
     have((hIsTheHeightFunction, in(n, N)) |- in(x, app(h, n)) ==> in(x, term)) by RightImplies(termHasHeightBackward)
     thenHave((hIsTheHeightFunction, in(n, N)) |- forall(x, in(x, app(h, n)) ==> in(x, term))) by RightForall
-    have(thesis) by Cut(lastStep, ADTThm.subsetAxiomBackward of (x := app(h, n), y := term))
+    have(thesis) by Cut(lastStep, subsetIntro of (x := app(h, n), y := term))
   })
 
   /**
@@ -658,7 +655,7 @@ private class SyntacticADT[N <: Arity](using line: sourcecode.Line, file: source
                 case f: FunctionType =>
                   have((hIsTheHeightFunction, in(n, N)) |- subset(f.getOrElse(app(h, n)), f.getOrElse(term))) by Cut(heightSubsetTerm, f.monotonicity of (y := app(h, n), z := term))
                   have((hIsTheHeightFunction, in(n, N), in(v, f.getOrElse(app(h, n)))) |- in(v, f.getOrElse(term))) by Cut(
-                    lastStep, ADTThm.subsetAxiomForward of (z := v, x := f.getOrElse(app(h, n)), y := f.getOrElse(term))
+                    lastStep, subsetElim of (z := v, x := f.getOrElse(app(h, n)), y := f.getOrElse(term))
                   )
                   thenHave((hIsTheHeightFunction, in(n, N) /\ constructorVarsInDomain(c, app(h, n))) |- in(v, f.getOrElse(term))) by Weakening
 
@@ -686,7 +683,7 @@ private class SyntacticADT[N <: Arity](using line: sourcecode.Line, file: source
                   have((hIsTheHeightFunction, in(max, N)) |- subset(app(h, ni), app(h, max))) by 
                     Cut(niInMax, heightMonotonic of (m := ni, n := max))
                   have((hIsTheHeightFunction, in(max, N), in(v, app(h, ni))) |- in(v, app(h, max))) by 
-                    Cut(lastStep, ADTThm.subsetAxiomForward of (z := v, x := app(h, ni), y := app(h, max)))
+                    Cut(lastStep, subsetElim of (z := v, x := app(h, ni), y := app(h, max)))
                 case GroundType(t) =>
                   have((hIsTheHeightFunction, in(max, N), in(v, t)) |- in(v, t)) by Restate
                 case f: FunctionType => 
@@ -695,7 +692,7 @@ private class SyntacticADT[N <: Arity](using line: sourcecode.Line, file: source
                   have((hIsTheHeightFunction, in(max, N)) |- subset(f.getOrElse(app(h, ni)), f.getOrElse(app(h, max)))) by 
                     Cut(lastStep, f.monotonicity of (y := app(h, ni), z := app(h, max)))
                   have((hIsTheHeightFunction, in(max, N), in(v, f.getOrElse(app(h, ni)))) |- in(v, f.getOrElse(app(h, max)))) by 
-                    Cut(lastStep, ADTThm.subsetAxiomForward of (z := v, x := f.getOrElse(app(h, ni)), y := f.getOrElse(app(h, max))))
+                    Cut(lastStep, subsetElim of (z := v, x := f.getOrElse(app(h, ni)), y := f.getOrElse(app(h, max))))
             
               thenHave((hIsTheHeightFunction, in(max, N), constructorVarsInHNi) |- in(v, ty.getOrElse(app(h, max)))) by Weakening
             
@@ -822,8 +819,8 @@ private class SyntacticADT[N <: Arity](using line: sourcecode.Line, file: source
 
       // STEP 1.2 : Use monotonicity to prove that y ∈ height(n) => y ∈ height(n + 1)
       have((hIsTheHeightFunction, in(n, N), subset(n, successor(n))) |- subset(app(h, n), app(h, successor(n)))) by Cut(ADTThm.successorIsNat, heightMonotonic of (n := successor(n), m := n))
-      val heightSubsetSucc = have((hIsTheHeightFunction, in(n, N)) |- subset(app(h, n), app(h, successor(n)))) by Cut(ADTThm.subsetSuccessor, lastStep)
-      val liftHeight = have((hIsTheHeightFunction, in(n, N), in(z, app(h, n))) |- in(z, app(h, successor(n)))) by Cut(lastStep, ADTThm.subsetAxiomForward of (x := app(h, n), y := app(h, successor(n))))
+      val heightSubsetSucc = have((hIsTheHeightFunction, in(n, N)) |- subset(app(h, n), app(h, successor(n)))) by Cut(Ordinals.subsetSuccessor of (a := n), lastStep)
+      val liftHeight = have((hIsTheHeightFunction, in(n, N), in(z, app(h, n))) |- in(z, app(h, successor(n)))) by Cut(lastStep, subsetElim of (x := app(h, n), y := app(h, successor(n))))
 
       // STEP 1.3 : Generalize the above result to show that if for some c, x = c(x1, ..., xn) with xi, ..., xj ∈ height(n)
       // then for some c', x = c'(x1, ..., xn) with xi, ..., xj ∈ height(n + 1).
@@ -853,7 +850,7 @@ private class SyntacticADT[N <: Arity](using line: sourcecode.Line, file: source
                         have((hIsTheHeightFunction, in(n, N), constructorVarsInHN) |- in(v, t)) by Restate
                       case f: FunctionType =>
                         have((hIsTheHeightFunction, in(n, N)) |- subset(f.getOrElse(app(h, n)), f.getOrElse(app(h, successor(n))))) by Cut(heightSubsetSucc, f.monotonicity of (y := app(h, n), z := app(h, successor(n))))
-                        have((hIsTheHeightFunction, in(n, N), in(v, f.getOrElse(app(h, n)))) |- in(v, f.getOrElse(app(h, successor(n))))) by Cut(lastStep, ADTThm.subsetAxiomForward of (x := f.getOrElse(app(h, n)), y := f.getOrElse(app(h, successor(n))), z := v))
+                        have((hIsTheHeightFunction, in(n, N), in(v, f.getOrElse(app(h, n)))) |- in(v, f.getOrElse(app(h, successor(n))))) by Cut(lastStep, subsetElim of (x := f.getOrElse(app(h, n)), y := f.getOrElse(app(h, successor(n))), z := v))
                         thenHave((hIsTheHeightFunction, in(n, N), constructorVarsInHN) |- in(v, f.getOrElse(app(h, successor(n))))) by Weakening
 
                 val left = have((hIsTheHeightFunction, in(n, N), constructorVarsInHN) |- constructorVarsInHSuccN) by RightAnd(liftHeightAndSequence: _*)
@@ -1033,8 +1030,7 @@ private class SyntacticADT[N <: Arity](using line: sourcecode.Line, file: source
                                   val appVZInHN = have((in(v, fn.getOrElse(app(h, n))), fn.wellTypedDomains) |- in(appliedFun, app(h, n))) by TypeChecker.prove
 
                                   have(inductionFormulaN |- inductionFormulaN) by Hypothesis
-                                  thenHave(inductionFormulaN |- in(appliedFun, app(h, n)) ==> P(appliedFun)) by InstantiateForall(appliedFun)
-                                  thenHave((inductionFormulaN, in(appliedFun, app(h, n))) |- P(appliedFun)) by Restate
+                                  thenHave((inductionFormulaN, in(appliedFun, app(h, n))) |- P(appliedFun)) by InstantiateForall(appliedFun)
                                   have((inductionFormulaN, in(v, fn.getOrElse(app(h, n))), fn.wellTypedDomains) |- P(appliedFun)) by Cut(appVZInHN, lastStep)
                                   thenHave((inductionFormulaN, in(v, fn.getOrElse(app(h, n)))) |- fn.wellTypedDomains ==>
                                   P(appliedFun)) by RightImplies
@@ -1091,10 +1087,8 @@ private class SyntacticADT[N <: Arity](using line: sourcecode.Line, file: source
     // STEP 3: Conclude
 
     have((hIsTheHeightFunction, structuralInductionPreconditions) |- forall(n, in(n, N) ==> inductionFormulaN)) by Cut(lastStep, inductiveCaseRemaining)
-    thenHave((hIsTheHeightFunction, structuralInductionPreconditions) |- in(n, N) ==> inductionFormulaN) by InstantiateForall(n)
-    thenHave((hIsTheHeightFunction, structuralInductionPreconditions, in(n, N)) |- inductionFormulaN) by Restate
-    thenHave((hIsTheHeightFunction, structuralInductionPreconditions, in(n, N)) |- in(x, app(h, n)) ==> P(x)) by InstantiateForall(x)
-    thenHave((hIsTheHeightFunction, structuralInductionPreconditions, in(n, N) /\ in(x, app(h, n))) |- P(x)) by Restate
+    thenHave((hIsTheHeightFunction, structuralInductionPreconditions, in(n, N)) |- inductionFormulaN) by InstantiateForall(n)
+    thenHave((hIsTheHeightFunction, structuralInductionPreconditions, in(n, N) /\ in(x, app(h, n))) |- P(x)) by InstantiateForall(x)
     val exImpliesP = thenHave((hIsTheHeightFunction, structuralInductionPreconditions, exists(n, in(n, N) /\ in(x, app(h, n)))) |- P(x)) by LeftExists
     have((hIsTheHeightFunction, in(x, term)) |- exists(n, in(n, N) /\ in(x, app(h, n)))) by Cut(termHasHeight, ADTThm.equivalenceApply of (p1 := in(x, term), p2 := exists(n, in(n, N) /\ in(x, app(h, n)))))
 
@@ -1536,16 +1530,16 @@ private class SemanticConstructor[N <: Arity](using line: sourcecode.Line, file:
 
 
           val s0 = have(vars2WellTyped + (appliedTerm1 === appliedTerm2) |- appliedTerm1 === structuralTerm2) by Cut(tappTerm2Def,
-            ADTThm.altEqualityTransitivity of (x := appliedTerm1, y := appliedTerm2, z := structuralTerm2))
+            equalityTransitivity of (x := appliedTerm1, y := appliedTerm2, z := structuralTerm2))
           have(vars1WellTyped + (appliedTerm1 === structuralTerm2) |- structuralTerm1 === structuralTerm2) by Cut(tappTerm1Def,
-            ADTThm.altEqualityTransitivity of (x := structuralTerm1, y := appliedTerm1, z := structuralTerm2))
+            equalityTransitivity of (x := structuralTerm1, y := appliedTerm1, z := structuralTerm2))
           have((vars1WellTyped ++ vars2WellTyped) + (appliedTerm1 === appliedTerm2) |- structuralTerm1 === structuralTerm2) by Cut(s0, lastStep)
           val forward = thenHave(vars1WellTyped ++ vars2WellTyped |- (appliedTerm1 === appliedTerm2) ==> (structuralTerm1 === structuralTerm2)) by RightImplies
 
           val s1 = have(vars1WellTyped + (structuralTerm1 === structuralTerm2) |- appliedTerm1 === structuralTerm2) by Cut(tappTerm1Def,
-            ADTThm.altEqualityTransitivity of (x := appliedTerm1, y := structuralTerm1, z := structuralTerm2))
+            equalityTransitivity of (x := appliedTerm1, y := structuralTerm1, z := structuralTerm2))
           have(vars2WellTyped + (appliedTerm1 === structuralTerm2) |- appliedTerm1 === appliedTerm2) by Cut(tappTerm2Def,
-            ADTThm.altEqualityTransitivity of (x := appliedTerm1, y := structuralTerm2, z := appliedTerm2))
+            equalityTransitivity of (x := appliedTerm1, y := structuralTerm2, z := appliedTerm2))
           have((vars1WellTyped ++ vars2WellTyped) + (structuralTerm1 === structuralTerm2) |- appliedTerm1 === appliedTerm2) by Cut(s1, lastStep)
           val backward = thenHave(vars1WellTyped ++ vars2WellTyped |- (structuralTerm1 === structuralTerm2) ==> (appliedTerm1 === appliedTerm2)) by RightImplies
 
@@ -1660,11 +1654,11 @@ private class SemanticConstructor[N <: Arity](using line: sourcecode.Line, file:
 
           val s0 = have(vars2WellTyped + (c1.appliedTerm1 === c2.appliedTerm2) |- c1.appliedTerm1 === c2.structuralTerm2) by Cut(
             tappTerm2Def,
-            ADTThm.altEqualityTransitivity of (x := c1.appliedTerm1, y := c2.appliedTerm2, z := c2.structuralTerm2)
+            equalityTransitivity of (x := c1.appliedTerm1, y := c2.appliedTerm2, z := c2.structuralTerm2)
           )
           have(vars1WellTyped + (c1.appliedTerm1 === c2.structuralTerm2) |- c1.structuralTerm1 === c2.structuralTerm2) by Cut(
             tappTerm1Def,
-            ADTThm.altEqualityTransitivity of (x := c1.structuralTerm1, y := c1.appliedTerm1, z := c2.structuralTerm2)
+            equalityTransitivity of (x := c1.structuralTerm1, y := c1.appliedTerm1, z := c2.structuralTerm2)
           )
           have(thesis) by Cut(s0, lastStep)
         }
@@ -1846,8 +1840,7 @@ private class SemanticConstructor[N <: Arity](using line: sourcecode.Line, file:
 
       // STEP 2: Conclude
       have(inductionPreconditionsIneq |- forall(z, z :: term ==> !(x === z))) by Restate.from(induction of (P := lambda(z, !(x === z))))
-      thenHave(inductionPreconditionsIneq |- x :: term ==> !(x === x)) by InstantiateForall(x)
-      val ind = thenHave(x :: term |- !inductionPreconditionsIneq) by Restate
+      val ind = thenHave(x :: term |- !inductionPreconditionsIneq) by InstantiateForall(x)
       have(x :: term |- isConstructor) by Cut(lastStep, strengtheningOfInductionPreconditions)
     }
   }

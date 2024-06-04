@@ -134,10 +134,11 @@ class SerializationTest extends AnyFunSuite {
 
   test("exporting a proof to a file and back should work, with imports") {
     import lisa.maths.settheory.SetTheory as ST
+    import lisa.maths.settheory.InductiveSets as IS
     val thms = List(
       // ("russelsParadox", ST.russelsParadox),
       ("setUnionMembership", ST.setUnionMembership),
-      ("inductiveSetExists", ST.inductiveSetExists),
+      //("inductiveSetExists", IS.inductiveSetExists),
       ("setWithNoElementsIsEmpty", ST.setWithNoElementsIsEmpty),
       ("emptySetIsItsOwnOnlySubset", ST.emptySetIsItsOwnOnlySubset)
     )
@@ -157,10 +158,11 @@ class SerializationTest extends AnyFunSuite {
 
   test("exporting multiple theorems at once to a file and back should work") {
     import lisa.maths.settheory.SetTheory as ST
+    import lisa.maths.settheory.InductiveSets as IS
     val thms = List(
       // ("russelsParadox", ST.russelsParadox),
       ("setUnionMembership", ST.setUnionMembership),
-      ("inductiveSetExists", ST.inductiveSetExists),
+      //("inductiveSetExists", IS.inductiveSetExists),
       ("setWithNoElementsIsEmpty", ST.setWithNoElementsIsEmpty),
       ("emptySetIsItsOwnOnlySubset", ST.emptySetIsItsOwnOnlySubset)
     )

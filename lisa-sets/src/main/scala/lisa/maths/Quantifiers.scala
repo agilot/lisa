@@ -52,11 +52,10 @@ object Quantifiers extends lisa.Main {
    * Theorem --- Equality relation is transitive.
    */
   val equalityTransitivity = Theorem(
-    (x === y) /\ (y === z) |- (x === z)
+    (x === y, y === z) |- (x === z)
   ) {
     have((x === y) |- (x === y)) by Hypothesis
-    thenHave(((x === y), (y === z)) |- (x === z)) by RightSubstEq.withParametersSimple(List((y, z)), lambda(y, x === y))
-    thenHave(thesis) by Restate
+    thenHave(thesis) by RightSubstEq.withParametersSimple(List((y, z)), lambda(y, x === y))
   }
 
   /**
@@ -249,6 +248,40 @@ object Quantifiers extends lisa.Main {
     }
 
     have(thesis) by Tautology.from(fwd, bwd)
+  }
+
+  val onePointRule = Theorem(
+    ∃(x, (x === y) /\ Q(x)) <=> Q(y)
+  ) {
+    val s1 = have(∃(x, (x === y) /\ Q(x)) ==> Q(y)) subproof {
+      assume(∃(x, (x === y) /\ Q(x)))
+      val ex = witness(lastStep)
+      val s1 = have(Q(ex)) by Tautology.from(ex.definition)
+      val s2 = have(ex === y) by Tautology.from(ex.definition)
+      have(Q(y)) by Substitution.ApplyRules(s2)(s1)
+    }
+    val s2 = have(Q(y) ==> ∃(x, (x === y) /\ Q(x))) subproof {
+      assume(Q(y))
+      thenHave((y === y) /\ Q(y)) by Restate
+      thenHave(∃(x, (x === y) /\ Q(x))) by RightExists
+      thenHave(thesis) by Restate.from
+    }
+    have(thesis) by Tautology.from(s1, s2)
+  }
+
+  val existenceAndUniqueness = Theorem(
+    (∃(y, P(y)), ∀(x, ∀(y, P(x) /\ P(y) ==> (x === y)))) |- ∃!(x, P(x)) 
+  ) {
+    val forward = have((P(y), P(x) /\ P(y) ==> (x === y)) |- P(x) ==> (x === y)) by Restate
+    have(P(y) |- P(y)) by Hypothesis
+    thenHave((x === y, P(y)) |- P(x)) by RightSubstEq.withParametersSimple(List((y, x)), lambda(y, P(y)))
+    val backward = thenHave(P(y) |- (x === y) ==> P(x)) by RightImplies
+    have((P(y), P(x) /\ P(y) ==> (x === y)) |- (x === y) <=> P(x)) by RightIff(forward, backward)
+    thenHave((P(y), forall(y, P(x) /\ P(y) ==> (x === y))) |- (x === y) <=> P(x)) by LeftForall 
+    thenHave((P(y), forall(x, forall(y, P(x) /\ P(y) ==> (x === y)))) |- (x === y) <=> P(x)) by LeftForall
+    thenHave((P(y), forall(x, forall(y, P(x) /\ P(y) ==> (x === y)))) |- forall(x, (x === y) <=> P(x))) by RightForall
+    thenHave((P(y), forall(x, forall(y, P(x) /\ P(y) ==> (x === y)))) |- exists(y, forall(x, (x === y) <=> P(x)))) by RightExists
+    thenHave(thesis) by LeftExists
   }
 
 }

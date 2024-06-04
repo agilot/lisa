@@ -30,14 +30,14 @@ class ComprehensionsTests extends AnyFunSuite {
         have(x === f(∅) |- x === f(∅)) by Restate
         thenHave((x_1 === ∅, x === f(x_1)) |- x === f(∅)) by Substitution.ApplyRules(x_1 === ∅)
         thenHave((x_1 === ∅) /\ (x === f(x_1)) |- x === f(∅)) by Restate
-        thenHave((in(x_1, singleton(∅))) /\ ((x === f(x_1))) |- x === f(∅)) by Substitution.ApplyRules(singletonHasNoExtraElements of (y := x_1, x := ∅))
+        thenHave((in(x_1, singleton(∅))) /\ ((x === f(x_1))) |- x === f(∅)) by Substitution.ApplyRules(singletonMembership of (y := x_1, x := ∅))
         thenHave(∃(x_1, in(x_1, singleton(∅)) /\ ((x === f(x_1)))) |- x === f(∅)) by LeftExists
 
       }
 
       val s2 = have((x === f(∅)) ==> ∃(x_1, in(x_1, singleton(∅)) /\ (x === f(x_1)))) subproof {
         have(x === f(∅) |- (∅ === ∅) /\ (x === f(∅))) by Restate
-        thenHave(x === f(∅) |- in(∅, singleton(∅)) /\ (x === f(∅))) by Substitution.ApplyRules(singletonHasNoExtraElements of (y := x_1, x := ∅))
+        thenHave(x === f(∅) |- in(∅, singleton(∅)) /\ (x === f(∅))) by Substitution.ApplyRules(singletonMembership of (y := x_1, x := ∅))
         thenHave(x === f(∅) |- ∃(x_1, in(x_1, singleton(∅)) /\ (x === f(x_1)))) by RightExists
         thenHave(thesis) by Restate.from
 
