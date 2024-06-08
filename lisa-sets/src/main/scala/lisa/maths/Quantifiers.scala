@@ -34,6 +34,16 @@ object Quantifiers extends lisa.Main {
   }
 
   /**
+   * Theorem --- Equality relation is transitive.
+   */
+  val equalityTransitivity = Theorem(
+    (x === y, y === z) |- (x === z)
+  ) {
+    have((x === y) |- (x === y)) by Hypothesis
+    thenHave(thesis) by RightSubstEq.withParametersSimple(List((y, z)), lambda(y, x === y))
+  }
+
+  /**
    * Theorem --- If there exists a *unique* element satisfying a predicate,
    * then we can say there *exists* an element satisfying it as well.
    */
@@ -48,15 +58,23 @@ object Quantifiers extends lisa.Main {
     thenHave(thesis) by Restate
   }
 
-  /**
-   * Theorem --- Equality relation is transitive.
-   */
-  val equalityTransitivity = Theorem(
-    (x === y, y === z) |- (x === z)
+  val existsOneImpliesUniqueness = Theorem(
+    (∃!(x, P(x)), P(x), P(y)) |- x === y
   ) {
-    have((x === y) |- (x === y)) by Hypothesis
-    thenHave(thesis) by RightSubstEq.withParametersSimple(List((y, z)), lambda(y, x === y))
+    val hyp = have(forall(x, (x === z) <=> P(x)) |- forall(x, (x === z) <=> P(x))) by Hypothesis
+    thenHave((forall(x, (x === z) <=> P(x))) |- (x === z) <=> P(x)) by InstantiateForall(x)
+    thenHave((forall(x, (x === z) <=> P(x)), P(x)) |- x === z) by Weakening
+    val right = have((forall(x, (x === z) <=> P(x)), P(x), y === z) |- x === y) by Cut(lastStep, equalityTransitivity of (y := z, z := y))
+    
+    have((forall(x, (x === z) <=> P(x))) |- (y === z) <=> P(y)) by InstantiateForall(y)(hyp)
+    val left = thenHave((forall(x, (x === z) <=> P(x)), P(y)) |- y === z) by Weakening
+
+    have((forall(x, (x === z) <=> P(x)), P(x), P(y)) |- x === y) by Cut(left, right)
+    thenHave((exists(z, forall(x, (x === z) <=> P(x))), P(x), P(y)) |- x === y) by LeftExists
+    thenHave(thesis) by LeftExistsOne
   }
+
+
 
   /**
    * Theorem --- Conjunction and universal quantification commute.

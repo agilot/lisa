@@ -98,7 +98,7 @@ object TypeSystem  {
   }
 
   extension [N <: Arity](f: (Term**N |-> Term)) {
-    def is (typ: FunctionalClass): FunctionalTypeAssignment[N] & Formula  = FunctionalTypeAssignment[N](f, typ).asInstanceOf
+    infix def is (typ: FunctionalClass): FunctionalTypeAssignment[N] & Formula  = FunctionalTypeAssignment[N](f, typ).asInstanceOf
   }
 
   extension[A <: Class] (c: Class) {
@@ -113,8 +113,8 @@ object TypeSystem  {
   }
 
   extension [A <: Class](t: Term) {
-    def is(clas:A): Formula with TypeAssignment[A] = TypeAssignment(t, clas).asInstanceOf[Formula with TypeAssignment[A]]
-    def ::(clas:A): Formula with TypeAssignment[A] = TypeAssignment(t, clas).asInstanceOf[Formula with TypeAssignment[A]]
+    infix def is(clas:A): Formula & TypeAssignment[A] = TypeAssignment(t, clas).asInstanceOf[Formula & TypeAssignment[A]]
+    def ::(clas:A): Formula & TypeAssignment[A] = TypeAssignment(t, clas).asInstanceOf[Formula & TypeAssignment[A]]
     def @@(t2: Term): AppliedFunction = AppliedFunction(t, t2)
     def *(t2: Term): AppliedFunction = AppliedFunction(t, t2)
   }
@@ -346,7 +346,7 @@ object TypeSystem  {
       var typingError: proof.ProofTacticJudgement = null
       bot.right.find(goal =>
         goal match
-          case (term is typ) => 
+          case (term `is` typ) => 
             val ptj = typecheck(using SetTheoryLibrary)(context.toSeq, term, Some(typ))
             if ptj.isValid then
               success = ptj
@@ -462,14 +462,14 @@ object TypeSystem  {
                           val in: Seq[Class] = labelType.in.toSeq
                           //val labelProp = labelType.formula(label.asInstanceOf)
                           val labelPropStatement = step()
-                          val labInst = labelPropStatement.of(args: _*)
+                          val labInst = labelPropStatement.of(args*)
                           val subst = (labelType.args zip args).map((v, a) => (v := a))
                           val newOut: Class = out match {
-                            case t: Term => t.substitute(subst: _*)
-                            case f: (Term**1 |-> Formula) @unchecked => f.substitute(subst: _*)
+                            case t: Term => t.substitute(subst*)
+                            case f: (Term**1 |-> Formula) @unchecked => f.substitute(subst*)
                           }
                           have(term is newOut) by Tautology.from(
-                            (argTypesProofs :+ labInst ) : _*
+                            (argTypesProofs :+ labInst ) *
                           )
                           newOut
                     case Some(typValue) => 
@@ -480,8 +480,8 @@ object TypeSystem  {
                         ) && {
                           val subst = (labelType.args zip args).map((v, a) => (v := a))
                           val newOut: Class = labelType.out match {
-                            case t: Term => t.substitute(subst: _*)
-                            case f: (Term**1 |-> Formula) @unchecked => f.substitute(subst: _*)
+                            case t: Term => t.substitute(subst*)
+                            case f: (Term**1 |-> Formula) @unchecked => f.substitute(subst*)
                           }
                           K.isSame((term is newOut).asFormula.underlying, (term is typValue).asFormula.underlying)
                           
@@ -495,7 +495,7 @@ object TypeSystem  {
                           //val labelProp = labelType.formula(label.asInstanceOf)
                           val labelPropStatement = step()
                           have(term is typValue) by Tautology.from(
-                            (argTypesProofs :+ labelPropStatement.of(args: _*) ) : _*
+                            (argTypesProofs :+ labelPropStatement.of(args*) ) *
                           )
                           typValue
 

@@ -168,7 +168,7 @@ object MembershipRelation extends lisa.Main {
     */
   val membershipRelationIrreflexive = Lemma(antiReflexive(membershipRelation(x), x)) {
     have(in(pair(y, y), membershipRelation(x)) |- in(y, y)) by Weakening(membershipRelationElemPair of (a -> y, b -> y))
-    have(in(pair(y, y), membershipRelation(x)) |- in(y, y) /\ !in(y, y)) by RightAnd(lastStep, selfNonInclusion of (x -> y))
+    have(in(pair(y, y), membershipRelation(x)) |- in(y, y) /\ !in(y, y)) by RightAnd(lastStep, selfNonMembership of (x -> y))
     thenHave(in(y, x) ==> !in(pair(y, y), membershipRelation(x))) by Weakening
     thenHave(∀(y, in(y, x) ==> !in(pair(y, y), membershipRelation(x)))) by RightForall
     have(relationBetween(membershipRelation(x), x, x) /\ ∀(y, in(y, x) ==> !in(pair(y, y), membershipRelation(x)))) by RightAnd(membershipRelationIsARelation, lastStep)

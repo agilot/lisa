@@ -171,13 +171,12 @@ object Ordinals extends lisa.Main {
     */
   val unionSetAndElementsTransitive = Lemma(forall(x, in(x, y) ==> transitiveSet(x)) |- transitiveSet(setUnion(union(y), y))) {
 
-    val right = have((in(w, z), in(z, y)) |- in(w, setUnion(union(y), y))) by Cut(unionIntro of (z := w, y := z, x := y), setUnionLeftIntro of (z := w, x := union(y)))
-    have((transitiveSet(union(y)), in(w, z), in(z, union(y))) |- in(w, setUnion(union(y), y))) by Cut(transitiveSetAltElim of (z := w, y := z, x := union(y)), setUnionLeftIntro of (z := w, x := union(y)))
 
-    val left = have((forall(x, in(x, y) ==> transitiveSet(x)), in(w, z), in(z, union(y))) |- in(w, setUnion(union(y), y))) by Cut(unionTransitive, lastStep)
-
-    have((forall(x, in(x, y) ==> transitiveSet(x)), in(w, z), in(z, union(y)) \/ in(z, y)) |- in(w, setUnion(union(y), y))) by LeftOr(left, right)
-    have((forall(x, in(x, y) ==> transitiveSet(x)), in(w, z), in(z, setUnion(union(y), y))) |- in(w, setUnion(union(y), y))) by Cut(setUnionElim of (x := union(y)), lastStep)
+    have((in(z, setUnion(union(y), y)), in(w, z)) |- (in(z, union(y)), in(w, union(y)))) by Cut(setUnionElim of (x := union(y)), unionIntro of (z := w, y := z, x := y))
+    have((in(z, setUnion(union(y), y)), in(w, z)) |- (in(z, union(y)), in(w, setUnion(union(y), y)))) by Cut(lastStep, setUnionLeftIntro of (z := w, x := union(y)))
+    have((in(z, setUnion(union(y), y)), in(w, z), transitiveSet(union(y))) |- (in(w, union(y)), in(w, setUnion(union(y), y)))) by Cut(lastStep, transitiveSetAltElim of (z := w, y := z, x := union(y)))
+    have((in(z, setUnion(union(y), y)), in(w, z), transitiveSet(union(y))) |- in(w, setUnion(union(y), y))) by Cut(lastStep, setUnionLeftIntro of (z := w, x := union(y)))
+    have((in(z, setUnion(union(y), y)), in(w, z), forall(x, in(x, y) ==> transitiveSet(x))) |- in(w, setUnion(union(y), y))) by Cut(unionTransitive, lastStep)
     thenHave(forall(x, in(x, y) ==> transitiveSet(x)) |- in(w, z) /\ in(z, setUnion(union(y), y)) ==> in(w, setUnion(union(y), y))) by Restate
     thenHave(forall(x, in(x, y) ==> transitiveSet(x)) |- forall(z, in(w, z) /\ in(z, setUnion(union(y), y)) ==> in(w, setUnion(union(y), y)))) by RightForall
     thenHave(forall(x, in(x, y) ==> transitiveSet(x)) |- forall(w, forall(z, in(w, z) /\ in(z, setUnion(union(y), y)) ==> in(w, setUnion(union(y), y))))) by RightForall
@@ -578,7 +577,7 @@ object Ordinals extends lisa.Main {
   }
 
   val subsetSuccessor = Lemma(subset(a, successor(a))) {
-    have(thesis) by Substitution.ApplyRules(successor.shortDefinition)(unionSubsetFirst of (b := singleton(a)))
+    have(thesis) by Substitution.ApplyRules(successor.shortDefinition)(setUnionLeftSubset of (b := singleton(a)))
   }
 
     /**
@@ -775,7 +774,7 @@ object Ordinals extends lisa.Main {
     have((ordinalClass, forall(a, in(a, x) ==> ordinal(a))) |- ordinal(x)) by Cut(lastStep, transitiveSetOfOrdinalsIsOrdinal)
     have(ordinalClass |- ordinal(x)) by Cut(ordinalClassIsSetOfOrd, lastStep)
     thenHave(ordinalClass |- in(x, x)) by Substitution.ApplyRules(ordinalClassDef)
-    have(ordinalClass |- ()) by RightAnd(lastStep, selfNonInclusion)
+    have(ordinalClass |- ()) by RightAnd(lastStep, selfNonMembership)
     thenHave(exists(x, ordinalClass) |- ()) by LeftExists
   }
 

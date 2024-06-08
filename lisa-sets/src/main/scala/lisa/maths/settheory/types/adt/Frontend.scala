@@ -232,7 +232,7 @@ object ADTSyntax {
       val semanticCons = trimmedNames.tail.zip(syntacticCons).map(SemanticConstructor(_, _, syntacticADT))
       val semanticADT = SemanticADT[N](syntacticADT, semanticCons)
       val cons = semanticCons.map(Constructor(_)) 
-      (ADT[N](semanticADT, cons), new constructors[N](cons : _*))
+      (ADT[N](semanticADT, cons), new constructors[N](cons *))
   
   }
 
@@ -387,7 +387,7 @@ object ADTSyntax {
       * @param adt the ADT
       * @return a tuple containing the ADT and its constructors
       */
-    private def extractConstructors[N <: Arity](adt: ADT[N]): (ADT[N], constructors[N]) = (adt, constructors(adt.constructors : _*))
+    private def extractConstructors[N <: Arity](adt: ADT[N]): (ADT[N], constructors[N]) = (adt, constructors(adt.constructors *))
 
     /**
       * Outputs a polymorphic ADT and constructors from a user specification
@@ -555,7 +555,7 @@ object ADTSyntax {
       val subst = adtVar -> consTerm
 
       val assumptions = 
-        wellTypedSet(cons.underlying.semanticSignature(vars).map(p => (p._1, p._2.substitute(cons.underlying.typeVariablesSeq.zip(args).map(SubstPair(_, _)) : _*))))
+        wellTypedSet(cons.underlying.semanticSignature(vars).map(p => (p._1, p._2.substitute(cons.underlying.typeVariablesSeq.zip(args).map(SubstPair(_, _)) *))))
         ++ 
         cons.underlying.syntacticSignature(vars).map({
           case (v, Self) => prop.substitute(adtVar -> v)

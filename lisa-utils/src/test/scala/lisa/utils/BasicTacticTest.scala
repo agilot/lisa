@@ -203,7 +203,7 @@ class BasicTacticTest extends ProofTacticTestLib {
 
     testTacticCases(correct, incorrect) { (stmts, stmt2) =>
       val prems = stmts.map(introduceSequent(_))
-      LeftOr(prems: _*)(stmt2)
+      LeftOr(prems*)(stmt2)
     }
   }
 
@@ -227,7 +227,7 @@ class BasicTacticTest extends ProofTacticTestLib {
 
     testTacticCases(correct, incorrect) { (stmts, stmt2, forms) =>
       val prems = stmts.map(introduceSequent(_))
-      LeftOr.withParameters(forms.map(FOLParser.parseFormula(_)): _*)(prems: _*)(stmt2)
+      LeftOr.withParameters(forms.map(FOLParser.parseFormula(_))*)(prems*)(stmt2)
     }
   }
 
@@ -573,7 +573,7 @@ class BasicTacticTest extends ProofTacticTestLib {
 
     testTacticCases(correct, incorrect) { (stmts, stmt2) =>
       val prems = stmts.map(introduceSequent(_))
-      RightAnd(prems: _*)(stmt2)
+      RightAnd(prems*)(stmt2)
     }
   }
 
@@ -599,7 +599,7 @@ class BasicTacticTest extends ProofTacticTestLib {
 
     testTacticCases(correct, incorrect) { (stmts, stmt2, forms) =>
       val prems = stmts.map(introduceSequent(_))
-      RightAnd.withParameters(forms.map(FOLParser.parseFormula(_)): _*)(prems: _*)(stmt2)
+      RightAnd.withParameters(forms.map(FOLParser.parseFormula(_))*)(prems*)(stmt2)
     }
   }
 

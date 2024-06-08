@@ -201,14 +201,12 @@ object Segments extends lisa.Main {
   def initialSegmentOrder(b: Term, r: Term, x: Term) = relationRestriction(r, initialSegment(b, r, x), initialSegment(b, r, x))
 
   val pairInInitialSegmentOrder = Lemma(
-    (strictWellOrder(r, x), in(pair(s, t), initialSegmentOrder(b, r, x))) |- in(s, initialSegment(b, r, x)) /\ in(t, initialSegment(b, r, x))
+    (in(pair(s, t), initialSegmentOrder(b, r, x))) |- in(s, initialSegment(b, r, x)) /\ in(t, initialSegment(b, r, x))
   ) {
-    have((relationBetween(r, x, x), subset(initialSegment(b, r, x), x), in(pair(s, t), initialSegmentOrder(b, r, x))) |- in(s, initialSegment(b, r, x)) /\ in(t, initialSegment(b, r, x))) by Cut(
-      relationRestrictionIsRelationSubset of (x := initialSegment(b, r, x), y := initialSegment(b, r, x), w := x, z := x), 
+    have(thesis) by Cut(
+      relationRestrictionIsRelationBetweenRestrictedDomains of (x := initialSegment(b, r, x), y := initialSegment(b, r, x), w := x, z := x), 
       relationBetweenElimPair of (r := initialSegmentOrder(b, r, x), a := initialSegment(b, r, x), b := initialSegment(b, r, x), x := s, y := t)
     )
-    have((strictWellOrder(r, x), subset(initialSegment(b, r, x), x), in(pair(s, t), initialSegmentOrder(b, r, x))) |- in(s, initialSegment(b, r, x)) /\ in(t, initialSegment(b, r, x))) by Cut(strictWellOrderIsRelation, lastStep)
-    have(thesis) by Cut(initialSegmentSubsetDomain, lastStep)
   }
 
   /**
@@ -408,7 +406,7 @@ object Segments extends lisa.Main {
   //  * partial order `p = (X, <)`. The result is `f` with its domain restricted
   //  * to the elements less than `a` wrt `<`.
   //  */
-  // val orderedRestriction = DEF(f, a, p) --> restrictedFunction(f, initialSegment(p, a))
+  // val orderedRestriction = DEF(f, a, p) --> domainRestriction(f, initialSegment(p, a))
 
   // /**
   //  * Theorem --- Ordered Restriction Membership

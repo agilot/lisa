@@ -236,9 +236,9 @@ object Substitution {
               leftContextReduced.termRules.map { case (_, (rule, subst)) =>
                 sourceOf.get(rule) match {
                   case Some(f: proof.Fact) =>
-                    f.of(subst.toSeq.map((l, r) => (l := r)): _*)
+                    f.of(subst.toSeq.map((l, r) => (l := r))*)
                   // case Some(j: lib.theory.Justification) =>
-                  //   j.of(subst.toSeq.map((l, r) => (l, lambda(Seq(), r))): _*)
+                  //   j.of(subst.toSeq.map((l, r) => (l, lambda(Seq(), r)))*)
                   case _ =>
                     eqSource(rule).of()
                 }
@@ -246,9 +246,9 @@ object Substitution {
                 leftContextReduced.formulaRules.map { case (_, (rule, subst)) =>
                   sourceOf.get(rule) match {
                     case Some(f: proof.Fact) =>
-                      f.of(subst._1.toSeq.map((l, r) => (l := r)) ++ subst._2.toSeq.map((l, r) => (l := r)): _*)
+                      f.of(subst._1.toSeq.map((l, r) => (l := r)) ++ subst._2.toSeq.map((l, r) => (l := r))*)
                     // case Some(j: lib.theory.Justification) =>
-                    //   j.of(subst._1.toSeq.map((l, r) => (l, lambda(Seq[Variable](), r))) ++ subst._2.toSeq.map((l, r) => (l, lambda(Seq[Variable](), r))): _*)
+                    //   j.of(subst._1.toSeq.map((l, r) => (l, lambda(Seq[Variable](), r))) ++ subst._2.toSeq.map((l, r) => (l, lambda(Seq[Variable](), r)))*)
                     case _ =>
                       iffSource(rule).of()
                   }
@@ -257,9 +257,9 @@ object Substitution {
               rightContextReduced.termRules.map { case (_, (rule, subst)) =>
                 sourceOf.get(rule) match {
                   case Some(f: proof.Fact) =>
-                    f.of(subst.toSeq.map((l, r) => (l := r)): _*)
+                    f.of(subst.toSeq.map((l, r) => (l := r))*)
                   // case Some(j: lib.theory.Justification) =>
-                  //   j.of(subst.toSeq.map((l, r) => (l, lambda(Seq(), r))): _*)
+                  //   j.of(subst.toSeq.map((l, r) => (l, lambda(Seq(), r)))*)
                   case None =>
                     eqSource(rule).of()
                 }
@@ -267,9 +267,9 @@ object Substitution {
                 rightContextReduced.formulaRules.map { case (_, (rule, subst)) =>
                   sourceOf.get(rule) match {
                     case Some(f: proof.Fact) =>
-                      f.of(subst._1.toSeq.map((l, r) => (l := r)) ++ subst._2.toSeq.map((l, r) => (l := r)): _*)
+                      f.of(subst._1.toSeq.map((l, r) => (l := r)) ++ subst._2.toSeq.map((l, r) => (l := r))*)
                     // case Some(j: lib.theory.Justification) =>
-                    //   j.of(subst._1.toSeq.map((l, r) => (l, lambda(Seq[Variable](), r))) ++ subst._2.toSeq.map((l, r) => (l, lambda(Seq[Variable](), r))): _*)
+                    //   j.of(subst._1.toSeq.map((l, r) => (l, lambda(Seq[Variable](), r))) ++ subst._2.toSeq.map((l, r) => (l, lambda(Seq[Variable](), r)))*)
                     case None =>
                       iffSource(rule).of()
                   }
