@@ -5,9 +5,10 @@
 package lisa.maths.settheory.types.adt
 
 import lisa.maths.settheory.SetTheory.{*, given}
-import ADTDefinitions.*
 import Helpers.*
+import ADTDefinitions.{GroundType, FunctionType, Self, appSeq}
 import lisa.maths.settheory.types.TypeLib.{ |=>}
+import lisa.maths.settheory.types.TypeSystem.*
 
 /**
   * Tactic performing a structural induction proof over an algebraic data type.
@@ -46,7 +47,7 @@ class Induction[M <: Arity](expectedVar: Option[Variable], expectedADT: Option[A
     */
   private def proveForallPredicate[N <: Arity](using proof: lisa.SetTheoryLibrary.Proof)(cases: Map[Constructor[N], (Seq[Variable], proof.Fact)], inductionVariable: Variable, adt: ADT[N], typeVariablesSubst: Seq[Term], propFun: Term => Formula, context: Set[Formula]): proof.Fact =
 
-    val prop = lambda[Term, Formula](x, propFun(x))
+    val prop = lisa.maths.settheory.SetTheory.lambda[Term, Formula](x, propFun(x))
     val typeVariablesSubstPairs = adt.typeVariables.toSeq.zip(typeVariablesSubst).map(SubstPair(_, _))
     val instTerm = adt(typeVariablesSubst *)
 
@@ -70,13 +71,13 @@ class Induction[M <: Arity](expectedVar: Option[Variable], expectedADT: Option[A
       )
       acc.statement.right.head match 
         case Implies(trueInd, rest) => 
-          // println(s"Case: ${c.fullName}")
-          // println(isSame(trueInd, inductiveCaseProof.statement.right.head))
-          // println(inductiveCaseProof.statement)
-          // println("         +          ")
-          // println(acc.statement)
-          // println("         =          ")
-          // println((acc.statement.left ++ inductiveCaseProof.statement.left) |- rest)
+          println(s"Case: ${c.name}")
+          println(isSame(trueInd, inductiveCaseProof.statement.right.head))
+          println(inductiveCaseProof.statement)
+          println("         +          ")
+          println(acc.statement)
+          println("         =          ")
+          println((acc.statement.left ++ inductiveCaseProof.statement.left) |- rest)
           have((acc.statement.left ++ inductiveCaseProof.statement.left) |- rest) by Sorry//Cut(inductiveCaseProof, acc)
         case _ => throw UnreachableException
     )

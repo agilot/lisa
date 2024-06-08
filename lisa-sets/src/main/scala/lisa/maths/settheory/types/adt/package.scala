@@ -10,6 +10,7 @@ package lisa.maths.settheory.types
   *   lisa.maths.settheory.types.adt.{*, given}
   * }}}
   * 
+  * 
   * ====Defining an ADT====
   *
   * ADTs can be defined using the following syntax:
@@ -193,7 +194,7 @@ package lisa.maths.settheory.types
   * 
   */
 package object adt {
-  export ADTSyntax.{ |, define, constructors, adt_to_term, fun_to_term, constructor_to_term, Case, fun, -->, |=>}
+  export ADTSyntax.{ |, define, constructors, adt_to_term, constructor_to_term, Case, -->, |=>}
   export ADTSyntax.ADTBuilder.|
   export lisa.maths.settheory.types.TypeSystem.*
   export lisa.maths.settheory.types.TypeLib.{|=>}

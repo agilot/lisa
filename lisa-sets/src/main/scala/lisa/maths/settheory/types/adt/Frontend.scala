@@ -459,10 +459,10 @@ object ADTSyntax {
     */
   given adt_to_term: Conversion[ADT[0], Term] = _.applyUnsafe(**())
 
-  /**
-    * Converts a function over an ADT with no type variables into a term (i.e a set function).
-    */
-  given fun_to_term: Conversion[ADTFunction[0], Term] = _.applyUnsafe(**())
+  // /**
+  //   * Converts a function over an ADT with no type variables into a term (i.e a set function).
+  //   */
+  // given fun_to_term: Conversion[ADTFunction[0], Term] = _.applyUnsafe(**())
 
   /**
     * Converts a constructor with no type variables into a term (i.e a set function).
@@ -574,7 +574,7 @@ object ADTSyntax {
       subproof(using iProof)
       val proofStep = (new SUBPROOF(using proof)(None)(iProof)).judgement.validate(line, file).asInstanceOf[proof.ProofStep]
 
-      def subproofWithExtraStep: proof.ProofTacticJudgement = TacticSubproof{ ip ?=>
+      def subproofWithExtraStep: proof.ProofTacticJudgement = lisa.maths.settheory.SetTheory.TacticSubproof{ ip ?=>
         val fullSeq = Tautology(using lisa.SetTheoryLibrary, ip)(proofStep)(botWithAssumptions)
         if fullSeq.isValid then
           fullSeq.validate(line, file)
@@ -593,21 +593,21 @@ object ADTSyntax {
     def apply(body : Term)(using builder: CaseBuilder[N, Term, Unit]) = builder += (cons, (vars, body))
   }
 
-  /**
-    * Defines a function over an ADT
-    *
-    * @param adt the domain of this function
-    * @param returnType the return type of this function
-    * @param name the name of this functions
-    * @param cases the definition of the function for each constructor
-    */
-  def fun[N <: Arity](adt: ADT[N], returnType: Term)(using name: sourcecode.Name)(cases: CaseBuilder[N, Term, Unit] ?=> Unit): ADTFunction[N] = {
-    val builder = CaseBuilder[N, Term, Unit](())
-    cases(using builder)
-    builder.isValid(adt) match
-      case None => 
-        ADTFunction(SemanticFunction[N](name.value, adt.underlying, builder.build.map((k, v) => (k.underlying, v)), returnType), adt)
-      case Some(msg) => throw IllegalArgumentException(msg)
-  }
+  // /**
+  //   * Defines a function over an ADT
+  //   *
+  //   * @param adt the domain of this function
+  //   * @param returnType the return type of this function
+  //   * @param name the name of this functions
+  //   * @param cases the definition of the function for each constructor
+  //   */
+  // def fun[N <: Arity](adt: ADT[N], returnType: Term)(using name: sourcecode.Name)(cases: CaseBuilder[N, Term, Unit] ?=> Unit): ADTFunction[N] = {
+  //   val builder = CaseBuilder[N, Term, Unit](())
+  //   cases(using builder)
+  //   builder.isValid(adt) match
+  //     case None => 
+  //       ADTFunction(SemanticFunction[N](name.value, adt.underlying, builder.build.map((k, v) => (k.underlying, v)), returnType), adt)
+  //     case Some(msg) => throw IllegalArgumentException(msg)
+  // }
 
 }

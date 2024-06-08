@@ -6,7 +6,7 @@ package lisa.maths.settheory.types.adt
 
 import lisa.maths.settheory.SetTheory.{*, given}
 import lisa.maths.settheory.types.TypeLib.{any}
-import lisa.maths.settheory.types.TypeSystem.{TypedConstantFunctional, FunctionalClass}
+import lisa.maths.settheory.types.TypeSystem.{TypedConstantFunctional, FunctionalClass, Class}
 
 /**
  * Type theoretic interpretation of a constructor, that is a function whose type is
@@ -212,73 +212,73 @@ private object ADT {
   def getADT(id: Identifier): Option[ADT[?]] = identifiersToADT.get(id)
 }
 
-/**
- * Type theoretic function over algebraic data types. Its definition is the direct sum of the definitions of its constructors.
- * Comes with introduction and elimination rules.
- *
- * @constructor gives a type theoretic interpretation to a set theoretic function over an ADT
- * @tparam N the number of type variables appearing in the definition of this function's domain
- * @param line the line at which this ADT is defined. Usually fetched automatically by the compiler.
- * Used for error reporting
- * @param file the file in which this ADT is defined. Usually fetched automatically by the compiler.
- * Used for error reporting
- * @param underlying the underlying set theoretic function
- * @param adt the domain of this function
- */
-private class ADTFunction[N <: Arity](using line: sourcecode.Line, file: sourcecode.File)(
-    private val underlying: SemanticFunction[N],
-    private val adt: ADT[N]
-) extends TypedConstantFunctional[N](
-      underlying.fullName,
-      underlying.typeArity,
-      FunctionalClass(Seq.fill(underlying.typeArity)(any), underlying.typeVariablesSeq, underlying.typ, underlying.typeArity),
-      underlying.intro
-    ) {
+// /**
+//  * Type theoretic function over algebraic data types. Its definition is the direct sum of the definitions of its constructors.
+//  * Comes with introduction and elimination rules.
+//  *
+//  * @constructor gives a type theoretic interpretation to a set theoretic function over an ADT
+//  * @tparam N the number of type variables appearing in the definition of this function's domain
+//  * @param line the line at which this ADT is defined. Usually fetched automatically by the compiler.
+//  * Used for error reporting
+//  * @param file the file in which this ADT is defined. Usually fetched automatically by the compiler.
+//  * Used for error reporting
+//  * @param underlying the underlying set theoretic function
+//  * @param adt the domain of this function
+//  */
+// private class ADTFunction[N <: Arity](using line: sourcecode.Line, file: sourcecode.File)(
+//     private val underlying: SemanticFunction[N],
+//     private val adt: ADT[N]
+// ) extends TypedConstantFunctional[N](
+//       underlying.fullName,
+//       underlying.typeArity,
+//       FunctionalClass(Seq.fill(underlying.typeArity)(any), underlying.typeVariablesSeq, underlying.typ, underlying.typeArity),
+//       underlying.intro
+//     ) {
 
-  /**
-   * Name of the function
-   *
-   * e.g. list/length
-   */
-  val name = underlying.fullName
+//   /**
+//    * Name of the function
+//    *
+//    * e.g. list/length
+//    */
+//   val name = underlying.fullName
 
-  /**
-   * Theorem --- Elimination rules
-   *
-   *     `f * (c * x1 * ... * xn) = case(c, x1, ..., xn)`
-   *
-   * That is, when this function is applied to a constructor, it returns the corresponding case.
-   */
-  val elim: Map[Constructor[N], THM] = adt.constructors
-    .map(c =>
-      (
-        c,
-        THM(underlying.shortDefinition(c.underlying).statement, s"${name} elimination rule: ${c.name} case", line.value, file.value, Theorem) {
-          have(underlying.shortDefinition(c.underlying))
-        }
-      )
-    )
-    .toMap
+//   /**
+//    * Theorem --- Elimination rules
+//    *
+//    *     `f * (c * x1 * ... * xn) = case(c, x1, ..., xn)`
+//    *
+//    * That is, when this function is applied to a constructor, it returns the corresponding case.
+//    */
+//   val elim: Map[Constructor[N], THM] = adt.constructors
+//     .map(c =>
+//       (
+//         c,
+//         THM(underlying.shortDefinition(c.underlying).statement, s"${name} elimination rule: ${c.name} case", line.value, file.value, Theorem) {
+//           have(underlying.shortDefinition(c.underlying))
+//         }
+//       )
+//     )
+//     .toMap
 
-  /**
-   * Alias for [[this.elim]]
-   */
-  val shortDefinition: Map[Constructor[N], THM] = elim
+//   /**
+//    * Alias for [[this.elim]]
+//    */
+//   val shortDefinition: Map[Constructor[N], THM] = elim
 
-  /**
-   * Theorem --- Introduction rule
-   *
-   *   `∀X1, ..., Xn. f(X1, ..., Xn) : ADT(X1, ..., Xn) -> T`
-   *
-   * where `f` is this function, `ADT` the ADT it takes argument and `T` its return type.
-   */
-  val intro: THM =
-    THM(underlying.intro.statement, s"${name} introduction rule", line.value, file.value, Theorem) {
-      have(underlying.intro)
-    }
+//   /**
+//    * Theorem --- Introduction rule
+//    *
+//    *   `∀X1, ..., Xn. f(X1, ..., Xn) : ADT(X1, ..., Xn) -> T`
+//    *
+//    * where `f` is this function, `ADT` the ADT it takes argument and `T` its return type.
+//    */
+//   val intro: THM =
+//     THM(underlying.intro.statement, s"${name} introduction rule", line.value, file.value, Theorem) {
+//       have(underlying.intro)
+//     }
 
-  /**
-   * Type variables in the signature of the function
-   */
-  val typeVariables: Variable ** N = underlying.typeVariables
-}
+//   /**
+//    * Type variables in the signature of the function
+//    */
+//   val typeVariables: Variable ** N = underlying.typeVariables
+// }

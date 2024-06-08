@@ -3,6 +3,7 @@ package lisa.maths.settheory.orderings
 import lisa.automation.settheory.SetTheoryTactics.*
 import lisa.maths.Quantifiers.*
 import lisa.maths.settheory.SetTheory.*
+import lisa.maths.settheory.Relations.*
 import lisa.maths.settheory.orderings.PartialOrders.*
 
 object MembershipRelation extends lisa.Main {

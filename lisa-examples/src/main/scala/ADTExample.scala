@@ -78,16 +78,16 @@ object ADTExample extends lisa.Main {
   // * 3 : Functions *
   // *****************
 
-  val not = fun(bool, bool) {
-    Case(tru) { fals }
-    Case(fals) { tru }
-  }
+  // val not = fun(bool, bool) {
+  //   Case(tru) { fals }
+  //   Case(fals) { tru }
+  // }
 
-  val pred = fun(nat, nat):
-    Case(zero): 
-      zero 
-    Case(succ, n): 
-      n
+  // val pred = fun(nat, nat):
+  //   Case(zero): 
+  //     zero 
+  //   Case(succ, n): 
+  //     n
 
 
   // ************************

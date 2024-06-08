@@ -160,14 +160,14 @@ private [adt] object Helpers {
    *
    * @param s2 the sequence to compare with
    */
-  extension (s1: Seq[Term]) def ===(s2: Seq[Term]): Formula = /\(s1.zip(s2).map(_ === _))
+  extension (s1: Seq[Term]) def ===+(s2: Seq[Term]): Formula = /\+(s1.zip(s2).map(_ === _))
 
   /**
    * Disjunction of a sequence of formulas.
    *
    * @param s the formulas to which the disjunction is applied
    */
-  def \/(s: Iterable[Formula]): Formula =
+  def \/+(s: Iterable[Formula]): Formula =
     if s.isEmpty then False
     else s.fold(False)(_ \/ _)
 
@@ -176,7 +176,7 @@ private [adt] object Helpers {
    *
    * @param s the formulas to which the conjunction is applied
    */
-  def /\(s: Iterable[Formula]): Formula =
+  def /\+(s: Iterable[Formula]): Formula =
     if s.isEmpty then True
     else s.fold(True)(_ /\ _)
 
@@ -244,12 +244,13 @@ private [adt] object Helpers {
 /**
   * Definitions and helper functions for ADT.
   */
-private[adt] object ADTDefinitions {
+private[adt] object ADTDefinitions extends lisa.Main {
 
-  import lisa.maths.settheory.SetTheory.{*, given}
+  import lisa.maths.settheory.SetTheory.*
+  import lisa.maths.settheory.Relations.*
   import lisa.maths.settheory.types.TypeSystem.*
   import lisa.maths.settheory.types.TypeLib.{|=>}
-  import Helpers.{/\, x, y, z}
+  import Helpers.*
   import lisa.maths.settheory.orderings.Ordinals.{successor}
 
   /**
@@ -399,7 +400,7 @@ private[adt] object ADTDefinitions {
    * 
    * @param s the terms and their respective types
    */
-  def wellTypedFormula(s: Seq[(Term, Term)]): Formula = /\ (wellTyped(s))
+  def wellTypedFormula(s: Seq[(Term, Term)]): Formula = /\+(wellTyped(s))
 
   /**
     * Returns a formula asserting that all terms of a sequence are well-typed with respect to the
@@ -408,7 +409,7 @@ private[adt] object ADTDefinitions {
     * @param s the terms and their respective type
     * @param orElse the term to use in case of a self reference
     */
-  def wellTypedFormula(s: Seq[(Term, ConstructorArgument)])(orElse: Term): Formula = /\ (wellTyped(s)(orElse))
+  def wellTypedFormula(s: Seq[(Term, ConstructorArgument)])(orElse: Term): Formula = /\+ (wellTyped(s)(orElse))
 
 }
 
@@ -421,8 +422,9 @@ private[adt] object ADTDefinitions {
 private [adt] object ADTHelperTheorems extends lisa.Main {
 
   import lisa.maths.settheory.SetTheory.*
-  import lisa.maths.Quantifiers.{existentialEquivalenceDistribution, equalityInExistentialQuantifier,
-    existentialConjunctionWithClosedFormula, equalityTransitivity, existsOneImpliesUniqueness}
+  import lisa.maths.settheory.Relations.*
+  import lisa.maths.settheory.Functions.*
+  import lisa.maths.Quantifiers.*
   import ADTDefinitions.*
   import Helpers.*
   import lisa.maths.settheory.types.TypeLib.{|=>}

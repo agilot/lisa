@@ -3,6 +3,8 @@ package lisa.maths.settheory.orderings
 import lisa.automation.settheory.SetTheoryTactics.*
 import lisa.maths.Quantifiers.*
 import lisa.maths.settheory.SetTheory.*
+import lisa.maths.settheory.Relations.*
+import lisa.maths.settheory.Functions.*
 import lisa.prooflib.SimpleDeducedSteps.InstantiateForall
 import lisa.prooflib.SimpleDeducedSteps.InstantiateForall
 
