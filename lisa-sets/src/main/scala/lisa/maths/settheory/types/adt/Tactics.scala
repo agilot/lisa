@@ -71,13 +71,6 @@ class Induction[M <: Arity](expectedVar: Option[Variable], expectedADT: Option[A
       )
       acc.statement.right.head match 
         case Implies(trueInd, rest) => 
-          println(s"Case: ${c.name}")
-          println(isSame(trueInd, inductiveCaseProof.statement.right.head))
-          println(inductiveCaseProof.statement)
-          println("         +          ")
-          println(acc.statement)
-          println("         =          ")
-          println((acc.statement.left ++ inductiveCaseProof.statement.left) |- rest)
           have((acc.statement.left ++ inductiveCaseProof.statement.left) |- rest) by Sorry//Cut(inductiveCaseProof, acc)
         case _ => throw UnreachableException
     )

@@ -114,7 +114,8 @@ object ADTSyntax {
     /**
      * Converts an ADT into a constructor taking one inductive argument.
      */
-    override def apply(a: ADT[N]): ConstructorBuilder = ConstructorBuilder(Seq(Self))
+    override def apply(a: ADT[N]): ConstructorBuilder = 
+      if a == null then ConstructorBuilder(Seq(Self)) else term_to_const(a(a.typeVariables.toSeq*))
   }
 
   given fun_to_const: ConstructorConverter[FunctionType] with {
@@ -413,45 +414,8 @@ object ADTSyntax {
       */
     private inline def unapply(builder: ConstructorBuilder): (ADT[0], constructors[0]) = unapply(builder.toADTBuilder)
 
-    /**
-      * Returns an ADT isomorphic to a given type. It has only one constructor taking as only argument an element of
-      * the provided type.
-      * Needs to be inline in order to fetch the name of the ADT and the constructor.
-      *
-      * @param t type given by the user
-      */
-    inline def unapply(t: Term): (ADT[0], constructors[0]) = unapply(term_to_const(t))
 
-    /**
-      * Returns the unit type. This is an ADT containing only one value and hence having only one 
-      * constructor (non-inductive and taking no arguments).
-      * Needs to be inline in order to fetch the name of the ADT and the constructor.
-      *
-      * @param u user specification indicating that they want to generate the unit type
-      */
-    inline def unapply(u: Unit): (ADT[0], constructors[0]) = unapply(unit_to_const(u))
-
-    /**
-      * Returns an ADT isomorphic to a function from a set to this ADT. It has only
-      * one constructor.
-      * Needs to be inline in order to fetch the name of the ADT and the constructor.
-      *
-      * @param f function given by the user
-      */
-    inline def unapply(f: FunctionType): (ADT[0], constructors[0]) = unapply(fun_to_const(f))
-
-    /**
-      * Returns a product type (also known as tuple). This is an ADT containing only one constructor.
-      * Generally its arguments are non inductive as the opposite would lead to the empty type.
-      * Needs to be inline in order to fetch the name of the ADT and the constructor.
-      *
-      * @param t user specification of the tuple
-      */
-    inline def unapply[N <: Arity, T <: Tuple](t: ((ADT[N] | Term) | FunctionType) *: T)(using ConstructorConverter[T]): (ADT[0], constructors[0]) = 
-      t.head match
-        case a: ADT[N] => unapply(adt_tuple_to_const(a *: t.tail))
-        case term: Term => unapply(any_to_const(term *: t.tail))
-        case f: FunctionType => unapply(fun_tuple_to_const(f *: t.tail))
+    inline def unapply[T](t: T)(using ConstructorConverter[T]): (ADT[0], constructors[0]) = unapply(any_to_const(t))
   }
 
   /**
@@ -459,10 +423,10 @@ object ADTSyntax {
     */
   given adt_to_term: Conversion[ADT[0], Term] = _.applyUnsafe(**())
 
-  // /**
-  //   * Converts a function over an ADT with no type variables into a term (i.e a set function).
-  //   */
-  // given fun_to_term: Conversion[ADTFunction[0], Term] = _.applyUnsafe(**())
+  /**
+    * Converts a function over an ADT with no type variables into a term (i.e a set function).
+    */
+  given fun_to_term: Conversion[ADTFunction[0], Term] = _.applyUnsafe(**())
 
   /**
     * Converts a constructor with no type variables into a term (i.e a set function).
@@ -593,21 +557,21 @@ object ADTSyntax {
     def apply(body : Term)(using builder: CaseBuilder[N, Term, Unit]) = builder += (cons, (vars, body))
   }
 
-  // /**
-  //   * Defines a function over an ADT
-  //   *
-  //   * @param adt the domain of this function
-  //   * @param returnType the return type of this function
-  //   * @param name the name of this functions
-  //   * @param cases the definition of the function for each constructor
-  //   */
-  // def fun[N <: Arity](adt: ADT[N], returnType: Term)(using name: sourcecode.Name)(cases: CaseBuilder[N, Term, Unit] ?=> Unit): ADTFunction[N] = {
-  //   val builder = CaseBuilder[N, Term, Unit](())
-  //   cases(using builder)
-  //   builder.isValid(adt) match
-  //     case None => 
-  //       ADTFunction(SemanticFunction[N](name.value, adt.underlying, builder.build.map((k, v) => (k.underlying, v)), returnType), adt)
-  //     case Some(msg) => throw IllegalArgumentException(msg)
-  // }
+  /**
+    * Defines a function over an ADT
+    *
+    * @param adt the domain of this function
+    * @param returnType the return type of this function
+    * @param name the name of this functions
+    * @param cases the definition of the function for each constructor
+    */
+  def fun[N <: Arity](adt: ADT[N], returnType: Term)(using name: sourcecode.Name)(cases: CaseBuilder[N, Term, Unit] ?=> Unit): ADTFunction[N] = {
+    val builder = CaseBuilder[N, Term, Unit](())
+    cases(using builder)
+    builder.isValid(adt) match
+      case None => 
+        ADTFunction(SemanticFunction[N](name.value, adt.underlying, builder.build.map((k, v) => (k.underlying, v)), returnType), adt)
+      case Some(msg) => throw IllegalArgumentException(msg)
+  }
 
 }

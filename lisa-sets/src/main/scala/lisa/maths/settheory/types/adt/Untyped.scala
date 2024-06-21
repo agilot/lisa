@@ -22,8 +22,7 @@ import lisa.maths.settheory.types.TypeSystem.{ :: , TypeChecker}
 import lisa.maths.Quantifiers.{universalEquivalenceDistribution, equalityTransitivity}
 import lisa.fol.FOL.Variable
 import lisa.maths.settheory.types.TypeLib.funcspaceAxiom
-import lisa.maths.settheory.orderings.Ordinals.{successor}
-import lisa.maths.settheory.orderings.Ordinals
+import lisa.maths.settheory.orderings.Ordinals.*
 
 /**
  * Helpers for constructors
@@ -277,7 +276,7 @@ private class SyntacticADT[N <: Arity](using line: sourcecode.Line, file: source
         val chainInjectivity = thenHave(!(toTerm(maxTag - minTag) === emptySet) |- !(tagTerm1 === tagTerm2)) by Restate
 
         // STEP 1.3: Conclude using the fact that 0 is not the successor of any number
-        have(!(toTerm(maxTag - minTag) === emptySet)) by Exact(Ordinals.successorNonEmpty)
+        have(!(toTerm(maxTag - minTag) === emptySet)) by Exact(successorNonEmpty)
         have(thesis) by Cut(lastStep, chainInjectivity)
       }
 
@@ -492,15 +491,19 @@ private class SyntacticADT[N <: Arity](using line: sourcecode.Line, file: source
    *
    * TODO: Try to pull out
    */
-  private val heightMonotonic = benchmark(Lemma((hIsTheHeightFunction, in(n, N), subset(m, n)) |- subset(app(h, m), app(h, n))) {
-    have((introductionFunctionMonotonic.statement.right.head, introductionFunctionCumulative.statement.right.head, hIsTheHeightFunction, in(n, relationDomain(h)), subset(m, n)) |- subset(app(h, m), app(h, n))) by Weakening(fixpointFunctionMonotonicity of (P2 := lambda((x, s), isInIntroductionFunctionImage(s)(x))))
-    have((introductionFunctionCumulative.statement.right.head, hIsTheHeightFunction, in(n, relationDomain(h)), subset(m, n)) |- subset(app(h, m), app(h, n))) by 
+  private val heightMonotonic = benchmark(Lemma((hIsTheHeightFunction, in(n, N), in(m, N), subset(m, n)) |- subset(app(h, m), app(h, n))) {
+    have((introductionFunctionMonotonic.statement.right.head, introductionFunctionCumulative.statement.right.head, hIsTheHeightFunction, in(n, relationDomain(h)), in(m, relationDomain(h)), subset(m, n)) |- subset(app(h, m), app(h, n))) by Weakening(fixpointFunctionMonotonicity of (P2 := lambda((x, s), isInIntroductionFunctionImage(s)(x))))
+    have((introductionFunctionCumulative.statement.right.head, hIsTheHeightFunction, in(n, relationDomain(h)), in(m, relationDomain(h)), subset(m, n)) |- subset(app(h, m), app(h, n))) by 
       Cut(introductionFunctionMonotonic, lastStep)
-    have((hIsTheHeightFunction, in(n, relationDomain(h)), subset(m, n)) |- subset(app(h, m), app(h, n))) by 
+    have((hIsTheHeightFunction, in(n, relationDomain(h)), in(m, relationDomain(h)), subset(m, n)) |- subset(app(h, m), app(h, n))) by 
       Cut(introductionFunctionCumulative, lastStep)
-    thenHave((hIsTheHeightFunction, in(n, N), subset(m, n), relationDomain(h) === N) |- subset(app(h, m), app(h, n))) by LeftSubstEq.withParametersSimple(
+    thenHave((hIsTheHeightFunction, in(n, N), in(m, relationDomain(h)), subset(m, n), relationDomain(h) === N) |- subset(app(h, m), app(h, n))) by LeftSubstEq.withParametersSimple(
       List((relationDomain(h), N)),
       lambda(d, in(n, d))
+    )
+    thenHave((hIsTheHeightFunction, in(n, N), in(m, N), subset(m, n), relationDomain(h) === N) |- subset(app(h, m), app(h, n))) by LeftSubstEq.withParametersSimple(
+      List((relationDomain(h), N)),
+      lambda(d, in(m, d))
     )
   })
 
@@ -519,7 +522,7 @@ private class SyntacticADT[N <: Arity](using line: sourcecode.Line, file: source
       List((relationDomain(h), N)),
       lambda(d, in(successor(n), d))
     )
-    have((hIsTheHeightFunction, nonsuccessorOrdinal(N), in(n, N), relationDomain(h) === N) |- in(x, app(h, successor(n))) <=> isInIntroductionFunctionImage(app(h, n))(x)) by Cut(nonsuccessorOrdinalIsInductive of (m := n, n := N), lastStep)
+    have((hIsTheHeightFunction, nonsuccessorOrdinal(N), in(n, N), relationDomain(h) === N) |- in(x, app(h, successor(n))) <=> isInIntroductionFunctionImage(app(h, n))(x)) by Cut(nonsuccessorOrdinalIsInductive of (b := n, a := N), lastStep)
     have((hIsTheHeightFunction, in(n, N), relationDomain(h) === N) |- in(x, app(h, successor(n))) <=> isInIntroductionFunctionImage(app(h, n))(x)) by Cut(heightDomainLimit, lastStep)
   })
 
@@ -680,23 +683,23 @@ private class SyntacticADT[N <: Arity](using line: sourcecode.Line, file: source
 
               ty match
                 case Self =>
-                  have((hIsTheHeightFunction, in(max, N)) |- subset(app(h, ni), app(h, max))) by 
+                  have((hIsTheHeightFunction, in(ni, N), in(max, N)) |- subset(app(h, ni), app(h, max))) by 
                     Cut(niInMax, heightMonotonic of (m := ni, n := max))
-                  have((hIsTheHeightFunction, in(max, N), in(v, app(h, ni))) |- in(v, app(h, max))) by 
+                  have((hIsTheHeightFunction, in(ni, N), in(max, N), in(v, app(h, ni))) |- in(v, app(h, max))) by 
                     Cut(lastStep, subsetElim of (z := v, x := app(h, ni), y := app(h, max)))
                 case GroundType(t) =>
                   have((hIsTheHeightFunction, in(max, N), in(v, t)) |- in(v, t)) by Restate
                 case f: FunctionType => 
-                  have((hIsTheHeightFunction, in(max, N)) |- subset(app(h, ni), app(h, max))) by 
+                  have((hIsTheHeightFunction, in(ni, N), in(max, N)) |- subset(app(h, ni), app(h, max))) by 
                     Cut(niInMax, heightMonotonic of (m := ni, n := max))
-                  have((hIsTheHeightFunction, in(max, N)) |- subset(f.getOrElse(app(h, ni)), f.getOrElse(app(h, max)))) by 
+                  have((hIsTheHeightFunction, in(ni, N), in(max, N)) |- subset(f.getOrElse(app(h, ni)), f.getOrElse(app(h, max)))) by 
                     Cut(lastStep, f.monotonicity of (y := app(h, ni), z := app(h, max)))
-                  have((hIsTheHeightFunction, in(max, N), in(v, f.getOrElse(app(h, ni)))) |- in(v, f.getOrElse(app(h, max)))) by 
+                  have((hIsTheHeightFunction, in(ni, N), in(max, N), in(v, f.getOrElse(app(h, ni)))) |- in(v, f.getOrElse(app(h, max)))) by 
                     Cut(lastStep, subsetElim of (z := v, x := f.getOrElse(app(h, ni)), y := f.getOrElse(app(h, max))))
             
-              thenHave((hIsTheHeightFunction, in(max, N), constructorVarsInHNi) |- in(v, ty.getOrElse(app(h, max)))) by Weakening
+              thenHave((hIsTheHeightFunction, in(max, N), niInN, constructorVarsInHNi) |- in(v, ty.getOrElse(app(h, max)))) by Weakening
             
-            have((hIsTheHeightFunction, in(max, N), constructorVarsInHNi) |- constructorVarsInDomain(c, app(h, max))) by RightAnd(andSeq*)
+            have((hIsTheHeightFunction, in(max, N), niInN, constructorVarsInHNi) |- constructorVarsInDomain(c, app(h, max))) by RightAnd(andSeq*)
             have((hIsTheHeightFunction, niInN, constructorVarsInHNi) |- constructorVarsInDomain(c, app(h, max))) by Cut(maxInN, lastStep)
             have((hIsTheHeightFunction, niInN, constructorVarsInHNi) |- in(max, N) /\ constructorVarsInDomain(c, app(h, max))) by RightAnd(maxInN, lastStep)
             thenHave((hIsTheHeightFunction, niInN, constructorVarsInHNi) |- exists(n, in(n, N) /\ constructorVarsInDomain(c, app(h, n)))) by RightExists
@@ -819,7 +822,7 @@ private class SyntacticADT[N <: Arity](using line: sourcecode.Line, file: source
 
       // STEP 1.2 : Use monotonicity to prove that y ∈ height(n) => y ∈ height(n + 1)
       have((hIsTheHeightFunction, in(n, N), subset(n, successor(n))) |- subset(app(h, n), app(h, successor(n)))) by Cut(successorIsNat, heightMonotonic of (n := successor(n), m := n))
-      val heightSubsetSucc = have((hIsTheHeightFunction, in(n, N)) |- subset(app(h, n), app(h, successor(n)))) by Cut(Ordinals.subsetSuccessor of (a := n), lastStep)
+      val heightSubsetSucc = have((hIsTheHeightFunction, in(n, N)) |- subset(app(h, n), app(h, successor(n)))) by Cut(subsetSuccessor of (a := n), lastStep)
       val liftHeight = have((hIsTheHeightFunction, in(n, N), in(z, app(h, n))) |- in(z, app(h, successor(n)))) by Cut(lastStep, subsetElim of (x := app(h, n), y := app(h, successor(n))))
 
       // STEP 1.3 : Generalize the above result to show that if for some c, x = c(x1, ..., xn) with xi, ..., xj ∈ height(n)

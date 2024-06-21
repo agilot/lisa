@@ -1,8 +1,11 @@
+import lisa.maths.settheory.SetTheory.singleton
+import lisa.utils.parsing.SynonymInfo.empty
 object ADTExample extends lisa.Main {
   import lisa.maths.settheory.types.adt.{*, given}
 
   // variable declarations
-  val A = variable
+  val a = variable
+  val b = variable
 
   val n = variable
   val l = variable
@@ -21,28 +24,17 @@ object ADTExample extends lisa.Main {
   // Boolean
   val define(bool: ADT[0], constructors(tru, fals)) = () | ()
 
-  println("---------------")
-
   // Nat
   val define(nat: ADT[0], constructors(zero, succ)) = () | nat
 
-  println("---------------")
-
   // Option
-  val define(option: ADT[1], constructors(none, some)) = A --> () | A
-
-  println("---------------")
+  val define(option: ADT[1], constructors(none, some)) = a --> () | nat
 
   // List
-  val define(list: ADT[1], constructors(nil, cons)) = A --> () | (A, list)
-
-  println("---------------")
+  val define(list: ADT[1], constructors(nil, cons)) = a --> () | (a, list)
 
   //Binary Trees
-  val define(tree: ADT[1], constructors(leaf, node)) = A --> A | (A, nat |=> tree)
-
-  
-  println("---------------")
+  val define(tree: ADT[1], constructors(leaf, node)) = a --> a | (a, nat |=> tree)
 
   // Nothing
   val define(nothing, constructors()) = |
@@ -61,7 +53,7 @@ object ADTExample extends lisa.Main {
   show(nil.intro)
   show(cons.intro)
 
-  Lemma(nil(A) :: list(A)){
+  Lemma(nil(a) :: list(a)){
     have(thesis) by TypeChecker.prove
   } 
   Lemma(cons(nat) * (succ * zero) * nil(nat) :: list(nat)){
@@ -78,17 +70,19 @@ object ADTExample extends lisa.Main {
   // * 3 : Functions *
   // *****************
 
-  // val not = fun(bool, bool) {
-  //   Case(tru) { fals }
-  //   Case(fals) { tru }
-  // }
+  val not = fun(bool, bool) {
+    Case(tru) { fals }
+    Case(fals) { tru }
+  }
 
-  // val pred = fun(nat, nat):
-  //   Case(zero): 
-  //     zero 
-  //   Case(succ, n): 
-  //     n
+  val pred = fun(nat, option(nat)):
+    Case(zero): 
+      none(nat) 
+    Case(succ, n): 
+      some(nat) * n
 
+  show(pred.intro)
+  show(pred.elim(succ))
 
   // ************************
   // * 4 : Induction Tactic *
@@ -113,27 +107,47 @@ object ADTExample extends lisa.Main {
   // * 5: All features together *
   // ****************************
 
-  val consInj = Theorem((l :: list(A), x :: A) |- !(l === cons(A) * x * l)) {
+  val succInj = Theorem(n :: nat |- !(n === succ * n)) {
+    
+    val boolean = unorderedPair(emptySet, singleton(emptySet))
+    val f = variable
+    have((b :: boolean, f :: (boolean |=> boolean)) |- f * b :: boolean) by TypeChecker.prove
+    have(thesis) by Induction() {
+      Case(zero) subproof {
+        have(zero :: nat) by TypeChecker.prove
+        have(!(zero === succ * zero)) by 
+          Tautology.from(nat.injectivity(zero, succ) of (y0 := zero), lastStep)
+      }
+      
+      Case(succ, n) subproof {
+        have((n :: nat) |- succ * n :: nat) by TypeChecker.prove
+        have((!(n === succ * n), n :: nat) |- !(succ * n === succ * (succ * n))) by 
+          Tautology.from(succ.injectivity of (x0 := n, y0 := succ * n), lastStep)
+      }
+    }
+  }
 
-    val typeNil = have(nil(A) :: list(A)) by TypeChecker.prove
-    val typeCons = have((y :: A, l :: list(A)) |- cons(A) * y * l :: list(A)) by TypeChecker.prove
+  val consInj = Theorem((l :: list(a), x :: a) |- !(l === cons(a) * x * l)) {
 
-    have(l :: list(A) |- forall(x, x :: A ==> !(l === cons(A) * x * l))) by Induction(){
+    val typeNil = have(nil(a) :: list(a)) by TypeChecker.prove
+    val typeCons = have((y :: a, l :: list(a)) |- cons(a) * y * l :: list(a)) by TypeChecker.prove
+
+    have(l :: list(a) |- forall(x, x :: a ==> !(l === cons(a) * x * l))) by Induction(){
       Case(nil) subproof {
-        have(x :: A ==> !(nil(A) === cons(A) * x * nil(A))) by Tautology.from(list.injectivity(nil, cons) of (y0 := x, y1 := nil(A)), typeNil)
-        thenHave(forall(x, x :: A ==> !(nil(A) === cons(A) * x * nil(A)))) by RightForall
+        have(x :: a ==> !(nil(a) === cons(a) * x * nil(a))) by Tautology.from(list.injectivity(nil, cons) of (y0 := x, y1 := nil(a)), typeNil)
+        thenHave(forall(x, x :: a ==> !(nil(a) === cons(a) * x * nil(a)))) by RightForall
       }
       Case(cons, y, l) subproof {
-        have((y :: A ==> !(l === cons(A) * y * l), y :: A, l :: list(A)) |- x :: A ==> !(cons(A) * y * l === cons(A) * x * (cons(A) * y * l))) by Tautology.from(
-             cons.injectivity of (x0 := y, x1 := l, y0 := x, y1 := cons(A) * y * l),
+        have((y :: a ==> !(l === cons(a) * y * l), y :: a, l :: list(a)) |- x :: a ==> !(cons(a) * y * l === cons(a) * x * (cons(a) * y * l))) by Tautology.from(
+             cons.injectivity of (x0 := y, x1 := l, y0 := x, y1 := cons(a) * y * l),
              typeCons
            )
-        thenHave((y :: A ==> !(l === cons(A) * y * l), y :: A, l :: list(A)) |- forall(x, x :: A ==> !(cons(A) * y * l === cons(A) * x * (cons(A) * y * l)))) by RightForall
-        thenHave((forall(x, x :: A ==> !(l === cons(A) * x * l)), y :: A, l :: list(A)) |- forall(x, x :: A ==> !(cons(A) * y * l === cons(A) * x * (cons(A) * y * l)))) by LeftForall
+        thenHave((y :: a ==> !(l === cons(a) * y * l), y :: a, l :: list(a)) |- forall(x, x :: a ==> !(cons(a) * y * l === cons(a) * x * (cons(a) * y * l)))) by RightForall
+        thenHave((forall(x, x :: a ==> !(l === cons(a) * x * l)), y :: a, l :: list(a)) |- forall(x, x :: a ==> !(cons(a) * y * l === cons(a) * x * (cons(a) * y * l)))) by LeftForall
       }
     }
 
-    thenHave(l :: list(A) |- x :: A ==> !(l === cons(A) * x * l)) by InstantiateForall(x)
+    thenHave(l :: list(a) |- x :: a ==> !(l === cons(a) * x * l)) by InstantiateForall(x)
     thenHave(thesis) by Tautology
   }
 

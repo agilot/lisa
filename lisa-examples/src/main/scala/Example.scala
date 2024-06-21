@@ -54,6 +54,15 @@ object Example extends lisa.Main {
     )
   }
 
+  val z = variable
+  val subsetReflexivity = Theorem(
+    x ⊆ x
+  ) {
+    have(z ∈ x ==> z ∈ x) by Restate
+    thenHave(forall(z, z ∈ x ==> z ∈ x)) by RightForall
+    have(thesis) by (Apply(lisa.maths.settheory.SetTheory.subsetIntro) on lastStep)
+  }
+
   /*
 
   import lisa.mathematics.settheory.SetTheory.*

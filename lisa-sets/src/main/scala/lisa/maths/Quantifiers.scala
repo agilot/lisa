@@ -12,6 +12,7 @@ object Quantifiers extends lisa.Main {
   private val p = formulaVariable
   private val P = predicate[1]
   private val Q = predicate[1]
+  private val R = predicate[2]
 
   /**
    * Theorem --- A formula is equivalent to itself universally quantified if

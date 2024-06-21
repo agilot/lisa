@@ -95,13 +95,14 @@ private [adt] object Helpers {
     * @return the result of the block of code and prints how long it took to execute
     */
   def benchmark[T](using name: sourcecode.Name)(f: => T): T = {
-    val before = System.nanoTime
+    
+    //val before = System.nanoTime
 
     val res = f
 
-    val totalTime = (System.nanoTime - before) / 1000000
+    //val totalTime = (System.nanoTime - before) / 1000000
 
-    println(s"${name.value} time: $totalTime ms")
+    //println(s"${name.value} time: $totalTime ms")
 
     res
   }
@@ -498,148 +499,27 @@ private [adt] object ADTHelperTheorems extends lisa.Main {
     have(thesis) by Tautology
   }
 
-  // ************
-  // * ORDINALS *
-  // ************
-
-
-
-  val successorOrdinal = DEF(n) --> ordinal(n) /\ exists(m, n === successor(m))
-  val nonsuccessorOrdinal = DEF(n) --> ordinal(n) /\ !exists(m, n === successor(m))
-  val limitOrdinal = DEF(n) --> nonsuccessorOrdinal(n) /\ !(n === emptySet)
-
-
-
-  val successorOrdinalIsOrdinal = Lemma(successorOrdinal(n) |- ordinal(n)) {
-    sorry
-  }
-
-  val nonsuccessorOrdinalIsOrdinal = Lemma(nonsuccessorOrdinal(n) |- ordinal(n)) {
-    sorry
-  }
-
-  val limitOrdinalIsOrdinal = Lemma(limitOrdinal(n) |- ordinal(n)) {
-    sorry
-  }
-
-  val nonsuccessorOrdinalIsNotSuccessorOrdinal = Lemma((ordinal(n), nonsuccessorOrdinal(n)) |- !successorOrdinal(n)) {
-    sorry
-  }
-
-  val successorIsOrdinalImpliesOrdinal = Lemma(ordinal(successor(n)) |- ordinal(n)) {
-    sorry
-  }
-
-  val successorIsSuccessorOrdinal = Lemma(ordinal(n) |- successorOrdinal(successor(n))) {
-    sorry
-  }
-  
-  val successorIsSuccessorOrdinal2 = Lemma(ordinal(successor(n)) |- successorOrdinal(successor(n))) {
-    sorry
-  }
-
-  val nonsuccessorOrdinalIsInductive = Lemma((nonsuccessorOrdinal(n), in(m, n)) |- in(successor(m), n)) {
-    sorry
-  }
-
-  val limitOrdinalIsInductive = Lemma((limitOrdinal(n), in(m, n)) |- in(successor(m), n)) {
-    sorry
-  }
-
-  val leqOrdinal = Lemma((ordinal(n), subset(m, n)) |- in(m, n) \/ (m === n)) {
-    sorry
-  }
-
-  val leqOrdinalDef = Lemma(ordinal(n) |- subset(m, n) <=> m ∈ successor(n)) {
-    sorry
-  }
-
-
-  val intersectionInOrdinal = Lemma((ordinal(n), in(m, n)) |- m ∩ n === m) {
-    sorry
-  }
-
-  val successorOrNonsuccessorOrdinal = Lemma(ordinal(n) |- successorOrdinal(n) \/ nonsuccessorOrdinal(n)) {
-    sorry
-  }
-
-
-
-  // Natural numbers
-  val N = Constant("N")
-  addSymbol(N)
-
-  val domainIsOrdinal = Axiom(ordinal(N))
-
-
-  /**
-   * Lemma --- 0 is a natural number.
-   *
-   *    `0 ∈ N`
-   */
-  val zeroIsNat = Lemma(in(emptySet, N)) {
-    sorry
-  }
-
-  /**
-   * Lemma --- The natural numbers are not empty.
-   *
-   *   `N != ∅`
-   */
-  val natNotEmpty = Lemma(N === emptySet |- ()) {
-    have(!(N === emptySet)) by Cut(zeroIsNat, setWithElementNonEmpty of (y := emptySet, x := N))
-  }
-
-  /**
-   * Lemma --- There exists a natural number.
-   *
-   *  `∃n ∈ N`
-   */
-  val existsNat = Lemma(exists(n, in(n, N))) {
-    have(thesis) by RightExists(zeroIsNat)
-  }
-
-  /**
-   * Lemma --- Successor is an injective function.
-   *
-   *   `n = m <=> n + 1 = m + 1`
-   */
-  val successorInjectivity = Lemma((n === m) <=> (successor(n) === successor(m))) {
-    sorry
-  }
-
-  /**
-   * Lemma --- A term is a natural number if and only if its successor is a natural number.
-   *
-   *  `n ∈ N <=> n + 1 ∈ N`
-   */
-  val successorIsNat = Lemma(in(n, N) |- in(successor(n), N)) {
-    sorry
-  }
-
 
   // *************
   // * FUNCTIONS *
   // *************
 
 
-  val inRestrictedFunctionRange = Lemma((functional(f), in(x, d ∩ relationDomain(f))) |- in(app(f, x), relationRange(domainRestriction(f, d)))) {
+  val inRestrictedFunctionRange = Lemma((functional(f), in(x, relationDomain(f) ∩ d)) |- in(app(f, x), relationRange(domainRestriction(f, d)))) {
     sorry
   }
 
   /**
    * Lemma --- If an element is in the image of a restricted function, then it has a preimage inside its domain.
    *
-   *     `functional(f) |- y ⊆ Im(f) <=> ∃x ∈ d ∩ Dom(f). f|d(x) = y`
+   *     `functional(f) |- y ⊆ Im(f) <=> ∃x ∈ Dom(f) ∩ d. f|d(x) = y`
    */
-  val restrictedFunctionRangeMembership = Lemma(functional(f) |- in(y, relationRange(domainRestriction(f, d))) <=> ∃(x, in(x, d ∩ relationDomain(f)) /\ (app(domainRestriction(f, d), x) === y))) {
+  val restrictedFunctionRangeMembership = Lemma(functional(f) |- in(y, relationRange(domainRestriction(f, d))) <=> ∃(x, in(x,  relationDomain(f) ∩ d) /\ (app(domainRestriction(f, d), x) === y))) {
     have(functional(f) |- in(y, relationRange(domainRestriction(f, d))) <=> ∃(x, in(x, relationDomain(domainRestriction(f, d))) /\ (app(domainRestriction(f, d), x) === y))) by Cut(
       domainRestrictionFunctional of (x := d),
       functionalRangeMembership of (f := domainRestriction(f, d), b := y)
     )
-    thenHave(functional(f) |- in(y, relationRange(domainRestriction(f, d))) <=> ∃(x, in(x, d ∩ relationDomain(f)) /\ (app(domainRestriction(f, d), x) === y))) by Substitution.ApplyRules(
-      domainRestrictionDomain of (x := d)
-    )
+    thenHave(thesis) by Substitution.ApplyRules(domainRestrictionDomain of (x := d))
   }
 
   /**
@@ -851,17 +731,17 @@ private [adt] object ADTHelperTheorems extends lisa.Main {
    *     `monotonic(h) and Dom(h) = N |- ∪ Im(h|n + 1) = h(n)`
    */
   val unionRangeCumulativeRestrictedFunction =
-    Lemma((functional(h), ordinal(relationDomain(h)), in(successor(n), relationDomain(h)), ∀(m, subset(m, n) ==> subset(app(h, m), app(h, n)))) |- unionRange(domainRestriction(h, successor(n))) === app(h, n)) {
+    Lemma((functional(h), ordinal(relationDomain(h)), in(successor(n), relationDomain(h)), ∀(m, in(m, relationDomain(h)) ==> (subset(m, n) ==> subset(app(h, m), app(h, n))))) |- unionRange(domainRestriction(h, successor(n))) === app(h, n)) {
 
-      have(functional(h) |- (y ∈ restrRange(h, successor(n)) /\ z ∈ y) <=> ∃(m, m ∈ (successor(n) ∩ relationDomain(h)) /\ (app(domainRestriction(h, successor(n)), m) === y)) /\ z ∈ y) by Cut(
+      have(functional(h) |- (y ∈ restrRange(h, successor(n)) /\ z ∈ y) <=> ∃(m, m ∈ (relationDomain(h) ∩ successor(n)) /\ (app(domainRestriction(h, successor(n)), m) === y)) /\ z ∈ y) by Cut(
         restrictedFunctionRangeMembership of (f := h, d := successor(n)),
-        rightAndEquivalence of (p1 := y ∈ restrRange(h, successor(n)), p2 := ∃(m, m ∈ (successor(n) ∩ relationDomain(h)) /\ (app(domainRestriction(h, successor(n)), m) === y)), p := z ∈ y)
+        rightAndEquivalence of (p1 := y ∈ restrRange(h, successor(n)), p2 := ∃(m, m ∈ (relationDomain(h) ∩ successor(n)) /\ (app(domainRestriction(h, successor(n)), m) === y)), p := z ∈ y)
       )
 
       thenHave(
         (functional(h), ordinal(relationDomain(h)), in(successor(n), relationDomain(h))) |- (y ∈ restrRange(h, successor(n)) /\ z ∈ y) <=> 
         ∃(m, m ∈ successor(n) /\ (app(domainRestriction(h, successor(n)), m) === y)) /\ z ∈ y
-      ) by Substitution.ApplyRules(intersectionInOrdinal of (m := successor(n), n := relationDomain(h)))
+      ) by Substitution.ApplyRules(intersectionInOrdinal of (b := successor(n), a := relationDomain(h)))
 
       thenHave(
         (functional(h), ordinal(relationDomain(h)), in(successor(n), relationDomain(h))) |- (y ∈ restrRange(h, successor(n)) /\ z ∈ y) <=> 
@@ -884,11 +764,11 @@ private [adt] object ADTHelperTheorems extends lisa.Main {
         )
       )
 
-      val introM =
-        thenHave(
-          (functional(h), ordinal(relationDomain(h)), in(successor(n), relationDomain(h))) |- ∃(y, y ∈ restrRange(h, successor(n)) /\ z ∈ y) <=> 
-          ∃(m, ∃(y, m ∈ successor(n) /\ z ∈ y /\ (app(domainRestriction(h, successor(n)), m) === y)))
-        ) by Tableau
+      val introM = thenHave(
+        (functional(h), ordinal(relationDomain(h)), in(successor(n), relationDomain(h))) |- ∃(y, y ∈ restrRange(h, successor(n)) /\ z ∈ y) <=> 
+        ∃(m, ∃(y, m ∈ successor(n) /\ z ∈ y /\ (app(domainRestriction(h, successor(n)), m) === y)))
+      ) by Substitution.ApplyRules(existentialSwap of (P2 := lambda((y, m), m ∈ successor(n) /\ (app(domainRestriction(h, successor(n)), m) === y) /\ z ∈ y))
+      )
 
       have((∃(y, m ∈ successor(n) /\ z ∈ y /\ (app(domainRestriction(h, successor(n)), m) === y))) <=> (m ∈ successor(n) /\ z ∈ app(domainRestriction(h, successor(n)), m))) by Exact(
         equalityInExistentialQuantifier of (P := lambda(y, m ∈ successor(n) /\ z ∈ y))
@@ -918,32 +798,32 @@ private [adt] object ADTHelperTheorems extends lisa.Main {
         ∃(y, y ∈ restrRange(h, successor(n)) /\ z ∈ y) <=> ∃(m, subset(m, n) /\ z ∈ app(h, m))) by Cut(introM, lastStep)
 
       have((functional(h), ordinal(successor(n)), ordinal(relationDomain(h)), in(successor(n), relationDomain(h))) |- 
-        ∃(y, y ∈ restrRange(h, successor(n)) /\ z ∈ y) <=> ∃(m, subset(m, n) /\ z ∈ app(h, m))) by Cut(successorIsOrdinalImpliesOrdinal, lastStep)
+        ∃(y, y ∈ restrRange(h, successor(n)) /\ z ∈ y) <=> ∃(m, subset(m, n) /\ z ∈ app(h, m))) by Cut(successorIsOrdinalImpliesOrdinal of (a := n), lastStep)
       have((functional(h), ordinal(relationDomain(h)), in(successor(n), relationDomain(h))) |- 
         ∃(y, y ∈ restrRange(h, successor(n)) /\ z ∈ y) <=> ∃(m, subset(m, n) /\ z ∈ app(h, m))) by Cut(elementsOfOrdinalsAreOrdinals of (b := successor(n), a := relationDomain(h)), lastStep)
 
       val unionIsExists =
         thenHave((functional(h), ordinal(relationDomain(h)), in(successor(n), relationDomain(h))) |- z ∈ unionRange(domainRestriction(h, successor(n))) <=> ∃(m, subset(m, n) /\ z ∈ app(h, m))) by Substitution.ApplyRules(unionAxiom of (x := restrRange(h, successor(n))))
 
-      val monotonicity = ∀(m, subset(m, n) ==> subset(app(h, m), app(h, n)))
+      val monotonicity = ∀(m, in(m, relationDomain(h)) ==> (subset(m, n) ==> subset(app(h, m), app(h, n))))
 
-      have(monotonicity |- ∃(m, subset(m, n) /\ z ∈ app(h, m)) <=> z ∈ app(h, n)) subproof {
-        have(z ∈ app(h, n) |- z ∈ app(h, n)) by Hypothesis
-        have(z ∈ app(h, n) |- subset(n, n) /\ z ∈ app(h, n)) by RightAnd(lastStep, subsetReflexivity of (x := n))
-        thenHave(z ∈ app(h, n) |- ∃(m, subset(m, n) /\ z ∈ app(h, m))) by RightExists
-        val backward = thenHave(z ∈ app(h, n) ==> ∃(m, subset(m, n) /\ z ∈ app(h, m))) by RightImplies
+      have((monotonicity, in(n, relationDomain(h))) |- ∃(m, in(m, relationDomain(h)) /\ subset(m, n) /\ z ∈ app(h, m)) <=> z ∈ app(h, n)) subproof {
+        have((z ∈ app(h, n), in(n, relationDomain(h))) |- in(n, relationDomain(h)) /\ z ∈ app(h, n)) by Restate
+        have((z ∈ app(h, n), in(n, relationDomain(h))) |- in(n, relationDomain(h)) /\ subset(n, n) /\ z ∈ app(h, n)) by RightAnd(lastStep, subsetReflexivity of (x := n))
+        thenHave((z ∈ app(h, n), in(n, relationDomain(h))) |- ∃(m, in(m, relationDomain(h)) /\ subset(m, n) /\ z ∈ app(h, m))) by RightExists
+        val backward = thenHave(in(n, relationDomain(h)) |- z ∈ app(h, n) ==> ∃(m, in(m, relationDomain(h)) /\ subset(m, n) /\ z ∈ app(h, m))) by RightImplies
 
         have(monotonicity |- monotonicity) by Hypothesis
-        thenHave((monotonicity, subset(m, n)) |- subset(app(h, m), app(h, n))) by InstantiateForall(m)
-        have((monotonicity, subset(m, n), z ∈ app(h, m)) |- z ∈ app(h, n)) by Cut(lastStep,subsetElim of (x := app(h, m), y := app(h, n)))
-        thenHave((monotonicity, subset(m, n) /\ z ∈ app(h, m)) |- z ∈ app(h, n)) by LeftAnd
-        thenHave((monotonicity, ∃(m, subset(m, n) /\ z ∈ app(h, m))) |- z ∈ app(h, n)) by LeftExists
-        val forward = thenHave(monotonicity |- ∃(m, subset(m, n) /\ z ∈ app(h, m)) ==> z ∈ app(h, n)) by RightImplies
+        thenHave((monotonicity, subset(m, n), in(m, relationDomain(h))) |- subset(app(h, m), app(h, n))) by InstantiateForall(m)
+        have((monotonicity, subset(m, n), in(m, relationDomain(h)), z ∈ app(h, m)) |- z ∈ app(h, n)) by Cut(lastStep,subsetElim of (x := app(h, m), y := app(h, n)))
+        thenHave((monotonicity, in(m, relationDomain(h)) /\ subset(m, n) /\ z ∈ app(h, m)) |- z ∈ app(h, n)) by Restate
+        thenHave((monotonicity, ∃(m, in(m, relationDomain(h)) /\ subset(m, n) /\ z ∈ app(h, m))) |- z ∈ app(h, n)) by LeftExists
+        val forward = thenHave(monotonicity |- ∃(m, in(m, relationDomain(h)) /\ subset(m, n) /\ z ∈ app(h, m)) ==> z ∈ app(h, n)) by RightImplies
 
         have(thesis) by RightIff(forward, backward)
       }
 
-      have((functional(h), ordinal(relationDomain(h)), in(successor(n), relationDomain(h)), monotonicity) |- (z ∈ unionRange(domainRestriction(h, successor(n)))) <=> z ∈ app(h, n)) by Substitution.ApplyRules(lastStep)(unionIsExists)
+      have((functional(h), ordinal(relationDomain(h)), in(successor(n), relationDomain(h)), monotonicity) |- (z ∈ unionRange(domainRestriction(h, successor(n)))) <=> z ∈ app(h, n)) by Sorry//Substitution.ApplyRules(lastStep)(unionIsExists)
       thenHave((functional(h), ordinal(relationDomain(h)), in(successor(n), relationDomain(h)), monotonicity) |- ∀(z, z ∈ unionRange(domainRestriction(h, successor(n))) <=> z ∈ app(h, n))) by RightForall
       have(thesis) by Cut(lastStep, equalityIntro of (x := unionRange(domainRestriction(h, successor(n))), y := app(h, n)))
     }
@@ -961,11 +841,12 @@ private [adt] object ADTHelperTheorems extends lisa.Main {
   def classFunctionMonotonic(c: PredicateLabel[2]) = forall(m, forall(n, subset(m, n) ==> forall(x, c(x, m) ==> c(x, n))))
 
   val inFixpointFunctionDomain = Lemma((fixpointClassFunction(h)(P2), in(n, relationDomain(h))) |- ordinal(n)) {
-    sorry
+    have(fixpointClassFunction(h)(P2) |- ordinal(relationDomain(h))) by Restate
+    have(thesis) by Cut(lastStep, elementsOfOrdinalsAreOrdinals of (b := n, a := relationDomain(h)))
   }
 
   val subsetElemFixpointFunctionDomain = Lemma((fixpointClassFunction(h)(P2), in(n, relationDomain(h)), subset(m, n)) |- in(m,  relationDomain(h))) {
-      sorry
+    sorry
   }
 
   val successorElemFixpointFunctionDomain = Lemma((fixpointClassFunction(h)(P2), in(successor(n), relationDomain(h))) |- in(n,  relationDomain(h))) {
@@ -987,7 +868,8 @@ private [adt] object ADTHelperTheorems extends lisa.Main {
     thenHave((funApplicationDef, in(successor(n), relationDomain(h))) |- forall(x, funBodySucc)) by InstantiateForall(successor(n))
     thenHave((funApplicationDef, in(successor(n), relationDomain(h))) |- funBodySucc) by InstantiateForall(x)
     thenHave((fixpointClassFunction(h)(P2), in(successor(n), relationDomain(h)), successorOrdinal(successor(n))) |- in(x, app(h, successor(n))) <=> P2(x, unionRange(domainRestriction(h, successor(n))))) by Tautology
-    have((fixpointClassFunction(h)(P2), in(successor(n), relationDomain(h)), ordinal(successor(n))) |- in(x, app(h, successor(n))) <=> P2(x, unionRange(domainRestriction(h, successor(n))))) by Cut(successorIsSuccessorOrdinal2, lastStep)
+    have((fixpointClassFunction(h)(P2), in(successor(n), relationDomain(h)), ordinal(n)) |- in(x, app(h, successor(n))) <=> P2(x, unionRange(domainRestriction(h, successor(n))))) by Cut(successorIsSuccessorOrdinal of (a := n), lastStep)
+    have((fixpointClassFunction(h)(P2), in(successor(n), relationDomain(h)), ordinal(successor(n))) |- in(x, app(h, successor(n))) <=> P2(x, unionRange(domainRestriction(h, successor(n))))) by Cut(successorIsOrdinalImpliesOrdinal of (a := n), lastStep)
     have(thesis) by Cut(inFixpointFunctionDomain of (n := successor(n)), lastStep)
   }
 
@@ -1004,13 +886,12 @@ private [adt] object ADTHelperTheorems extends lisa.Main {
     thenHave((funApplicationDef, in(n, relationDomain(h))) |- forall(x, funBody)) by InstantiateForall(n)
     thenHave((funApplicationDef, in(n, relationDomain(h))) |- funBody) by InstantiateForall(x)
     thenHave((fixpointClassFunction(h)(P2), in(n, relationDomain(h)), !successorOrdinal(n)) |- in(x, app(h, n)) <=> in(x, unionRange(domainRestriction(h, n)))) by Tautology
-    have((fixpointClassFunction(h)(P2), in(n, relationDomain(h)), ordinal(n), nonsuccessorOrdinal(n)) |- in(x, app(h, n)) <=> in(x, unionRange(domainRestriction(h, n)))) by Cut(nonsuccessorOrdinalIsNotSuccessorOrdinal, lastStep)
-    have((fixpointClassFunction(h)(P2), in(n, relationDomain(h)), nonsuccessorOrdinal(n)) |- in(x, app(h, n)) <=> in(x, unionRange(domainRestriction(h, n)))) by Cut(inFixpointFunctionDomain, lastStep)
+    have((fixpointClassFunction(h)(P2), in(n, relationDomain(h)), nonsuccessorOrdinal(n)) |- in(x, app(h, n)) <=> in(x, unionRange(domainRestriction(h, n)))) by Cut(nonsuccessorOrdinalIsNotSuccessorOrdinal, lastStep)
     thenHave((fixpointClassFunction(h)(P2), in(n, relationDomain(h)), nonsuccessorOrdinal(n)) |- forall(x, in(x, app(h, n)) <=> in(x, unionRange(domainRestriction(h, n))))) by RightForall
     have(thesis) by Cut(lastStep, equalityIntro of (x := app(h, n), y := unionRange(domainRestriction(h, n))))
   }
   
-  val fixpointFunctionMonotonicity = benchmark(Lemma((classFunctionMonotonic(P2), classFunctionCumulative(P2), fixpointClassFunction(h)(P2), in(n, relationDomain(h)), subset(m, n)) |- subset(app(h, m), app(h, n))) {
+  val fixpointFunctionMonotonicity = benchmark(Lemma((classFunctionMonotonic(P2), classFunctionCumulative(P2), fixpointClassFunction(h)(P2), in(m, relationDomain(h)), in(n, relationDomain(h)), subset(m, n)) |- subset(app(h, m), app(h, n))) {
 
     val succCase = have((classFunctionMonotonic(P2), classFunctionCumulative(P2), fixpointClassFunction(h)(P2), in(n, relationDomain(h)), subset(m, n), successorOrdinal(n)) |- subset(app(h, m), app(h, n))) subproof {
 
@@ -1074,7 +955,7 @@ private [adt] object ADTHelperTheorems extends lisa.Main {
           lambda(p, p)
         )
 
-        have(thesis) by Cut(successorOrdinal.definition of (n := m), lastStep)
+        have(thesis) by Cut(successorOrdinal.definition of (a := m), lastStep)
 
       }
 
@@ -1128,16 +1009,12 @@ private [adt] object ADTHelperTheorems extends lisa.Main {
         lambda(p, p)
       )
 
-      have(thesis) by Cut(successorOrdinal.definition, lastStep)
+      have(thesis) by Cut(successorOrdinal.definition of (a := n), lastStep)
     }
 
-    val nonSuccCase = have((fixpointClassFunction(h)(P2), in(n, relationDomain(h)), subset(m, n), nonsuccessorOrdinal(n)) |- subset(app(h, m), app(h, n))) subproof {
-      have((functional(h), in(m, n), n ∩ relationDomain(h) === n) |- in(app(h, m), relationRange(domainRestriction(h, n)))) by LeftSubstEq.withParametersSimple(
-        List((n ∩ relationDomain(h), n)),
-        lambda(s, in(m, s))
-      )(inRestrictedFunctionRange of (f := h, x := m, d := n))
+    val nonSuccCase = have((fixpointClassFunction(h)(P2), in(m, relationDomain(h)), in(n, relationDomain(h)), subset(m, n), nonsuccessorOrdinal(n)) |- subset(app(h, m), app(h, n))) subproof {
 
-      have((ordinal(relationDomain(h)), functional(h), in(m, n), in(n, relationDomain(h))) |- in(app(h, m), relationRange(domainRestriction(h, n)))) by Cut(intersectionInOrdinal of (m := n, n := relationDomain(h)), lastStep)
+      have((ordinal(relationDomain(h)), functional(h), in(m, n), in(n, relationDomain(h))) |- in(app(h, m), relationRange(domainRestriction(h, n)))) by Substitution.ApplyRules(intersectionInOrdinal of (b := n, a := relationDomain(h)))(inRestrictedFunctionRange of (f := h, x := m, d := n))
 
       have((ordinal(relationDomain(h)), functional(h), in(m, n), in(n, relationDomain(h))) |- subset(app(h, m), unionRange(domainRestriction(h, n)))) by Cut(lastStep, inSetSubsetUnion of (x := app(h, m), y := relationRange(domainRestriction(h, n))))
 
@@ -1154,15 +1031,15 @@ private [adt] object ADTHelperTheorems extends lisa.Main {
         List((m, n)),
         lambda(s, subset(app(h, m), app(h, s)))
       )(subsetReflexivity of (x := app(h, m)))
-
-      have((fixpointClassFunction(h)(P2), in(m, n) \/ (m === n), in(n, relationDomain(h)), nonsuccessorOrdinal(n)) |- subset(app(h, m), app(h, n))) by LeftOr(nonSuccCaseIn, lastStep)
-      have((fixpointClassFunction(h)(P2), ordinal(n), subset(m, n), in(n, relationDomain(h)), nonsuccessorOrdinal(n)) |- subset(app(h, m), app(h, n))) by Cut(leqOrdinal, lastStep)
-      have(thesis) by Cut(nonsuccessorOrdinalIsOrdinal, lastStep)
+      have((ordinal(m), ordinal(n), subset(m, n)) |- (in(m, n), subset(app(h, m), app(h, n)))) by Cut(ordinalSubsetImpliesLeq of (a := m, b := n), lastStep)
+      have((fixpointClassFunction(h)(P2), in(n, relationDomain(h)), ordinal(m), ordinal(n), subset(m, n), nonsuccessorOrdinal(n)) |- subset(app(h, m), app(h, n))) by Cut(lastStep, nonSuccCaseIn)
+      have((fixpointClassFunction(h)(P2), ordinal(m), subset(m, n), in(n, relationDomain(h)), nonsuccessorOrdinal(n)) |- subset(app(h, m), app(h, n))) by Cut(nonsuccessorOrdinalIsOrdinal of (a := n), lastStep)
+      have(thesis) by Cut(inFixpointFunctionDomain of (n := m), lastStep)
     }
 
-    have((classFunctionMonotonic(P2), classFunctionCumulative(P2), fixpointClassFunction(h)(P2), in(n, relationDomain(h)), subset(m, n), successorOrdinal(n) \/ nonsuccessorOrdinal(n)) |- subset(app(h, m), app(h, n))) by LeftOr(succCase, nonSuccCase)
+    have((classFunctionMonotonic(P2), classFunctionCumulative(P2), fixpointClassFunction(h)(P2), in(m, relationDomain(h)), in(n, relationDomain(h)), subset(m, n), successorOrdinal(n) \/ nonsuccessorOrdinal(n)) |- subset(app(h, m), app(h, n))) by LeftOr(succCase, nonSuccCase)
 
-    have((classFunctionMonotonic(P2), classFunctionCumulative(P2), fixpointClassFunction(h)(P2), in(n, relationDomain(h)), subset(m, n), ordinal(n)) |- subset(app(h, m), app(h, n))) by Cut(successorOrNonsuccessorOrdinal, lastStep)
+    have((classFunctionMonotonic(P2), classFunctionCumulative(P2), fixpointClassFunction(h)(P2), in(m, relationDomain(h)), in(n, relationDomain(h)), subset(m, n), ordinal(n)) |- subset(app(h, m), app(h, n))) by Cut(successorOrNonsuccessorOrdinal, lastStep)
 
     have(thesis) by Cut(inFixpointFunctionDomain, lastStep)
 
@@ -1170,9 +1047,10 @@ private [adt] object ADTHelperTheorems extends lisa.Main {
   
   val fixpointFunctionSuccessor = Lemma((classFunctionMonotonic(P2), classFunctionCumulative(P2), fixpointClassFunction(h)(P2), in(successor(n), relationDomain(h))) |- in(x, app(h, successor(n))) <=> P2(x, app(h, n))) {
     
-    have(((classFunctionMonotonic(P2), classFunctionCumulative(P2), fixpointClassFunction(h)(P2), in(n, relationDomain(h))) |- subset(m, n) ==> subset(app(h, m), app(h, n)))) by RightImplies(fixpointFunctionMonotonicity)
-    thenHave(((classFunctionMonotonic(P2), classFunctionCumulative(P2), fixpointClassFunction(h)(P2), in(n, relationDomain(h))) |- forall(m, subset(m, n) ==> subset(app(h, m), app(h, n))))) by RightForall
-    have(((classFunctionMonotonic(P2), classFunctionCumulative(P2), fixpointClassFunction(h)(P2), in(successor(n), relationDomain(h))) |- forall(m, subset(m, n) ==> subset(app(h, m), app(h, n))))) by Cut(successorElemFixpointFunctionDomain, lastStep)
+    have(((classFunctionMonotonic(P2), classFunctionCumulative(P2), fixpointClassFunction(h)(P2), in(m, relationDomain(h)), in(n, relationDomain(h))) |- subset(m, n) ==> subset(app(h, m), app(h, n)))) by RightImplies(fixpointFunctionMonotonicity)
+    thenHave(((classFunctionMonotonic(P2), classFunctionCumulative(P2), fixpointClassFunction(h)(P2), in(n, relationDomain(h))) |- in(m, relationDomain(h)) ==> (subset(m, n) ==> subset(app(h, m), app(h, n))))) by RightImplies
+    thenHave(((classFunctionMonotonic(P2), classFunctionCumulative(P2), fixpointClassFunction(h)(P2), in(n, relationDomain(h))) |- forall(m, in(m, relationDomain(h)) ==> (subset(m, n) ==> subset(app(h, m), app(h, n)))))) by RightForall
+    have(((classFunctionMonotonic(P2), classFunctionCumulative(P2), fixpointClassFunction(h)(P2), in(successor(n), relationDomain(h))) |- forall(m, in(m, relationDomain(h)) ==> (subset(m, n) ==> subset(app(h, m), app(h, n)))))) by Cut(successorElemFixpointFunctionDomain, lastStep)
     have((functional(h), ordinal(relationDomain(h)), classFunctionMonotonic(P2), classFunctionCumulative(P2), fixpointClassFunction(h)(P2), in(successor(n), relationDomain(h))) |- unionRange(domainRestriction(h, successor(n))) === app(h, n)) by Cut(lastStep, unionRangeCumulativeRestrictedFunction)
     val unionRangeSucc = thenHave((classFunctionMonotonic(P2), classFunctionCumulative(P2), fixpointClassFunction(h)(P2), in(successor(n), relationDomain(h))) |- unionRange(domainRestriction(h, successor(n))) === app(h, n)) by Restate
     
@@ -1247,6 +1125,49 @@ private [adt] object ADTHelperTheorems extends lisa.Main {
         // STEP 2: Conclude using the extension by definition
 
         have(thesis) by Cut(lastStep, uniqueByExtension of (schemPred := lambda(t, fixpointDefinitionRight)))
+  }
+
+
+  val N = Constant("N")
+  addSymbol(N)
+
+  val domainIsOrdinal = Axiom(ordinal(N))
+
+
+  /**
+   * Lemma --- 0 is a natural number.
+   *
+   *    `0 ∈ N`
+   */
+  val zeroIsNat = Lemma(in(emptySet, N)) {
+    sorry
+  }
+
+  /**
+   * Lemma --- There exists a natural number.
+   *
+   *  `∃n ∈ N`
+   */
+  val existsNat = Lemma(exists(n, in(n, N))) {
+    have(thesis) by RightExists(zeroIsNat)
+  }
+
+  /**
+   * Lemma --- Successor is an injective function.
+   *
+   *   `n = m <=> n + 1 = m + 1`
+   */
+  val successorInjectivity = Lemma((n === m) <=> (successor(n) === successor(m))) {
+    sorry
+  }
+
+  /**
+   * Lemma --- A term is a natural number if and only if its successor is a natural number.
+   *
+   *  `n ∈ N <=> n + 1 ∈ N`
+   */
+  val successorIsNat = Lemma(in(n, N) |- in(successor(n), N)) {
+    sorry
   }
 
 }

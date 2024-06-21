@@ -1,3 +1,4 @@
+import lisa.maths.settheory.SetTheory.setIntersection
 
 object Test extends lisa.Main {
 
@@ -8,6 +9,7 @@ object Test extends lisa.Main {
   val y = variable
   val z = variable
   val a = variable
+  val b = variable
   val c = variable
   val d = variable
 
@@ -24,6 +26,13 @@ object Test extends lisa.Main {
 
   val goal = E(f(f(g(a))), g(f(f(a))))
 
+  val thm0 = Theorem(True) {
+    val rule = have(a ⊆ b ==> (c ∈ a ==> c ∈ b)) by Sorry
+    val fact1 = have(z ∈ x) by Sorry
+
+    have(x ⊆ y ==> z ∈ y) by (Apply(rule) on fact1)
+    have(thesis) by Restate
+  }
 
   val thm = Theorem((assump1, assump2, assump3) |- goal) {
     have(thesis) by Tableau
