@@ -602,7 +602,7 @@ object PartialOrders extends lisa.Main {
       lastStep
     )
     have((strictWellOrder(r, x), !(z === emptySet), subset(z, y), subset(y, x)) |- exists(a, isLeastElement(a, z, relationRestriction(r, y, y), y))) by Cut(
-      subsetTransitivity of (a := z, b := y, c := x),
+      subsetTransitivity of (x := z, z := x),
       lastStep
     )
     thenHave((strictWellOrder(r, x), subset(z, y) /\ !(z === emptySet), subset(y, x)) |- exists(a, isLeastElement(a, z, relationRestriction(r, y, y), y))) by LeftAnd

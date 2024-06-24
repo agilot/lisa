@@ -400,6 +400,70 @@ object Functions extends lisa.Main {
     have(thesis) by Weakening(functionalApp)
   }
 
+  val pairReconstructionInFunctional = Lemma(
+    (functional(f), in(p, f)) |- p === pair(firstInPair(p), secondInPair(p))
+  ) {
+    have(thesis) by Cut(functionalIsRelation, pairReconstructionInRelation of (r := f))
+  }
+
+  val elemOfFunctionalIsApp = Lemma(
+    (functional(f), in(p, f)) |- app(f, firstInPair(p)) === secondInPair(p)
+  ) {
+    have(thesis) by Substitution.ApplyRules(pairReconstructionInFunctional)(pairIsAppFunctional of (a := firstInPair(p), b := secondInPair(p)))
+  }
+
+  val pairAppReconstruction = Lemma(
+    (functional(f), in(p, f)) |- p === pair(firstInPair(p), app(f, firstInPair(p)))
+  ) {
+    have(thesis) by Substitution.ApplyRules(elemOfFunctionalIsApp)(pairReconstructionInFunctional)
+  }
+
+  val appSubset = Lemma(
+    (functional(g), subset(f, g), in(a, relationDomain(f))) |- app(g, a) === app(f, a)
+  ) {
+    have((functional(f), subset(f, g), in(a, relationDomain(f))) |- in(pair(a, app(f, a)), g)) by Cut(appIntroFunctional, subsetElim of (x := f, y := g, z := pair(a, app(f, a))))
+    have((functional(g), functional(f), subset(f, g), in(a, relationDomain(f))) |- app(f, a) === app(g, a)) by Cut(lastStep, pairIsAppFunctional of (b := app(f, a), f := g))
+    have(thesis) by Cut(functionalSubset, lastStep)
+  }
+
+  val appSetUnionRight = Lemma(
+    (functional(setUnion(f, g)), in(a, relationDomain(f))) |- app(setUnion(f, g), a) === app(f, a)
+  ) {
+    have(thesis) by Cut(setUnionLeftSubset of (a := f, b := g), appSubset of (g := setUnion(f, g)))
+  }
+
+  val appUnion = Lemma(
+    (functional(union(z)), in(f, z), in(a, relationDomain(f))) |- app(union(z), a) === app(f, a)
+  ) {
+    have(thesis) by Cut(inSetSubsetUnion of (x := f, y := z), appSubset of (g := union(z)))
+  }
+
+  val functionalSubsetApp = Lemma(
+    (functional(f), functional(g), subset(relationDomain(f), relationDomain(g)), forall(a, in(a, relationDomain(f)) ==> (app(f, a) === app(g, a)))) |- subset(f, g)
+  ) {
+    val appEq = forall(a, in(a, relationDomain(f)) ==> (app(f, a) === app(g, a)))
+
+    have(appEq |- appEq) by Hypothesis
+    val subst = thenHave((appEq, in(firstInPair(p), relationDomain(f))) |- app(f, firstInPair(p)) === app(g, firstInPair(p))) by InstantiateForall(firstInPair(p))
+    
+    have((functional(g), in(firstInPair(p), relationDomain(f)), subset(relationDomain(f), relationDomain(g))) |- in(pair(firstInPair(p), app(g, firstInPair(p))), g)) by Cut(subsetElim of (x := relationDomain(f), y := relationDomain(g), z := firstInPair(p)), appIntroFunctional of (f := g, a := firstInPair(p)))
+    thenHave((functional(g), appEq, in(firstInPair(p), relationDomain(f)), subset(relationDomain(f), relationDomain(g))) |- in(pair(firstInPair(p), app(f, firstInPair(p))), g)) by Substitution.ApplyRules(subst)
+    have((functional(g), appEq, in(pair(firstInPair(p), secondInPair(p)), f), subset(relationDomain(f), relationDomain(g))) |- in(pair(firstInPair(p), app(f, firstInPair(p))), g)) by Cut(relationDomainIntro of (a := firstInPair(p), b := secondInPair(p), r := f), lastStep)
+    thenHave((functional(f), functional(g), appEq, in(p, f), subset(relationDomain(f), relationDomain(g))) |- in(p, g)) by Substitution.ApplyRules(pairReconstructionInFunctional, pairAppReconstruction)
+    thenHave((functional(f), functional(g), appEq, subset(relationDomain(f), relationDomain(g))) |- in(p, f) ==> in(p, g)) by RightImplies
+    thenHave((functional(f), functional(g), appEq, subset(relationDomain(f), relationDomain(g))) |- forall(p, in(p, f) ==> in(p, g))) by RightForall
+    have(thesis) by Cut(lastStep, subsetIntro of (x := f, y := g))
+  }
+
+  val functionalEqualApp = Lemma(
+    (functional(f), functional(g), relationDomain(f) === relationDomain(g), forall(a, in(a, relationDomain(f)) ==> (app(f, a) === app(g, a)))) |- f === g
+  ) {
+    have((functional(f), functional(g), subset(relationDomain(f), relationDomain(g)), forall(a, in(a, relationDomain(f)) ==> (app(f, a) === app(g, a))), subset(g, f)) |- f === g) by Cut(functionalSubsetApp, subsetAntisymmetry of (x := f, y := g))
+    have((functional(f), functional(g), subset(relationDomain(f), relationDomain(g)), subset(relationDomain(g), relationDomain(f)), forall(a, in(a, relationDomain(f)) ==> (app(f, a) === app(g, a))), forall(a, in(a, relationDomain(g)) ==> (app(f, a) === app(g, a)))) |- f === g) by Cut(functionalSubsetApp of (f := g, g := f), lastStep)
+    thenHave((functional(f), functional(g), relationDomain(f) === relationDomain(g), subset(relationDomain(f), relationDomain(f)), forall(a, in(a, relationDomain(f)) ==> (app(f, a) === app(g, a)))) |- f === g) by Substitution.ApplyRules(relationDomain(f) === relationDomain(g))
+    have(thesis) by Cut(subsetReflexivity of (x := relationDomain(f)), lastStep)
+  }
+
   val functionalOverApp = Lemma(
     functionalOver(f, x) |- in(pair(a, b), f) <=> (in(a, x) /\ (app(f, a) === b))
   ) {
@@ -423,6 +487,31 @@ object Functions extends lisa.Main {
   ) {
     have(thesis) by Cut(functionalOverIsFunctional, pairIsAppFunctional)
   }
+
+  val functionalOverSubsetApp = Lemma(
+    (functionalOver(f, x), functionalOver(g, y), subset(x, y), forall(a, in(a, x) ==> (app(f, a) === app(g, a)))) |- subset(f, g)
+  ) {
+    have((functional(f), functionalOver(f, x), functional(g), functionalOver(g, y), subset(x, y), forall(a, in(a, x) ==> (app(f, a) === app(g, a)))) |- subset(f, g)) by Substitution.ApplyRules(functionalOverDomain, functionalOverDomain of (f := g, x := y))(functionalSubsetApp)
+    have((functionalOver(f, x), functional(g), functionalOver(g, y), subset(x, y), forall(a, in(a, x) ==> (app(f, a) === app(g, a)))) |- subset(f, g)) by Cut(functionalOverIsFunctional, lastStep)
+    have(thesis) by Cut(functionalOverIsFunctional of (f := g, x := y), lastStep)
+  }
+
+  val functionalOverEqualApp = Lemma(
+    (functionalOver(f, x), functionalOver(g, x), forall(a, in(a, x) ==> (app(f, a) === app(g, a)))) |- f === g
+  ) {
+    have((functional(f), functionalOver(f, x), functional(g), x === relationDomain(g), forall(a, in(a, x) ==> (app(f, a) === app(g, a)))) |- f === g) by Substitution.ApplyRules(functionalOverDomain)(functionalEqualApp)
+    have((functionalOver(f, x), functional(g), x === relationDomain(g), forall(a, in(a, x) ==> (app(f, a) === app(g, a)))) |- f === g) by Cut(functionalOverIsFunctional, lastStep)
+    have((functionalOver(f, x), functionalOver(g, x), x === relationDomain(g), forall(a, in(a, x) ==> (app(f, a) === app(g, a)))) |- f === g) by Cut(functionalOverIsFunctional of (f := g), lastStep)
+    thenHave((functionalOver(f, x), functionalOver(g, x), x === x, forall(a, in(a, x) ==> (app(f, a) === app(g, a)))) |- f === g) by Substitution.ApplyRules(functionalOverDomain)
+  }
+
+  val functionOverUniqueDomain = Lemma(
+    (functionalOver(f, x), functionalOver(f, y)) |- x === y
+  ) {
+    have((functionalOver(f, x), relationDomain(f) === y) |- x === y) by Cut(functionalOverDomain, equalityTransitivity of (y := relationDomain(f), z := y))
+    have(thesis) by Cut(functionalOverDomain of (x := y), lastStep)
+  }
+
 
   /**
    * Lemma --- An element is in the range of a function iff there is an element in the domain that maps to it.
@@ -626,11 +715,59 @@ object Functions extends lisa.Main {
     have(thesis) by Cut(functionalIsRelation of (f := g), lastStep)
   }
 
-  val restrictedFunctionApplication = Lemma(
-    in(y, x) |- app(f, y) === app(domainRestriction(f, x), y)
+  val functionRestrictionFunctionalOver = Lemma(
+    functionalOver(f, a) |- functionalOver(domainRestriction(f, x), setIntersection(a, x))
   ) {
+    have(functional(f) |- functionalOver(domainRestriction(f, x), relationDomain(domainRestriction(f, x)))) by Cut(domainRestrictionFunctional, functionalOverIntro of (f := domainRestriction(f, x)))
+    have(functionalOver(f, a) |- functionalOver(domainRestriction(f, x), relationDomain(domainRestriction(f, x)))) by Cut(functionalOverIsFunctional of (x := a), lastStep)
+    thenHave(functionalOver(f, a) |- functionalOver(domainRestriction(f, x), setIntersection(relationDomain(f), x))) by Substitution.ApplyRules(domainRestrictionDomain)
+    thenHave(thesis) by Substitution.ApplyRules(functionalOverDomain of (x := a))
+  }
+
+  val functionRestrictionFunctionalOverSubset = Lemma(
+    (functionalOver(f, a), subset(x, a)) |- functionalOver(domainRestriction(f, x), x)
+  ) {
+    have(thesis) by Substitution.ApplyRules(setIntersectionOfSubsetBackward)(functionRestrictionFunctionalOver)
+  }
+
+  val restrictedFunctionApplication = Lemma(
+    (functional(f), in(a, x), in(a, relationDomain(f))) |- app(f, a) === app(domainRestriction(f, x), a)
+  ) {
+    have((functional(f), in(pair(a, app(f, a)), domainRestriction(f, x))) |- app(f, a) === app(domainRestriction(f, x), a)) by Cut(domainRestrictionFunctional, pairIsAppFunctional of (f := domainRestriction(f, x), b := app(f, a)))
+    have((functional(f), in(a, x), in(pair(a, app(f, a)), f)) |- app(f, a) === app(domainRestriction(f, x), a)) by Cut(domainRestrictionIntro of (b := app(f, a)), lastStep)
+    have((functional(f), in(a, x), in(a, relationDomain(f))) |- app(f, a) === app(domainRestriction(f, x), a)) by Cut(appIntroFunctional, lastStep)
+  }
+
+  val restrictedFunctionApplicationWithDomain = Lemma(
+    (functionalOver(f, y), in(a, x), in(a, y)) |- app(f, a) === app(domainRestriction(f, x), a)
+  ) {
+    have((functionalOver(f, y), in(a, x), in(a, relationDomain(f))) |- app(f, a) === app(domainRestriction(f, x), a)) by Cut(functionalOverIsFunctional of (x := y), restrictedFunctionApplication)
+    thenHave(thesis) by Substitution.ApplyRules(functionalOverDomain)
+  }
+
+  val functionRestrictionEqualApp = Lemma(
+    (functionalOver(f, a), functionalOver(g, b), subset(x, a), subset(x, b), forall(z, in(z, x) ==> (app(f, z) === app(g, z)))) |- domainRestriction(f, x) === domainRestriction(g, x)
+  ) {
+    have(forall(z, in(z, x) ==> (app(f, z) === app(g, z))) |- forall(z, in(z, x) ==> (app(f, z) === app(g, z)))) by Hypothesis
+    thenHave((forall(z, in(z, x) ==> (app(f, z) === app(g, z))), in(z, x)) |- app(f, z) === app(g, z)) by InstantiateForall(z)
+    thenHave((forall(z, in(z, x) ==> (app(f, z) === app(g, z))), functionalOver(f, a), in(z, x), in(z, a)) |- app(domainRestriction(f, x), z) === app(g, z)) by Substitution.ApplyRules(restrictedFunctionApplicationWithDomain of (a := z, y := a))
+    thenHave((forall(z, in(z, x) ==> (app(f, z) === app(g, z))), functionalOver(f, a), functionalOver(g, b), in(z, x), in(z, a), in(z, b)) |- app(domainRestriction(f, x), z) === app(domainRestriction(g, x), z)) by Substitution.ApplyRules(restrictedFunctionApplicationWithDomain of (a := z, y := b, f := g))
+    have((forall(z, in(z, x) ==> (app(f, z) === app(g, z))), functionalOver(f, a), functionalOver(g, b), in(z, x), subset(x, a), in(z, b)) |- app(domainRestriction(f, x), z) === app(domainRestriction(g, x), z)) by Cut(subsetElim of (y := a), lastStep)
+    have((forall(z, in(z, x) ==> (app(f, z) === app(g, z))), functionalOver(f, a), functionalOver(g, b), in(z, x), subset(x, a), subset(x, b)) |- app(domainRestriction(f, x), z) === app(domainRestriction(g, x), z)) by Cut(subsetElim of (y := b), lastStep)
+    thenHave((forall(z, in(z, x) ==> (app(f, z) === app(g, z))), functionalOver(f, a), functionalOver(g, b), subset(x, a), subset(x, b)) |- in(z, x) ==> (app(domainRestriction(f, x), z) === app(domainRestriction(g, x), z))) by RightImplies
+    thenHave((forall(z, in(z, x) ==> (app(f, z) === app(g, z))), functionalOver(f, a), functionalOver(g, b), subset(x, a), subset(x, b)) |- forall(z, in(z, x) ==> (app(domainRestriction(f, x), z) === app(domainRestriction(g, x), z)))) by RightForall
+    have((forall(z, in(z, x) ==> (app(f, z) === app(g, z))), functionalOver(f, a), functionalOver(g, b), subset(x, a), subset(x, b), functionalOver(domainRestriction(f, x), x), functionalOver(domainRestriction(g, x), x)) |- domainRestriction(f, x) === domainRestriction(g, x)) by Cut(lastStep, functionalOverEqualApp of (f := domainRestriction(f, x), g := domainRestriction(g, x)))
+    have((forall(z, in(z, x) ==> (app(f, z) === app(g, z))), functionalOver(f, a), functionalOver(g, b), subset(x, a), subset(x, b), functionalOver(domainRestriction(g, x), x)) |- domainRestriction(f, x) === domainRestriction(g, x)) by Cut(functionRestrictionFunctionalOverSubset, lastStep)
+    have(thesis) by Cut(functionRestrictionFunctionalOverSubset of (f := g, a := b), lastStep)
+
+    // val functionalOverEqualApp = Lemma(
+    //   (functionalOver(f, x), functionalOver(g, x), forall(a, in(a, x) ==> (app(f, a) === app(g, a)))) |- f === g
+    // )
+
     sorry
   }
+
+
 
   // TODO: any subset of a functional is functional
   // TODO: a functional over something restricted to x is still functional
@@ -675,8 +812,8 @@ object Functions extends lisa.Main {
     thenHave((surjective(f, x, y), functionFrom(f, x, y)) |- in(b, y) ==> in(b, relationRange(f))) by RightImplies
     thenHave((surjective(f, x, y), functionFrom(f, x, y)) |- ∀(b, in(b, y) ==> in(b, relationRange(f)))) by RightForall
     have((surjective(f, x, y), functionFrom(f, x, y)) |- subset(y, relationRange(f))) by Cut(lastStep, subsetIntro of (x := y, y := relationRange(f)))
-    have((surjective(f, x, y), functionFrom(f, x, y)) |- subset(y, relationRange(f)) /\ subset(relationRange(f), y)) by RightAnd(lastStep, functionFromRangeSubsetCodomain)
-    thenHave((surjective(f, x, y), functionFrom(f, x, y)) |- y === relationRange(f)) by Substitution.ApplyRules(subsetAntisymmetry of (x := y, y := relationRange(f)))
+    have((surjective(f, x, y), functionFrom(f, x, y), subset(relationRange(f), y)) |- y === relationRange(f)) by Cut(lastStep, subsetAntisymmetry of (x := y, y := relationRange(f)))
+    have((surjective(f, x, y), functionFrom(f, x, y)) |- y === relationRange(f)) by Cut(functionFromRangeSubsetCodomain, lastStep)
     have(thesis) by Cut(surjectiveIsFunction, lastStep)
   }
 
@@ -868,26 +1005,6 @@ object Functions extends lisa.Main {
 
     // contradiction
     have(thesis) by Tautology.from(lastStep, notFun)
-  }
-
-  /**
-   * Lemma --- Domain of Functional Union
-   *
-   * If the unary union of a set is functional, then its domain is defined
-   * precisely by the union of the domains of its elements.
-   *
-   *    functional(\cup z) |- \forall t. t \in dom(U z) <=> \exists y \in z. t
-   *    \in dom(y)
-   *
-   * This holds, particularly, as the elements of z must be functions
-   * themselves, which follows from the assumption.
-   */
-  val domainOfFunctionalUnion = Lemma(
-    functional(union(z)) |- forall(t, in(t, relationDomain(union(z))) <=> exists(y, in(y, z) /\ in(t, relationDomain(y))))
-  ) {
-    assume(functional(union(z)))
-    have(relation(union(z))) by Tautology.from(functional.definition of (f := union(z)))
-    have(thesis) by Tautology.from(lastStep, domainOfRelationalUnion)
   }
 
 }

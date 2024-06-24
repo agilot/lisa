@@ -82,7 +82,7 @@ object Relations extends lisa.Main {
     (subset(r1, r2), relationBetween(r2, a, b)) |- relationBetween(r1, a, b)
   ) {
     have((subset(r1, r2), relationBetween(r2, a, b)) |- subset(r1, cartesianProduct(a, b))) by
-      Substitution.ApplyRules(relationBetween.definition of (r := r2))(subsetTransitivity of (a := r1, b := r2, c := cartesianProduct(a, b)))
+      Substitution.ApplyRules(relationBetween.definition of (r := r2))(subsetTransitivity of (x := r1, y := r2, z := cartesianProduct(a, b)))
     thenHave(thesis) by Substitution.ApplyRules(relationBetween.definition of (r := r1))
   }
 
@@ -133,7 +133,7 @@ object Relations extends lisa.Main {
         subset(setUnion(r1, r2), cartesianProduct(setUnion(a, c), setUnion(b, d)))
     ) by Cut(
       unionOfSubsetsOfDifferentSets of (a := r1, b := r2, c := cartesianProduct(a, b), d := cartesianProduct(c, d)),
-      subsetTransitivity of (a := setUnion(r1, r2), b := setUnion(cartesianProduct(a, b), cartesianProduct(c, d)), c := cartesianProduct(setUnion(a, c), setUnion(b, d)))
+      subsetTransitivity of (x := setUnion(r1, r2), y := setUnion(cartesianProduct(a, b), cartesianProduct(c, d)), z := cartesianProduct(setUnion(a, c), setUnion(b, d)))
     )
     have((subset(r1, cartesianProduct(a, b)), subset(r2, cartesianProduct(c, d))) |- subset(setUnion(r1, r2), cartesianProduct(setUnion(a, c), setUnion(b, d)))) by Cut(
       unionOfCartesianProducts,
@@ -161,7 +161,7 @@ object Relations extends lisa.Main {
   ) {
     have((subset(r, cartesianProduct(a, b)), subset(a, c), subset(b, d)) |- subset(r, cartesianProduct(c, d))) by Cut(
       cartesianProductSubset of (w := a, x := b, y := c, z := d),
-      subsetTransitivity of (a := r, b := cartesianProduct(a, b), c := cartesianProduct(c, d))
+      subsetTransitivity of (x := r, y := cartesianProduct(a, b), z := cartesianProduct(c, d))
     )
     thenHave((subset(r, cartesianProduct(a, b)), subset(a, c), subset(b, d)) |- relationBetween(r, c, d)) by Substitution.ApplyRules(relationBetween.definition of (a := c, b := d))
     thenHave(thesis) by Substitution.ApplyRules(relationBetween.definition)
@@ -256,6 +256,11 @@ object Relations extends lisa.Main {
     have(thesis) by Weakening(relationDomainMembership)
   }
 
+  /**
+    * Lemma --- Domain of the singleton pair relation
+    * 
+    *  `dom({(a, b)}) = {a}`
+    */
   val relationDomainSingleton = Lemma(
     relationDomain(singleton(pair(a, b))) === singleton(a)
   ) {
@@ -818,9 +823,10 @@ object Relations extends lisa.Main {
     thenHave(relation(r) |- forall(p, in(p, r) ==> in(p, relationRestriction(r, relationDomain(r), relationRange(r))))) by RightForall
     have(relation(r) |- subset(r, relationRestriction(r, relationDomain(r), relationRange(r)))) by
       Cut(lastStep, subsetIntro of (x := r, y := relationRestriction(r, relationDomain(r), relationRange(r))))
-    have(relation(r) |- subset(r, relationRestriction(r, relationDomain(r), relationRange(r))) /\ subset(relationRestriction(r, relationDomain(r), relationRange(r)), r)) by
-      RightAnd(lastStep, relationRestrictionSubset of (r := r, x := relationDomain(r), y := relationRange(r)))
-    thenHave(thesis) by Substitution.ApplyRules(subsetAntisymmetry of (x := relationRestriction(r, relationDomain(r), relationRange(r)), y := r))
+    have((relation(r), subset(relationRestriction(r, relationDomain(r), relationRange(r)), r)) |- relationRestriction(r, relationDomain(r), relationRange(r)) === r) by
+      Cut(lastStep, subsetAntisymmetry of (x := relationRestriction(r, relationDomain(r), relationRange(r)), y := r))
+    have(thesis) by
+      Cut(relationRestrictionSubset of (r := r, x := relationDomain(r), y := relationRange(r)), lastStep)
   }
 
   val relationRestrictionSupersetRange = Lemma(
@@ -931,11 +937,9 @@ object Relations extends lisa.Main {
       thenHave(forall(a, in(a, setIntersection(relationDomain(f), x)) ==> in(a, relationDomain(domainRestriction(f, x))))) by RightForall
       have(thesis) by Cut(lastStep, subsetIntro of (x := setIntersection(relationDomain(f), x), y := relationDomain(domainRestriction(f, x))))
     }
-    have(subset(relationDomain(domainRestriction(f, x)), setIntersection(relationDomain(f), x)) /\ subset(setIntersection(relationDomain(f), x), relationDomain(domainRestriction(f, x)))) by RightAnd(
-      forward,
-      backward
-    )
-    thenHave(thesis) by Substitution.ApplyRules(subsetAntisymmetry of (x := relationDomain(domainRestriction(f, x)), y := setIntersection(relationDomain(f), x)))
+    have(subset(setIntersection(relationDomain(f), x), relationDomain(domainRestriction(f, x))) |- relationDomain(domainRestriction(f, x)) === setIntersection(relationDomain(f), x)) by 
+      Cut(forward, subsetAntisymmetry of (x := relationDomain(domainRestriction(f, x)), y := setIntersection(relationDomain(f), x)))
+    have(thesis) by Cut(backward, lastStep)
   }
 
   val domainRestrictionOnDomain = Lemma(
@@ -1411,7 +1415,7 @@ object Relations extends lisa.Main {
    * themselves, which follows from the assumption.
    */
   val domainOfRelationalUnion = Lemma(
-    forall(t, in(t, relationDomain(union(z))) <=> exists(y, in(y, z) /\ in(t, relationDomain(y))))
+    in(t, relationDomain(union(z))) <=> exists(y, in(y, z) /\ in(t, relationDomain(y)))
   ) {
     val uz = union(z)
 
@@ -1460,8 +1464,7 @@ object Relations extends lisa.Main {
       have(thesis) by Tautology.from(fwd, bwd)
     }
 
-    have(in(t, relationDomain(union(z))) <=> exists(y, in(y, z) /\ in(t, relationDomain(y)))) by Tautology.from(inDom, lastStep)
-    thenHave(thesis) by RightForall
+    have(thesis) by Tautology.from(inDom, lastStep)
   }
 
 }

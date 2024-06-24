@@ -1153,15 +1153,6 @@ private [adt] object ADTHelperTheorems extends lisa.Main {
   }
 
   /**
-   * Lemma --- Successor is an injective function.
-   *
-   *   `n = m <=> n + 1 = m + 1`
-   */
-  val successorInjectivity = Lemma((n === m) <=> (successor(n) === successor(m))) {
-    sorry
-  }
-
-  /**
    * Lemma --- A term is a natural number if and only if its successor is a natural number.
    *
    *  `n ∈ N <=> n + 1 ∈ N`

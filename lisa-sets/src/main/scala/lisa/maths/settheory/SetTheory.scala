@@ -130,6 +130,7 @@ object SetTheory extends lisa.Main {
    */
 
   def classFunction(R: Term ** 2 |-> Formula, P: Term ** 1 |-> Formula): Formula = forall(x, P(x) ==> existsOne(y, R(x, y)))
+  def classFunction(R: Term ** 2 |-> Formula): Formula = classFunction(R, lambda(x, True))
   def classFunction(R: Term ** 2 |-> Formula, A: Term): Formula = classFunction(R, lambda(x, in(x, A)))
 
   val classFunctionElim = Lemma(
@@ -137,6 +138,24 @@ object SetTheory extends lisa.Main {
   ) {
     have(classFunction(R, P) |- classFunction(R, P)) by Hypothesis
     thenHave(thesis) by InstantiateForall(x)
+  }
+
+  val totalClassFunctionElim = Lemma(
+    classFunction(R) |- existsOne(y, R(x, y))
+  ) {
+    have(thesis) by Restate.from(classFunctionElim of (P := lambda(x, True)))
+  }
+
+  val classFunctionUniqueness = Lemma(
+    (classFunction(R, P), P(x), R(x, y), R(x, z)) |- y === z
+  ) {
+    have(thesis) by Cut(classFunctionElim, existsOneImpliesUniqueness of (P := lambda(z, R(x, z)), x := y, y := z))
+  }
+
+  val totalClassFunctionUniqueness = Lemma(
+    (classFunction(R), R(x, y), R(x, z)) |- y === z
+  ) {
+    have(thesis) by Restate.from(classFunctionUniqueness of (P := lambda(x, True)))
   }
 
   val functionIsClassFunction = Lemma(
@@ -155,8 +174,8 @@ object SetTheory extends lisa.Main {
     thenHave(thesis) by RightForall
   }
 
-  val replacementUniqueness = Lemma(
-    classFunction(R, A) |- existsOne(B, forall(y, in(y, B) <=> exists(x, in(x, A) /\ R(x, y))))
+  val replacementExistence = Lemma(
+    classFunction(R, A) |- exists(B, forall(y, in(y, B) <=> exists(x, in(x, A) /\ R(x, y))))
   ) {
     have(∃!(y, R(x, y)) |- (R(x, y) /\ R(x, z)) ==> (y === z)) by Restate.from(existsOneImpliesUniqueness of (P := lambda(y, R(x, y)), x := y, y := z))
     thenHave(∃!(y, R(x, y)) |- forall(z, (R(x, y) /\ R(x, z)) ==> (y === z))) by RightForall
@@ -167,8 +186,13 @@ object SetTheory extends lisa.Main {
 
     have(forall(x, in(x, A) ==> forall(y, forall(z, (R(x, y) /\ R(x, z)) ==> (y === z)))) |- exists(B, forall(b, in(b, B) <=> exists(x, in(x, A) /\ R(x, b))))) by
       Restate.from({ val P = predicate[2]; replacementSchema of (P := R) })
-    have(classFunction(R, A) |- exists(B, forall(b, in(b, B) <=> exists(x, in(x, A) /\ R(x, b))))) by Cut(uniqueness, lastStep)
-    have(thesis) by Cut(lastStep, uniqueByExtension of (z := B, schemPred := lambda(b, exists(x, in(x, A) /\ R(x, b)))))
+    have(thesis) by Cut(uniqueness, lastStep)
+  }
+
+  val replacementUniqueness = Lemma(
+    classFunction(R, A) |- existsOne(B, forall(y, in(y, B) <=> exists(x, in(x, A) /\ R(x, y))))
+  ) {
+    have(thesis) by Cut(replacementExistence, uniqueByExtension of (z := B, schemPred := lambda(b, exists(x, in(x, A) /\ R(x, b)))))
   }
 
   val replacementClassFunction = Lemma(
@@ -275,28 +299,27 @@ object SetTheory extends lisa.Main {
    *   `x ⊆ y, y ⊆ x |- x = y`
    */
   val subsetAntisymmetry = Lemma(
-    (subset(x, y) /\ subset(y, x)) <=> (x === y)
+    (subset(x, y), subset(y, x)) |- (x === y)
   ) {
-    have(subset(x, y) /\ subset(y, x) <=> subset(x, y) /\ subset(y, x)) by Restate
-    thenHave(subset(x, y) /\ subset(y, x) <=> forall(t, in(t, x) ==> in(t, y)) /\ subset(y, x)) by Substitution.ApplyRules(subsetAxiom)
-    thenHave(subset(x, y) /\ subset(y, x) <=> forall(t, in(t, x) ==> in(t, y)) /\ forall(t, in(t, y) ==> in(t, x))) by Substitution.ApplyRules(subsetAxiom)
-    andThen(Substitution.applySubst(universalConjunctionCommutation of (P := lambda(t, in(t, x) ==> in(t, y)), Q := lambda(t, in(t, y) ==> in(t, x)))))
-    andThen(Substitution.applySubst(extensionalityAxiom))
-    thenHave(thesis) by Restate
+    val forward = have(subset(x, y) |- in(z, x) ==> in(z, y)) by RightImplies(subsetElim)
+    val backward = have(subset(y, x) |- in(z, y) ==> in(z, x)) by RightImplies(subsetElim of (x := y, y := x))
+    have((subset(x, y), subset(y, x)) |- in(z, x) <=> in(z, y)) by RightIff(forward, backward)
+    thenHave((subset(x, y), subset(y, x)) |- forall(z, in(z, x) <=> in(z, y))) by RightForall
+    have(thesis) by Cut(lastStep, equalityIntro)
   }
 
   /**
    * Lemma --- Subset transitivity
    *
-   *    `a ⊆ b, b ⊆ c ⊢ a ⊆ c`
+   *    `x ⊆ y, y ⊆ z ⊢ x ⊆ z`
    */
   val subsetTransitivity = Lemma(
-    (subset(a, b), subset(b, c)) |- subset(a, c)
+    (subset(x, y), subset(y, z)) |- subset(x, z)
   ) {
-    have((subset(a, b), subset(b, c), in(z, a)) |- in(z, c)) by Cut(subsetElim of (x := a, y := b), subsetElim of (x := b, y := c))
-    thenHave((subset(a, b), subset(b, c)) |- in(z, a) ==> in(z, c)) by RightImplies
-    thenHave((subset(a, b), subset(b, c)) |- forall(z, in(z, a) ==> in(z, c))) by RightForall
-    have(thesis) by Cut(lastStep, subsetIntro of (x := a, y := c))
+    have((subset(x, y), subset(y, z), in(a, x)) |- in(a, z)) by Cut(subsetElim of (z := a), subsetElim of (x := y, y := z, z := a))
+    thenHave((subset(x, y), subset(y, z)) |- in(a, x) ==> in(a, z)) by RightImplies
+    thenHave((subset(x, y), subset(y, z)) |- forall(a, in(a, x) ==> in(a, z))) by RightForall
+    have(thesis) by Cut(lastStep, subsetIntro of (y := z))
   }
 
   /**
@@ -1176,16 +1199,24 @@ object SetTheory extends lisa.Main {
     thenHave(thesis) by Substitution.ApplyRules(disjoint.definition)
   }
 
+  val nonDisjointSingleton = Lemma(
+    !disjoint(y, singleton(x)) |- in(x, y)
+  ) {
+    have(in(z, y) |- in(z, y)) by Hypothesis
+    thenHave((in(z, singleton(x)), in(z, y)) |- in(x, y)) by Substitution.ApplyRules(singletonElim of (y := z))
+    thenHave(in(z, singleton(x)) /\ in(z, y) |- in(x, y)) by LeftAnd
+    thenHave(exists(z, in(z, singleton(x)) /\ in(z, y)) |- in(x, y)) by LeftExists
+    have(thesis) by Cut(nonDisjointElim of (x := y, y := singleton(x)), lastStep)
+  }
+
   val singletonDisjointSelf = Lemma(
     disjoint(x, singleton(x))
   ) {
-    have(in(z, x) |- in(z, x)) by Hypothesis
-    thenHave((in(z, x), in(z, singleton(x))) |- in(z, z)) by Substitution.ApplyRules(singletonElim of (y := z))
-    thenHave((in(z, x) /\ in(z, singleton(x)), !in(z, z)) |- ()) by Restate
-    have(in(z, x) /\ in(z, singleton(x)) |- ()) by Cut(selfNonMembership of (x := z), lastStep)
-    thenHave(exists(z, in(z, x) /\ in(z, singleton(x))) |- ()) by LeftExists
-    have(!disjoint(x, singleton(x)) |- ()) by Cut(nonDisjointElim of (y := singleton(x)), lastStep)
+    have(!disjoint(x, singleton(x)) |- ()) by RightAnd(nonDisjointSingleton of (y := x), selfNonMembership)
   }
+
+
+
   
   val disjointSymmetry = Lemma(
     disjoint(x, y) <=> disjoint(y, x)
