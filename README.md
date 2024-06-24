@@ -1,6 +1,6 @@
 # Datatypes in  Lisa
 
-This repository contains the implementation of a datatype package inside Lisa. The file ADTExample.scala contains an example of how to use the package.
+This repository contains the implementation of a datatype package inside Lisa. The file [ADTExample.scala](lisa-examples/src/main/scala/ADTExample.scala) contains an example of how to use the package.
 
 
 ## Installation and utilisation
