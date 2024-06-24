@@ -1,7 +1,10 @@
-import lisa.maths.settheory.SetTheory.singleton
-import lisa.utils.parsing.SynonymInfo.empty
+import lisa.prooflib.OutputManager
 object ADTExample extends lisa.Main {
+
+  // importing the adt package
   import lisa.maths.settheory.types.adt.{*, given}
+  import lisa.maths.settheory.SetTheory.*
+
 
   // variable declarations
   val a = variable
@@ -33,7 +36,7 @@ object ADTExample extends lisa.Main {
   // List
   val define(list: ADT[1], constructors(nil, cons)) = a --> () | (a, list)
 
-  //Binary Trees
+  // Infinite Trees
   val define(tree: ADT[1], constructors(leaf, node)) = a --> a | (a, nat |=> tree)
 
   // Nothing
@@ -43,20 +46,19 @@ object ADTExample extends lisa.Main {
   // * 2 : Theorems *
   // ****************
 
+  summon[OutputManager].output("2: Theorems")
+
   // Injectivity
   show(nil.injectivity)
   show(cons.injectivity)
   show(list.injectivity(nil, cons))
-  show(tree.induction)
 
   // Introduction rules
   show(nil.intro)
   show(cons.intro)
 
-  Lemma(nil(a) :: list(a)){
-    have(thesis) by TypeChecker.prove
-  } 
-  Lemma(cons(nat) * (succ * zero) * nil(nat) :: list(nat)){
+  // Typechecking
+  val listTypecheck = Theorem(cons(nat) * (succ * zero) * nil(nat) :: list(nat)){
     have(thesis) by TypeChecker.prove
   } 
 
@@ -70,11 +72,15 @@ object ADTExample extends lisa.Main {
   // * 3 : Functions *
   // *****************
 
+  summon[OutputManager].output("3: Functions")
+
+  // Negation
   val not = fun(bool, bool) {
     Case(tru) { fals }
     Case(fals) { tru }
   }
 
+  // Predecessor
   val pred = fun(nat, option(nat)):
     Case(zero): 
       none(nat) 
@@ -88,6 +94,13 @@ object ADTExample extends lisa.Main {
   // * 4 : Induction Tactic *
   // ************************
 
+  summon[OutputManager].output("4: Induction")
+
+  /**
+    * Theorem --- Double negation
+    * 
+    *   `x :: bool |- not (not x) = x`
+    */
   Theorem(x :: bool |- not * (not * x) === x) {
     have(thesis) by Induction() {
       Case(tru) subproof {
@@ -104,9 +117,16 @@ object ADTExample extends lisa.Main {
   }
 
   // ****************************
-  // * 5: All features together *
+  // * 5: Everything together *
   // ****************************
 
+  summon[OutputManager].output("5: Everything together")
+
+  /**
+    * Theorem --- Every natural number is different from its successor
+    * 
+    *   `n :: nat |- n != n + 1`
+    */
   val succInj = Theorem(n :: nat |- !(n === succ * n)) {
     
     val boolean = unorderedPair(emptySet, singleton(emptySet))
@@ -115,8 +135,7 @@ object ADTExample extends lisa.Main {
     have(thesis) by Induction() {
       Case(zero) subproof {
         have(zero :: nat) by TypeChecker.prove
-        have(!(zero === succ * zero)) by 
-          Tautology.from(nat.injectivity(zero, succ) of (y0 := zero), lastStep)
+        have(!(zero === succ * zero)) by (Apply(nat.injectivity(zero, succ) of (y0 := zero)) on lastStep)
       }
       
       Case(succ, n) subproof {
@@ -127,6 +146,11 @@ object ADTExample extends lisa.Main {
     }
   }
 
+  /**
+    * Theorem --- Every list is different from its tail
+    * 
+    *   `l :: list(a), x :: a |- l != cons(a) x l`
+    */
   val consInj = Theorem((l :: list(a), x :: a) |- !(l === cons(a) * x * l)) {
 
     val typeNil = have(nil(a) :: list(a)) by TypeChecker.prove
@@ -148,7 +172,8 @@ object ADTExample extends lisa.Main {
     }
 
     thenHave(l :: list(a) |- x :: a ==> !(l === cons(a) * x * l)) by InstantiateForall(x)
-    thenHave(thesis) by Tautology
   }
+
+  summon[OutputManager].output("Thank you for running this example!", Console.MAGENTA)
 
 }

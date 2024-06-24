@@ -216,6 +216,11 @@ private [adt] object Helpers {
       case And(phi, psi) => simplify(phi) /\ simplify(psi)
       case Implies(True, phi) => simplify(phi)
       case Implies(phi, psi) => Implies(simplify(phi), simplify(psi))
+      case Iff(True, phi) => simplify(phi)
+      case Iff(phi, True) => simplify(phi)
+      case Iff(phi, psi) => Iff(simplify(phi), simplify(psi))
+      case Forall(v, phi) => Forall(v, simplify(phi))
+      case Exists(v, phi) => Exists(v, simplify(phi))
       case _ => f
 
 
@@ -732,100 +737,7 @@ private [adt] object ADTHelperTheorems extends lisa.Main {
    */
   val unionRangeCumulativeRestrictedFunction =
     Lemma((functional(h), ordinal(relationDomain(h)), in(successor(n), relationDomain(h)), ∀(m, in(m, relationDomain(h)) ==> (subset(m, n) ==> subset(app(h, m), app(h, n))))) |- unionRange(domainRestriction(h, successor(n))) === app(h, n)) {
-
-      have(functional(h) |- (y ∈ restrRange(h, successor(n)) /\ z ∈ y) <=> ∃(m, m ∈ (relationDomain(h) ∩ successor(n)) /\ (app(domainRestriction(h, successor(n)), m) === y)) /\ z ∈ y) by Cut(
-        restrictedFunctionRangeMembership of (f := h, d := successor(n)),
-        rightAndEquivalence of (p1 := y ∈ restrRange(h, successor(n)), p2 := ∃(m, m ∈ (relationDomain(h) ∩ successor(n)) /\ (app(domainRestriction(h, successor(n)), m) === y)), p := z ∈ y)
-      )
-
-      thenHave(
-        (functional(h), ordinal(relationDomain(h)), in(successor(n), relationDomain(h))) |- (y ∈ restrRange(h, successor(n)) /\ z ∈ y) <=> 
-        ∃(m, m ∈ successor(n) /\ (app(domainRestriction(h, successor(n)), m) === y)) /\ z ∈ y
-      ) by Substitution.ApplyRules(intersectionInOrdinal of (b := successor(n), a := relationDomain(h)))
-
-      thenHave(
-        (functional(h), ordinal(relationDomain(h)), in(successor(n), relationDomain(h))) |- (y ∈ restrRange(h, successor(n)) /\ z ∈ y) <=> 
-        ∃(m, m ∈ successor(n) /\ (app(domainRestriction(h, successor(n)), m) === y) /\ z ∈ y)
-      ) by Substitution.ApplyRules(existentialConjunctionWithClosedFormula of (P := lambda(m, m ∈ successor(n) /\ (app(domainRestriction(h, successor(n)), m) === y)), p := z ∈ y)
-      )
-
-      thenHave(
-        (functional(h), ordinal(relationDomain(h)), in(successor(n), relationDomain(h))) |- ∀(y, (y ∈ restrRange(h, successor(n)) /\ z ∈ y) <=> 
-        ∃(m, m ∈ successor(n) /\ (app(domainRestriction(h, successor(n)), m) === y) /\ z ∈ y))
-      ) by RightForall
-
-      have(
-        (functional(h), ordinal(relationDomain(h)), in(successor(n), relationDomain(h))) |- ∃(y, y ∈ restrRange(h, successor(n)) /\ z ∈ y) <=> 
-        ∃(y, ∃(m, m ∈ successor(n) /\ (app(domainRestriction(h, successor(n)), m) === y) /\ z ∈ y))
-      ) by Cut(
-        lastStep, existentialEquivalenceDistribution of (
-          P := lambda(y, y ∈ restrRange(h, successor(n)) /\ z ∈ y),
-          Q := lambda(y, ∃(m, m ∈ successor(n) /\ (app(domainRestriction(h, successor(n)), m) === y) /\ z ∈ y))
-        )
-      )
-
-      val introM = thenHave(
-        (functional(h), ordinal(relationDomain(h)), in(successor(n), relationDomain(h))) |- ∃(y, y ∈ restrRange(h, successor(n)) /\ z ∈ y) <=> 
-        ∃(m, ∃(y, m ∈ successor(n) /\ z ∈ y /\ (app(domainRestriction(h, successor(n)), m) === y)))
-      ) by Substitution.ApplyRules(existentialSwap of (P2 := lambda((y, m), m ∈ successor(n) /\ (app(domainRestriction(h, successor(n)), m) === y) /\ z ∈ y))
-      )
-
-      have((∃(y, m ∈ successor(n) /\ z ∈ y /\ (app(domainRestriction(h, successor(n)), m) === y))) <=> (m ∈ successor(n) /\ z ∈ app(domainRestriction(h, successor(n)), m))) by Exact(
-        equalityInExistentialQuantifier of (P := lambda(y, m ∈ successor(n) /\ z ∈ y))
-      )
-
-      thenHave(m ∈ successor(n) |- (∃(y, m ∈ successor(n) /\ z ∈ y /\ (app(domainRestriction(h, successor(n)), m) === y))) <=> (m ∈ successor(n) /\ z ∈ app(h, m))) by Substitution.ApplyRules(restrictedFunctionApplication)
-      thenHave((∃(y, m ∈ successor(n) /\ z ∈ y /\ (app(domainRestriction(h, successor(n)), m) === y))) <=> (m ∈ successor(n) /\ z ∈ app(h, m))) by Tableau
-      thenHave(ordinal(n) |- (∃(y, m ∈ successor(n) /\ z ∈ y /\ (app(domainRestriction(h, successor(n)), m) === y))) <=> (subset(m, n) /\ z ∈ app(h, m))) by Substitution.ApplyRules(leqOrdinalDef)
-
-      thenHave(ordinal(n) |- ∀(m, (∃(y, m ∈ successor(n) /\ z ∈ y /\ (app(domainRestriction(h, successor(n)), m) === y))) <=> (subset(m, n) /\ z ∈ app(h, m)))) by RightForall
-
-      have(ordinal(n) |- ∃(m, (∃(y, m ∈ successor(n) /\ z ∈ y /\ (app(domainRestriction(h, successor(n)), m) === y)))) <=> ∃(m, subset(m, n) /\ z ∈ app(h, m))) by Cut(
-        lastStep,
-        existentialEquivalenceDistribution of (
-          P := lambda(m, ∃(y, m ∈ successor(n) /\ z ∈ y /\ (app(domainRestriction(h, successor(n)), m) === y))),
-          Q := lambda(m, subset(m, n) /\ z ∈ app(h, m))
-        )
-      )
-
-      thenHave((ordinal(n), ∃(y, y ∈ restrRange(h, successor(n)) /\ z ∈ y) <=> ∃(m, (∃(y, m ∈ successor(n) /\ z ∈ y /\ (app(domainRestriction(h, successor(n)), m) === y))))) |- 
-        ∃(y, y ∈ restrRange(h, successor(n)) /\ z ∈ y) <=> ∃(m, subset(m, n) /\ z ∈ app(h, m))) by RightSubstIff.withParametersSimple(
-          List((∃(y, y ∈ restrRange(h, successor(n)) /\ z ∈ y), ∃(m, (∃(y, m ∈ successor(n) /\ z ∈ y /\ (app(domainRestriction(h, successor(n)), m) === y)))))),
-          lambda(p, p <=> ∃(m, subset(m, n) /\ z ∈ app(h, m)))
-        )
-
-      have((functional(h), ordinal(n), ordinal(relationDomain(h)), in(successor(n), relationDomain(h))) |- 
-        ∃(y, y ∈ restrRange(h, successor(n)) /\ z ∈ y) <=> ∃(m, subset(m, n) /\ z ∈ app(h, m))) by Cut(introM, lastStep)
-
-      have((functional(h), ordinal(successor(n)), ordinal(relationDomain(h)), in(successor(n), relationDomain(h))) |- 
-        ∃(y, y ∈ restrRange(h, successor(n)) /\ z ∈ y) <=> ∃(m, subset(m, n) /\ z ∈ app(h, m))) by Cut(successorIsOrdinalImpliesOrdinal of (a := n), lastStep)
-      have((functional(h), ordinal(relationDomain(h)), in(successor(n), relationDomain(h))) |- 
-        ∃(y, y ∈ restrRange(h, successor(n)) /\ z ∈ y) <=> ∃(m, subset(m, n) /\ z ∈ app(h, m))) by Cut(elementsOfOrdinalsAreOrdinals of (b := successor(n), a := relationDomain(h)), lastStep)
-
-      val unionIsExists =
-        thenHave((functional(h), ordinal(relationDomain(h)), in(successor(n), relationDomain(h))) |- z ∈ unionRange(domainRestriction(h, successor(n))) <=> ∃(m, subset(m, n) /\ z ∈ app(h, m))) by Substitution.ApplyRules(unionAxiom of (x := restrRange(h, successor(n))))
-
-      val monotonicity = ∀(m, in(m, relationDomain(h)) ==> (subset(m, n) ==> subset(app(h, m), app(h, n))))
-
-      have((monotonicity, in(n, relationDomain(h))) |- ∃(m, in(m, relationDomain(h)) /\ subset(m, n) /\ z ∈ app(h, m)) <=> z ∈ app(h, n)) subproof {
-        have((z ∈ app(h, n), in(n, relationDomain(h))) |- in(n, relationDomain(h)) /\ z ∈ app(h, n)) by Restate
-        have((z ∈ app(h, n), in(n, relationDomain(h))) |- in(n, relationDomain(h)) /\ subset(n, n) /\ z ∈ app(h, n)) by RightAnd(lastStep, subsetReflexivity of (x := n))
-        thenHave((z ∈ app(h, n), in(n, relationDomain(h))) |- ∃(m, in(m, relationDomain(h)) /\ subset(m, n) /\ z ∈ app(h, m))) by RightExists
-        val backward = thenHave(in(n, relationDomain(h)) |- z ∈ app(h, n) ==> ∃(m, in(m, relationDomain(h)) /\ subset(m, n) /\ z ∈ app(h, m))) by RightImplies
-
-        have(monotonicity |- monotonicity) by Hypothesis
-        thenHave((monotonicity, subset(m, n), in(m, relationDomain(h))) |- subset(app(h, m), app(h, n))) by InstantiateForall(m)
-        have((monotonicity, subset(m, n), in(m, relationDomain(h)), z ∈ app(h, m)) |- z ∈ app(h, n)) by Cut(lastStep,subsetElim of (x := app(h, m), y := app(h, n)))
-        thenHave((monotonicity, in(m, relationDomain(h)) /\ subset(m, n) /\ z ∈ app(h, m)) |- z ∈ app(h, n)) by Restate
-        thenHave((monotonicity, ∃(m, in(m, relationDomain(h)) /\ subset(m, n) /\ z ∈ app(h, m))) |- z ∈ app(h, n)) by LeftExists
-        val forward = thenHave(monotonicity |- ∃(m, in(m, relationDomain(h)) /\ subset(m, n) /\ z ∈ app(h, m)) ==> z ∈ app(h, n)) by RightImplies
-
-        have(thesis) by RightIff(forward, backward)
-      }
-
-      have((functional(h), ordinal(relationDomain(h)), in(successor(n), relationDomain(h)), monotonicity) |- (z ∈ unionRange(domainRestriction(h, successor(n)))) <=> z ∈ app(h, n)) by Sorry//Substitution.ApplyRules(lastStep)(unionIsExists)
-      thenHave((functional(h), ordinal(relationDomain(h)), in(successor(n), relationDomain(h)), monotonicity) |- ∀(z, z ∈ unionRange(domainRestriction(h, successor(n))) <=> z ∈ app(h, n))) by RightForall
-      have(thesis) by Cut(lastStep, equalityIntro of (x := unionRange(domainRestriction(h, successor(n))), y := app(h, n)))
+      sorry
     }
 
   def fixpointClassFunction(h: Term)(c: PredicateLabel[2]) =

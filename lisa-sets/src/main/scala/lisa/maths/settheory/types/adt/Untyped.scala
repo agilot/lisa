@@ -266,11 +266,7 @@ private class SyntacticADT[N <: Arity](using line: sourcecode.Line, file: source
         (1 to minTag).foldLeft(start)((fact, i) =>
           val midMaxTag = toTerm(maxTag - i)
           val midMinTag = toTerm(minTag - i)
-          have(successor(midMaxTag) === successor(midMinTag) |- midMaxTag === midMinTag) by Cut(
-            successorInjectivity of (n := midMaxTag, m := midMinTag),
-            equivalenceApply of (p1 := successor(midMaxTag) === successor(midMinTag), p2 := midMaxTag === midMinTag)
-          )
-          have(tagTerm1 === tagTerm2 |- midMaxTag === midMinTag) by Cut(fact, lastStep)
+          have(tagTerm1 === tagTerm2 |- midMaxTag === midMinTag) by Cut(fact, successorInjectivity of (a := midMaxTag, b := midMinTag))
         )
 
         val chainInjectivity = thenHave(!(toTerm(maxTag - minTag) === emptySet) |- !(tagTerm1 === tagTerm2)) by Restate
