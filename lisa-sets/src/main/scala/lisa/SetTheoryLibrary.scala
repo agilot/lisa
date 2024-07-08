@@ -187,7 +187,7 @@ object SetTheoryLibrary extends lisa.prooflib.Library {
    * element. Equivalently, the relation `∈` on any family of sets is
    * well-founded.
    *
-   * `() |- (x != ∅) ==> ∃ y ∈ x. ∀ z. z ∈ x ⇒ ! z ∈ y`
+   * `(x != ∅) ==> ∃ y ∈ x. ∀ z. z ∈ x ⇒ ! z ∈ y`
    */
   final val foundationAxiom: AXIOM = Axiom(!(x === emptySet) ==> exists(y, in(y, x) /\ forall(z, in(z, x) ==> !in(z, y))))
 

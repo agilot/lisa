@@ -140,7 +140,7 @@ class SerializationTest extends AnyFunSuite {
       ("setUnionMembership", ST.setUnionMembership),
       //("inductiveSetExists", IS.inductiveSetExists),
       ("setWithNoElementsIsEmpty", ST.setWithNoElementsIsEmpty),
-      ("emptySetIsItsOwnOnlySubset", ST.emptySetIsItsOwnOnlySubset)
+      ("subsetEmptySet", ST.subsetEmptySet)
     )
     thms.foreach(thm =>
       try {
@@ -164,7 +164,7 @@ class SerializationTest extends AnyFunSuite {
       ("setUnionMembership", ST.setUnionMembership),
       //("inductiveSetExists", IS.inductiveSetExists),
       ("setWithNoElementsIsEmpty", ST.setWithNoElementsIsEmpty),
-      ("emptySetIsItsOwnOnlySubset", ST.emptySetIsItsOwnOnlySubset)
+      ("subsetEmptySet", ST.subsetEmptySet)
     )
 
     val thmBack = testMulti(

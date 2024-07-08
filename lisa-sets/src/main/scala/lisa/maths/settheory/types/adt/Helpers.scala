@@ -625,17 +625,6 @@ private [adt] object ADTHelperTheorems extends lisa.Main {
     sorry
   }
 
-  /**
-   * Lemma --- A superset of a non empty set is non empty.
-   *
-   *     `x ⊆ y, x != ∅ |- y != ∅`
-   */
-  val subsetNotEmpty = Lemma((subset(x, y), !(x === emptySet)) |- !(y === emptySet)) {
-    val subst = have(y === emptySet |- y === emptySet) by Hypothesis
-    have((subset(x, emptySet), y === emptySet) |- (x === emptySet)) by Apply(equivalenceApply of (p1 := subset(x, emptySet))).on(emptySetIsItsOwnOnlySubset.asInstanceOf)
-    thenHave((subset(x, y), y === emptySet) |- (x === emptySet)) by Substitution.ApplyRules(subst)
-  }
-
 
   /**
    * Lemma --- The range of the empty function is empty.
@@ -671,15 +660,6 @@ private [adt] object ADTHelperTheorems extends lisa.Main {
     sorry
   }
 
-  /**
-   * Lemma --- Union is a monotonic operation with respect to set inclusion.
-   *
-   *     `x ⊆ y |- ∪ x ⊆ ∪ y`
-   */
-  val unionMonotonic = Lemma(subset(x, y) |- subset(union(x), union(y))) {
-    sorry
-  }
-
 
   /**
    * Lemma --- The union of the range is a monotonic operation with respect to set inclusion.
@@ -687,7 +667,7 @@ private [adt] object ADTHelperTheorems extends lisa.Main {
    *     `f ⊆ g |- ∪ Im(f) ⊆ ∪ Im(g)`
    */
   val unionRangeMonotonic = Lemma(subset(f, g) |- subset(unionRange(f), unionRange(g))) {
-    have(thesis) by Apply(unionMonotonic).on(relationRangeSubset of (r1 := f, r2 := g))
+    have(thesis) by Apply(unionMonotonicity).on(relationRangeSubset of (r1 := f, r2 := g))
   }
 
   /**
@@ -928,7 +908,7 @@ private [adt] object ADTHelperTheorems extends lisa.Main {
 
       have((ordinal(relationDomain(h)), functional(h), in(m, n), in(n, relationDomain(h))) |- in(app(h, m), relationRange(domainRestriction(h, n)))) by Substitution.ApplyRules(intersectionInOrdinal of (b := n, a := relationDomain(h)))(inRestrictedFunctionRange of (f := h, x := m, d := n))
 
-      have((ordinal(relationDomain(h)), functional(h), in(m, n), in(n, relationDomain(h))) |- subset(app(h, m), unionRange(domainRestriction(h, n)))) by Cut(lastStep, inSetSubsetUnion of (x := app(h, m), y := relationRange(domainRestriction(h, n))))
+      have((ordinal(relationDomain(h)), functional(h), in(m, n), in(n, relationDomain(h))) |- subset(app(h, m), unionRange(domainRestriction(h, n)))) by Cut(lastStep, subsetUnion of (x := app(h, m), y := relationRange(domainRestriction(h, n))))
 
       thenHave((fixpointClassFunction(h)(P2), in(m, n), in(n, relationDomain(h)), nonsuccessorOrdinal(n)) |- subset(app(h, m), unionRange(domainRestriction(h, n)))) by Weakening
 

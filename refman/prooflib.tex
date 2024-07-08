@@ -21,7 +21,7 @@ object MyTheoryName extends lisa.Main {
     have(thesis) by Tautology.from(step1, step2)
   } 
 
-  val emptySetIsASubset = Theorem(
+  val emptySetSubset = Theorem(
     ∅ ⊆ x
   ) {
     have((y ∈ ∅) ==> (y ∈ x)) by Tautology.from(

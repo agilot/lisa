@@ -20,7 +20,7 @@ object Example extends lisa.Main {
    *
    *    `|- ∅ ⊆ x`
    */
-  val emptySetIsASubset = Theorem(
+  val emptySetSubset = Theorem(
     ∅ ⊆ x
   ) {
     have((y ∈ ∅) ==> (y ∈ x)) by Weakening(emptySetAxiom of (x := y))
@@ -50,7 +50,7 @@ object Example extends lisa.Main {
     have(thesis) by Tautology.from(
       setWithElementNonEmpty of (y := ∅, x := powerSet(x)),
       powerAxiom of (x := ∅, y := x),
-      emptySetIsASubset
+      emptySetSubset
     )
   }
 

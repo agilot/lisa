@@ -212,7 +212,7 @@ object PartialOrders extends lisa.Main {
   val relationRestrictionLeastElement = Lemma(
     (isLeastElement(a, z, r, x), subset(z, y), subset(y, x)) |- isLeastElement(a, z, relationRestriction(r, y, y), y)
   ) {
-    have((in(pair(a, b), r) \/ (a === b), in(a, y), in(b, y)) |- in(pair(a, b), relationRestriction(r, y, y)) \/ (a === b)) by Tautology.from(relationRestrictionIntro of (x := y))
+    have((in(pair(a, b), r) \/ (a === b), in(a, y), in(b, y)) |- in(pair(a, b), relationRestriction(r, y, y)) \/ (a === b)) by Tautology.from(relationRestrictionIntroPair of (x := y))
     have((isLeastElement(a, z, r, x), in(b, z), in(a, y), in(b, y)) |- in(pair(a, b), relationRestriction(r, y, y)) \/ (a === b)) by Cut(isLeastElementElim of (y := z), lastStep)
     have((isLeastElement(a, z, r, x), subset(z, y), in(a, y), in(b, z)) |- in(pair(a, b), relationRestriction(r, y, y)) \/ (a === b)) by Cut(subsetElim of (z := b, x := z), lastStep)
     have((isLeastElement(a, z, r, x), subset(z, y), in(a, z), in(b, z)) |- in(pair(a, b), relationRestriction(r, y, y)) \/ (a === b)) by Cut(subsetElim of (z := a, x := z), lastStep)
@@ -581,7 +581,7 @@ object PartialOrders extends lisa.Main {
   val emptyStrictWellOrder = Lemma(
     strictWellOrder(emptySet, emptySet)
   ) {
-    have((subset(y, emptySet) /\ !(y === emptySet)) ==> exists(a, isLeastElement(a, y, emptySet, emptySet))) by Weakening(emptySetIsItsOwnOnlySubset of (x := y))
+    have((subset(y, emptySet) /\ !(y === emptySet)) ==> exists(a, isLeastElement(a, y, emptySet, emptySet))) by Weakening(subsetEmptySet of (x := y))
     thenHave(forall(y, (subset(y, emptySet) /\ !(y === emptySet)) ==> exists(a, isLeastElement(a, y, emptySet, emptySet)))) by RightForall
     have(strictTotalOrder(emptySet, emptySet) |- strictWellOrder(emptySet, emptySet)) by Cut(lastStep, strictWellOrderIntro of (r -> emptySet, x -> emptySet))
     have(thesis) by Cut(emptySetStrictTotalOrder, lastStep)

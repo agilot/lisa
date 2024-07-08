@@ -9,9 +9,14 @@ object Quantifiers extends lisa.Main {
   private val y = variable
   private val z = variable
   private val a = variable
+  private val q = formulaVariable
   private val p = formulaVariable
+  private val p1 = formulaVariable
+  private val p2 = formulaVariable
   private val P = predicate[1]
   private val Q = predicate[1]
+  private val P1 = predicate[1]
+  private val P2 = predicate[1]
   private val R = predicate[2]
 
   /**
@@ -226,7 +231,7 @@ object Quantifiers extends lisa.Main {
   val atleastTwoExist = Theorem(
     (exists(x, P(x)) /\ !existsOne(x, P(x))) <=> exists(x, exists(y, P(x) /\ P(y) /\ !(x === y)))
   ) {
-    val fwd = have((exists(x, P(x)) /\ !existsOne(x, P(x))) ==> exists(x, exists(y, P(x) /\ P(y) /\ !(x === y)))) subproof {
+    val forward = have((exists(x, P(x)) /\ !existsOne(x, P(x))) ==> exists(x, exists(y, P(x) /\ P(y) /\ !(x === y)))) subproof {
       have((P(x), ((x === y) /\ !P(y))) |- P(x) /\ !P(y)) by Restate
       thenHave((P(x), ((x === y) /\ !P(y))) |- P(y) /\ !P(y)) by Substitution.ApplyRules(x === y) // contradiction
       val xy = thenHave((P(x), ((x === y) /\ !P(y))) |- exists(x, exists(y, P(x) /\ P(y) /\ !(x === y)))) by Weakening
@@ -243,7 +248,7 @@ object Quantifiers extends lisa.Main {
       thenHave(thesis) by Restate
     }
 
-    val bwd = have(exists(x, exists(y, P(x) /\ P(y) /\ !(x === y))) ==> (exists(x, P(x)) /\ !existsOne(x, P(x)))) subproof {
+    val backward = have(exists(x, exists(y, P(x) /\ P(y) /\ !(x === y))) ==> (exists(x, P(x)) /\ !existsOne(x, P(x)))) subproof {
       have((P(x), P(y), !(x === y)) |- P(x)) by Restate
       val ex = thenHave((P(x), P(y), !(x === y)) |- exists(x, P(x))) by RightExists
 
@@ -266,7 +271,7 @@ object Quantifiers extends lisa.Main {
       thenHave(thesis) by Restate
     }
 
-    have(thesis) by Tautology.from(fwd, bwd)
+    have(thesis) by Tautology.from(forward, backward)
   }
 
   val onePointRule = Theorem(
@@ -303,4 +308,40 @@ object Quantifiers extends lisa.Main {
     thenHave(thesis) by LeftExists
   }
 
+  val existsOneEquality = Theorem(
+    ∃!(x, x === y)
+  ) {
+    have(y === y) by RightRefl
+    val existence = thenHave(exists(x, x === y)) by RightExists
+
+    have(((x === y) /\ (z === y)) ==> (x === z)) by Restate.from(equalityTransitivity)
+    thenHave(forall(z, (x === y) /\ (z === y) ==> (x === z))) by RightForall
+    thenHave(forall(x, forall(z, (x === y) /\ (z === y) ==> (x === z)))) by RightForall
+    have(∃(x, x === y) |- ∃!(x, x === y)) by Cut(lastStep, existenceAndUniqueness of (P := lambda(x, x === y)))
+    have(thesis) by Cut(existence, lastStep)
+  }
+
+  val existsCases = Theorem(
+    (q ==> ∃(x, P(x)), !q ==> ∃(x, Q(x))) |- ∃(x, (q ==> P(x)) /\ (!q ==> Q(x)))
+  ) {
+    have(thesis) by Tableau
+  }
+
+  val existsOneCases = Theorem(
+    (q ==> ∃!(x, P(x)), !q ==> ∃!(x, Q(x))) |- ∃!(x, (q ==> P(x)) /\ (!q ==> Q(x)))
+  ) {
+    val existenceLeft = have(q ==> ∃!(x, P(x)) |- q ==> ∃(x, P(x))) by Tautology.from(existsOneImpliesExists)
+    val existenceRight = existenceLeft of (q := !q, P := Q)
+    have((q ==> ∃!(x, P(x)), !q ==> ∃(x, Q(x))) |- ∃(x, (q ==> P(x)) /\ (!q ==> Q(x)))) by Cut(existenceLeft, existsCases)
+    val existence = have((q ==> ∃!(x, P(x)), !q ==> ∃!(x, Q(x))) |- ∃(x, (q ==> P(x)) /\ (!q ==> Q(x)))) by Cut(existenceRight, lastStep) 
+
+    val uniquenessLeft = have((q ==> ∃!(x, P(x)), q ==> P(x), q ==> P(y)) |- q ==> (x === y)) by Tautology.from(existsOneImpliesUniqueness)
+    val uniquenessRight = uniquenessLeft of (q := !q, P := Q)
+    have((q ==> ∃!(x, P(x)), !q ==> ∃!(x, Q(x)), q ==> P(x), q ==> P(y), !q ==> Q(x), !q ==> Q(y)) |- (q ==> (x === y)) /\ (!q ==> (x === y))) by RightAnd(uniquenessLeft, uniquenessRight)
+    thenHave((q ==> ∃!(x, P(x)), !q ==> ∃!(x, Q(x))) |- (((q ==> P(x)) /\ (!q ==> Q(x))) /\ ((q ==> P(y)) /\ (!q ==> Q(y)))) ==> (x === y)) by Tautology
+    thenHave((q ==> ∃!(x, P(x)), !q ==> ∃!(x, Q(x))) |- forall(y, (((q ==> P(x)) /\ (!q ==> Q(x))) /\ ((q ==> P(y)) /\ (!q ==> Q(y)))) ==> (x === y))) by RightForall
+    thenHave((q ==> ∃!(x, P(x)), !q ==> ∃!(x, Q(x))) |- forall(x, forall(y, (((q ==> P(x)) /\ (!q ==> Q(x))) /\ ((q ==> P(y)) /\ (!q ==> Q(y)))) ==> (x === y)))) by RightForall
+    have((q ==> ∃!(x, P(x)), !q ==> ∃!(x, Q(x)), ∃(x, (q ==> P(x)) /\ (!q ==> Q(x)))) |- ∃!(x, (q ==> P(x)) /\ (!q ==> Q(x)))) by Cut(lastStep, existenceAndUniqueness of (P := lambda(x, (q ==> P(x)) /\ (!q ==> Q(x)))))
+    have(thesis) by Cut(existence, lastStep)
+  }
 }

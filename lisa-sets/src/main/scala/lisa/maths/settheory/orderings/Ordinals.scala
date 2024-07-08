@@ -780,7 +780,7 @@ object Ordinals extends lisa.Main {
 
     have(a === b |- !in(b, a)) by RightSubstEq.withParametersSimple(List((a, b)), lambda(x, !in(x, a)))(selfNonMembership of (x := a))
     val right = thenHave(in(b, a) |- !(a === b)) by Restate
-    val left = have(in(b, a) |- !in(a, b)) by Restate.from(membershipAsymmetric of (x := a, y := b))
+    val left = have(in(b, a) |- !in(a, b)) by Restate.from(membershipAsymmetry of (x := a, y := b))
     val ordCases = have(in(b, a) |- !in(a, b) /\ !(a === b)) by RightAnd(left, right)
 
     val minElement = forall(b, ((ordinal(b) /\ !P(b)) ==> (in(a, b) \/ (a === b))))
@@ -852,7 +852,7 @@ object Ordinals extends lisa.Main {
     thenHave(transitiveSet(a) |- in(x, singleton(a)) ==> transitiveSet(x)) by RightImplies
     thenHave(transitiveSet(a) |- forall(x, in(x, singleton(a)) ==> transitiveSet(x))) by RightForall
     have(transitiveSet(a) |- transitiveSet(setUnion(union(singleton(a)), singleton(a)))) by Cut(lastStep, transitiveSetUnionAndElement of (y := singleton(a)))
-    thenHave(transitiveSet(a) |- transitiveSet(setUnion(a, singleton(a)))) by Substitution.ApplyRules(unionOfSingletonIsTheOriginalSet)
+    thenHave(transitiveSet(a) |- transitiveSet(setUnion(a, singleton(a)))) by Substitution.ApplyRules(unionSingleton)
     thenHave(thesis) by Substitution.ApplyRules(successor.shortDefinition)
   }
 
@@ -888,7 +888,7 @@ object Ordinals extends lisa.Main {
   val successorNoInBetween = Lemma(
     (in(a, b), in(b, successor(a))) |- ()
   ) {
-    val subst = have((in(a, b), in(b, successor(a))) |- a === b) by Cut(inSuccessorLeq, membershipAsymmetric of (x := a, y := b))
+    val subst = have((in(a, b), in(b, successor(a))) |- a === b) by Cut(inSuccessorLeq, membershipAsymmetry of (x := a, y := b))
     have(in(a, b) |- in(a, b)) by Hypothesis
     thenHave((in(a, b), in(b, successor(a))) |- in(a, a)) by Substitution.ApplyRules(subst)
     have(thesis) by RightAnd(lastStep, selfNonMembership of (x := a))

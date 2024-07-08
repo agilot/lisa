@@ -32,7 +32,7 @@ Wait for the Lisa codebase to be compiled and then press the number correspondin
   @*Theorem fixedPointDoubleApplication := 
     ∀'x. 'P('x) ==> 'P('f('x)) |- 'P('x) ==> 'P('f('f('x)))
 
-  Theorem emptySetIsASubset := |- subsetOf(emptySet, 'x)
+  Theorem emptySetSubset := |- subsetOf(emptySet, 'x)
 
   Theorem setWithElementNonEmpty := 
     elem('y, 'x) |- ¬('x = emptySet)
@@ -158,7 +158,7 @@ Lisa is based on set theory, so you can also use set-theoretic primitives such a
 
 \noindent\begin{minipage}{\linewidth}\vspace{1em}
   \begin{lstlisting}[language=lisa, frame=single]
-val emptySetIsASubset = Theorem(
+val emptySetSubset = Theorem(
   ∅ ⊆ x
 ) {
   have((y ∈ ∅) ==> (y ∈ x)) by Tautology.from(

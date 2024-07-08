@@ -348,7 +348,7 @@ object Segments extends lisa.Main {
       have((strictWellOrder(r, x), fIsIsomorphism, isLeastElement(a, nonIdentitySet(f, x), r, x), in(a, x), 
       bijective(f, x, initialSegment(b, r, x)), in(pair(a, app(f, a)), initialSegmentOrder(b, r, x)), in(a, initialSegment(b, r, x))) |- ()) by Cut(inverseFunctionImageInDomain of (y := initialSegment(b, r, x), b := a), lastStep)
       have((strictWellOrder(r, x), fIsIsomorphism, isLeastElement(a, nonIdentitySet(f, x), r, x), in(a, x), 
-      bijective(f, x, initialSegment(b, r, x)), in(pair(a, app(f, a)), r), in(a, initialSegment(b, r, x)), in(app(f, a), initialSegment(b, r, x))) |- ()) by Cut(relationRestrictionIntro of (b := app(f, a), x := initialSegment(b, r, x), y := initialSegment(b, r, x)), lastStep)
+      bijective(f, x, initialSegment(b, r, x)), in(pair(a, app(f, a)), r), in(a, initialSegment(b, r, x)), in(app(f, a), initialSegment(b, r, x))) |- ()) by Cut(relationRestrictionIntroPair of (b := app(f, a), x := initialSegment(b, r, x), y := initialSegment(b, r, x)), lastStep)
       have((strictWellOrder(r, x), fIsIsomorphism, isLeastElement(a, nonIdentitySet(f, x), r, x), in(a, x), 
       bijective(f, x, initialSegment(b, r, x)), in(pair(a, app(f, a)), r), in(app(f, a), initialSegment(b, r, x))) |- ()) by Cut(belowInitialSegment of (t := a, a := app(f, a)), lastStep)
       have((strictWellOrder(r, x), fIsIsomorphism, isLeastElement(a, nonIdentitySet(f, x), r, x), in(a, x), 
@@ -389,53 +389,5 @@ object Segments extends lisa.Main {
   ) {
     sorry
   }
-
-
-  // val initialSegmentPredecessorSplit = Lemma(
-  //   totalOrder(p) /\ predecessor(p, y, x) |- in(z, initialSegment(p, x)) <=> ((z === y) \/ in(z, initialSegment(p, y)))
-  // ) {
-  //   sorry
-  // }
-
-  // val initialSegmentIntersection = Lemma(
-  //   partialOrder(p) /\ in(y, initialSegment(p, x)) |- setIntersection(initialSegment(p, y), initialSegment(p, x)) === initialSegment(p, y)
-  // ) {
-  //   sorry
-  // }
-
-  // /**
-  //  * The restriction of a function `f` with respect to `a` relative to a
-  //  * partial order `p = (X, <)`. The result is `f` with its domain restricted
-  //  * to the elements less than `a` wrt `<`.
-  //  */
-  // val orderedRestriction = DEF(f, a, p) --> domainRestriction(f, initialSegment(p, a))
-
-  // /**
-  //  * Theorem --- Ordered Restriction Membership
-  //  *
-  //  * A pair `b` is in the ordered restriction of a function `f` to the initial
-  //  * segment of `a` under a partial order `p` iff it is in `f` and its first element
-  //  * (the one in the domain) is in the initial segment of `a`
-  //  */
-  // val orderedRestrictionMembership = Lemma(
-  //   partialOrder(p) |- in(b, orderedRestriction(f, a, p)) <=> (in(b, f) /\ in(firstInPair(b), initialSegment(p, a)))
-  // ) {
-  //   sorry
-  // }
-
-  // val orderedRestrictionFunctionalOverInit = Lemma(
-  //   in(a, initialSegment(p, b)) /\ functionalOver(f, initialSegment(p, b)) |- functionalOver(orderedRestriction(f, a, p), initialSegment(p, a))
-  // ) {
-  //   sorry
-  // }
-
-  // val orderedRestrictionAgreement = Lemma(
-  //   partialOrder(p) /\ in(b, initialSegment(p, a)) /\ in(b, relationDomain(f)) /\ in(b, relationDomain(g)) |- (app(orderedRestriction(f, a, p), b) === app(orderedRestriction(g, a, p), b)) <=> (app(
-  //     f,
-  //     b
-  //   ) === app(g, b))
-  // ) {
-  //   sorry
-  // }
 
 }

@@ -169,13 +169,13 @@ object Recursion extends lisa.Main {
           have((sDef, in(d, relationDomain(f)), ordinal(a), in(f, s)) |- in(d, a)) by Cut(sElim, lastStep)
           thenHave((sDef, in(d, relationDomain(f)) /\ in(f, s), ordinal(a)) |- in(d, a)) by LeftAnd
           thenHave((sDef, exists(f, in(d, relationDomain(f)) /\ in(f, s)), ordinal(a)) |- in(d, a)) by LeftExists
-          thenHave((sDef, in(d, relationDomain(union(s))), ordinal(a)) |- in(d, a)) by Substitution.ApplyRules(domainOfRelationalUnion of (t := d, z := s))
+          thenHave((sDef, in(d, relationDomain(union(s))), ordinal(a)) |- in(d, a)) by Substitution.ApplyRules(relationDomainUnion of (t := d, z := s))
         } 
         val backward = have((isFExistsBelow, sDef) |- in(d, a) ==> in(d, relationDomain(union(s)))) subproof {
           have(isF(f, d) |- in(d, relationDomain(f))) by Substitution.ApplyRules(isFDomain)(inSuccessor of (a := d))
           have((sDef, in(d, a), isF(f, d)) |- in(d, relationDomain(f)) /\ in(f, s)) by RightAnd(sIntro, lastStep)
           thenHave((sDef, in(d, a), isF(f, d)) |- exists(f, in(d, relationDomain(f)) /\ in(f, s))) by RightExists
-          thenHave((sDef, in(d, a), isF(f, d)) |- in(d, relationDomain(union(s)))) by Substitution.ApplyRules(domainOfRelationalUnion of (t := d, z := s))
+          thenHave((sDef, in(d, a), isF(f, d)) |- in(d, relationDomain(union(s)))) by Substitution.ApplyRules(relationDomainUnion of (t := d, z := s))
           thenHave((sDef, in(d, a), exists(f, isF(f, d))) |- in(d, relationDomain(union(s)))) by LeftExists
           have((sDef, in(d, a), isFExistsBelow) |- in(d, relationDomain(union(s)))) by Cut(isFExistsBelowElim, lastStep)
         }
