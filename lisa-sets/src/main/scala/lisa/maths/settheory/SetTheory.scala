@@ -1782,6 +1782,12 @@ object SetTheory extends lisa.Main {
     have(singleton(pair(x, y)) === cartesianProduct(singleton(x), singleton(y))) by Cut(lastStep, equalityIntro of (x := singleton(pair(x, y)), y := cartesianProduct(singleton(x), singleton(y))))
   }
 
+  val pairInSingletonCartesianProduct = Lemma(
+    in(pair(x, y), cartesianProduct(singleton(x), singleton(y)))
+  ){
+    have(thesis) by Substitution.ApplyRules(singletonCartesianProduct)(singletonIntro of (x := pair(x, y)))
+  }
+
   val cartesianProductLeftUnion = Lemma(
     cartesianProduct(setUnion(a, b), c) === setUnion(cartesianProduct(a, c), cartesianProduct(b, c))
   ) {
@@ -1897,6 +1903,113 @@ object SetTheory extends lisa.Main {
       )
     ) by Cut(left, unionOfTwoSubsets of (a := cartesianProduct(a, b), b := cartesianProduct(c, d), c := cartesianProduct(setUnion(a, c), setUnion(b, d))))
     have(thesis) by Cut(right, lastStep)
+  }
+
+  val swapUniqueness = Lemma(
+    existsOne(z, (exists(x, exists(y, p === pair(x, y))) ==> (z === pair(secondInPair(p), firstInPair(p)))) /\ (!exists(x, exists(y, p === pair(x, y))) ==> (z === p)))
+  ) {
+    val left = have(exists(x, exists(y, p === pair(x, y))) ==> existsOne(z, z === pair(secondInPair(p), firstInPair(p)))) by Weakening(existsOneEquality of (y := pair(secondInPair(p), firstInPair(p))))
+    val right = have(!exists(x, exists(y, p === pair(x, y))) ==> existsOne(z, z === p)) by Weakening(existsOneEquality of (y := p))
+
+    have(!exists(x, exists(y, p === pair(x, y))) ==> existsOne(z, z === p) |- existsOne(z, (exists(x, exists(y, p === pair(x, y))) ==> (z === pair(secondInPair(p), firstInPair(p)))) /\ (!exists(x, exists(y, p === pair(x, y))) ==> (z === p)))) by Cut(left, existsOneCases of (q := exists(x, exists(y, p === pair(x, y))), P := lambda(z, z === pair(secondInPair(p), firstInPair(p))), Q := lambda(z, z === p)))
+    have(thesis) by Cut(right, lastStep)
+  }
+
+  val swap = DEF(p) --> The(z, (exists(x, exists(y, p === pair(x, y))) ==> (z === pair(secondInPair(p), firstInPair(p)))) /\ (!exists(x, exists(y, p === pair(x, y))) ==> (z === p)))(swapUniqueness)
+
+  val swapPair = Lemma(
+    swap(pair(x, y)) === pair(y, x)
+  ) {
+    have((exists(a, exists(b, pair(x, y) === pair(a, b))) ==> (swap(pair(x, y)) === pair(secondInPair(pair(x, y)), firstInPair(pair(x, y))))) /\ (!exists(a, exists(b, pair(x, y) === pair(a, b))) ==> (swap(pair(x, y)) === pair(x, y)))) by InstantiateForall(swap(pair(x, y)))(swap.definition of (p := pair(x, y)))
+    thenHave(exists(a, exists(b, pair(x, y) === pair(a, b))) |- swap(pair(x, y)) === pair(secondInPair(pair(x, y)), firstInPair(pair(x, y)))) by Weakening
+    val withExists = thenHave(exists(a, exists(b, pair(x, y) === pair(a, b))) |- swap(pair(x, y)) === pair(y, x)) by Substitution.ApplyRules(secondInPairReduction, firstInPairReduction)
+
+    have(pair(x, y) === pair(x, y)) by RightRefl
+    thenHave(exists(b, pair(x, y) === pair(x, b))) by RightExists
+    thenHave(exists(a, exists(b, pair(x, y) === pair(a, b)))) by RightExists
+    have(thesis) by Cut(lastStep, withExists)
+  }
+
+  val swapNotPair = Lemma(
+    forall(x, forall(y, !(p === pair(x, y)))) |- swap(p) === p
+  ) {
+    have((exists(x, exists(y, p === pair(x, y))) ==> (swap(p) === pair(secondInPair(p), firstInPair(p)))) /\ (!exists(x, exists(y, p === pair(x, y))) ==> (swap(p) === p))) by InstantiateForall(swap(p))(swap.definition)
+    thenHave(thesis) by Weakening
+  }
+
+  val swapInvolutive = Lemma(
+    swap(swap(p)) === p
+  ) {
+    have(swap(swap(pair(x, y))) === pair(x, y)) by Substitution.ApplyRules(swapPair)(swapPair of (x := y, y := x))
+    thenHave(p === pair(x, y) |- swap(swap(p)) === p) by RightSubstEq.withParametersSimple(List((p, pair(x, y))), lambda(p, swap(swap(p)) === p))
+    thenHave(exists(y, p === pair(x, y)) |- swap(swap(p)) === p) by LeftExists
+    val left = thenHave(exists(x, exists(y, p === pair(x, y))) |- swap(swap(p)) === p) by LeftExists
+    val right = have(forall(x, forall(y, !(p === pair(x, y)))) |- swap(swap(p)) === p) by Substitution.ApplyRules(swapNotPair)(swapNotPair of (p := swap(p)))
+    have(thesis) by LeftOr(left, right)
+  }
+
+  val swapIsPair = Lemma(
+    exists(x, exists(y, p === pair(x, y))) <=> exists(x, exists(y, swap(p) === pair(x, y)))
+  ) {
+    have(p === pair(a, b) |- swap(p) === pair(b, a)) by Substitution.ApplyRules(p === pair(a, b))(swapPair of (x := a, y := b))
+    val forward = thenHave((p === pair(a, b)) ==> (swap(p) === pair(b, a))) by RightImplies
+    val backward = have((swap(p) === pair(b, a)) ==> (p === pair(a, b))) by Substitution.ApplyRules(swapInvolutive)(forward of (p := swap(p), b := a, a := b))
+    have((p === pair(a, b)) <=> (swap(p) === pair(b, a))) by RightIff(forward, backward)
+    thenHave(forall(b, (p === pair(a, b)) <=> (swap(p) === pair(b, a)))) by RightForall
+    have(exists(b, (p === pair(a, b))) <=> exists(b, (swap(p) === pair(b, a)))) by Cut(lastStep, existentialEquivalenceDistribution of (P := lambda(b, p === pair(a, b)), Q := lambda(b, swap(p) === pair(b, a))))
+    thenHave(forall(a, exists(b, (p === pair(a, b))) <=> exists(b, (swap(p) === pair(b, a))))) by RightForall
+    have(exists(a, exists(b, (p === pair(a, b)))) <=> exists(a, exists(b, (swap(p) === pair(b, a))))) by Cut(lastStep, existentialEquivalenceDistribution of (P := lambda(a, exists(b, p === pair(a, b))), Q := lambda(a, exists(b, swap(p) === pair(b, a)))))
+    thenHave(exists(a, exists(b, (p === pair(a, b)))) <=> exists(b, exists(a, (swap(p) === pair(b, a))))) by Substitution.ApplyRules(existentialSwap of (R := lambda((a, b), swap(p) === pair(b, a))))
+  }
+
+  val swapInjectivity = Lemma(
+    swap(x) === swap(y) |- x === y
+  ) {
+    have((swap(pair(a, b)) === swap(pair(c, d))) <=> (pair(a, b) === pair(c, d))) by Substitution.ApplyRules(pairExtensionality, swapPair)(pairExtensionality of (b := a, a := b, c := d, d := c))
+    thenHave(swap(pair(a, b)) === swap(pair(c, d)) |- pair(a, b) === pair(c, d)) by Weakening
+    thenHave((x === pair(a, b), y === pair(c, d), swap(x) === swap(y)) |- x === y) by Substitution.ApplyRules(x === pair(a, b), y === pair(c, d))
+    thenHave((x === pair(a, b), exists(d, y === pair(c, d)), swap(x) === swap(y)) |- x === y) by LeftExists
+    val case1 = thenHave((x === pair(a, b), exists(c, exists(d, y === pair(c, d))), swap(x) === swap(y)) |- x === y) by LeftExists
+
+    have((pair(b, a) === y, !(y === pair(b, a))) |- x === y) by Restate
+    thenHave((pair(b, a) === y, forall(a, !(y === pair(b, a)))) |- x === y) by LeftForall
+    thenHave((pair(b, a) === y, forall(b, forall(a, !(y === pair(b, a))))) |- x === y) by LeftForall
+    thenHave((swap(pair(a, b)) === swap(y), forall(b, forall(a, !(y === pair(b, a))))) |- x === y) by Substitution.ApplyRules(swapPair, swapNotPair)
+    val case2 = thenHave((x === pair(a, b), forall(b, forall(a, !(y === pair(b, a)))), swap(x) === swap(y)) |- x === y) by LeftSubstEq.withParametersSimple(List((x, pair(a, b))), lambda(x, swap(x) === swap(y)))
+
+    have((x === pair(a, b), swap(x) === swap(y)) |- x === y) by LeftOr(case1, case2)
+    thenHave((exists(b, x === pair(a, b)), swap(x) === swap(y)) |- x === y) by LeftExists
+    val case12 = thenHave((exists(a, exists(b, x === pair(a, b))), swap(x) === swap(y)) |- x === y) by LeftExists
+
+    have((forall(a, forall(b, !(x === pair(a, b)))), y === pair(a, b), swap(x) === swap(y)) |- x === y) by Restate.from(case2 of (x := y, y := x))
+    thenHave((forall(a, forall(b, !(x === pair(a, b)))), exists(b, y === pair(a, b)), swap(x) === swap(y)) |- x === y) by LeftExists
+    val case3 = thenHave((forall(a, forall(b, !(x === pair(a, b)))), exists(a, exists(b, y === pair(a, b))), swap(x) === swap(y)) |- x === y) by LeftExists
+    
+    have(x === y |- x === y) by Hypothesis
+    val case4 = thenHave((forall(a, forall(b, !(x === pair(a, b)))), forall(a, forall(b, !(y === pair(a, b)))), swap(x) === swap(y)) |- x === y) by Substitution.ApplyRules(swapNotPair)
+
+    have((forall(a, forall(b, !(x === pair(a, b)))), swap(x) === swap(y)) |- x === y) by LeftOr(case3, case4)
+    have(thesis) by LeftOr(case12, lastStep)
+  }
+
+  val swapEqualsPair = Lemma(
+    swap(p) === pair(x, y) |- p === pair(y, x)
+  ) {
+   have(thesis) by Substitution.ApplyRules(swapPair)(swapInjectivity of (x := p, y := pair(y, x)))
+  }
+
+  val swapCartesianProduct = Lemma(
+    in(p, cartesianProduct(x, y)) <=> in(swap(p), cartesianProduct(y, x))
+  ) {
+    val forward = have(in(p, cartesianProduct(x, y)) ==> in(swap(p), cartesianProduct(y, x))) subproof {
+      have(in(b, y) /\ in(a, x) |- in(pair(b, a), cartesianProduct(y, x))) by LeftAnd(cartesianProductIntro of (a := b, b := a, x := y, y := x))
+      have(in(pair(a, b), cartesianProduct(x, y)) |- in(pair(b, a), cartesianProduct(y, x))) by Cut(cartesianProductElimPair, lastStep)
+      thenHave(in(pair(a, b), cartesianProduct(x, y)) |- in(swap(pair(a, b)), cartesianProduct(y, x))) by Substitution.ApplyRules(swapPair)
+      thenHave((p === pair(a, b), in(p, cartesianProduct(x, y))) |- in(swap(p), cartesianProduct(y, x))) by Substitution.ApplyRules(p === pair(a, b))
+      have(in(p, cartesianProduct(x, y)) |- in(swap(p), cartesianProduct(y, x))) by Cut(pairReconstructionInCartesianProduct, lastStep of (a := firstInPair(p), b := secondInPair(p)))
+    }
+    val backward = have(in(swap(p), cartesianProduct(y, x)) ==> in(p, cartesianProduct(x, y))) by Substitution.ApplyRules(swapInvolutive)(forward of (p := swap(p), x := y, y := x))
+    have(thesis) by RightIff(forward, backward)
   }
 
 }

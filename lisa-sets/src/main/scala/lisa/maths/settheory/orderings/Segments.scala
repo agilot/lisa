@@ -120,8 +120,7 @@ object Segments extends lisa.Main {
   val irreflexiveRelationElementPreimage = Lemma(
     irreflexive(r, x) |- !in(b, elementPreimage(b, r, x))
   ){
-    have((irreflexive(r, x), in(b, x), relationBetween(r, x, x), in(b, elementPreimage(b, r, x))) |- ()) by RightAnd(antiReflexiveElim of (y := b), elementPreimageElim of (a := b))
-    have((irreflexive(r, x), relationBetween(r, x, x), in(b, elementPreimage(b, r, x))) |- ()) by Cut(elementPreimageInDomain of (a := b), lastStep)
+    have((irreflexive(r, x), relationBetween(r, x, x), in(b, elementPreimage(b, r, x))) |- ()) by RightAnd(antiReflexiveElim of (y := b), elementPreimageElim of (a := b))
     have((irreflexive(r, x), in(b, elementPreimage(b, r, x))) |- ()) by Cut(antiReflexiveRelationIsRelation, lastStep)
   }
 
@@ -273,28 +272,29 @@ object Segments extends lisa.Main {
   val nonIdentitySetEmpty = Lemma(
     (surjective(f, x, y), nonIdentitySet(f, x) === emptySet) |- x === y
   ) {
-    have((functionFrom(f, x, y), !in(a, nonIdentitySet(f, x)), in(a, x)) |- in(a, y)) by Substitution.ApplyRules(notInNonIdentitySetElim of (t := a))(functionFromAppInCodomain)
-    have((functionFrom(f, x, y), in(a, x), nonIdentitySet(f, x) === emptySet) |- in(a, y)) by Cut(setEmptyHasNoElements of (x := nonIdentitySet(f, x), y := a), lastStep)
-    have((surjective(f, x, y), in(a, x), nonIdentitySet(f, x) === emptySet) |- in(a, y)) by Cut(surjectiveIsFunction, lastStep)
-    val forward = thenHave((surjective(f, x, y), nonIdentitySet(f, x) === emptySet) |- in(a, x) ==> in(a, y)) by RightImplies 
+    val forward = have((surjective(f, x, y), nonIdentitySet(f, x) === emptySet) |- in(a, x) ==> in(a, y)) subproof {
+      have((functionFrom(f, x, y), !in(a, nonIdentitySet(f, x)), in(a, x)) |- in(a, y)) by Substitution.ApplyRules(notInNonIdentitySetElim of (t := a))(functionFromAppInCodomain)
+      have((functionFrom(f, x, y), in(a, x), nonIdentitySet(f, x) === emptySet) |- in(a, y)) by Cut(setEmptyHasNoElements of (x := nonIdentitySet(f, x), y := a), lastStep)
+      have((surjective(f, x, y), in(a, x), nonIdentitySet(f, x) === emptySet) |- in(a, y)) by Cut(surjectiveIsFunctionFrom, lastStep)
+    } 
+
+    val backward = have((nonIdentitySet(f, x) === emptySet, surjective(f, x, y)) |- in(b, y) ==> in(b, x)) subproof {
+      have((nonIdentitySet(f, x) === emptySet, in(a, x)) |- app(f, a) === a) by Cut(setEmptyHasNoElements of (x := nonIdentitySet(f, x), y := a), notInNonIdentitySetElim of (t := a))
+      thenHave(nonIdentitySet(f, x) === emptySet |- in(a, x) ==> (app(f, a) === a)) by RightImplies
+      val emptyIdSetProp = thenHave(nonIdentitySet(f, x) === emptySet |- forall(a, in(a, x) ==> (app(f, a) === a))) by RightForall
 
 
-    have((nonIdentitySet(f, x) === emptySet, in(a, x)) |- app(f, a) === a) by Cut(setEmptyHasNoElements of (x := nonIdentitySet(f, x), y := a), notInNonIdentitySetElim of (t := a))
-    thenHave(nonIdentitySet(f, x) === emptySet |- in(a, x) ==> (app(f, a) === a)) by RightImplies
-    val emptyIdSetProp = thenHave(nonIdentitySet(f, x) === emptySet |- forall(a, in(a, x) ==> (app(f, a) === a))) by RightForall
-
-
-    have(forall(a, in(a, x) ==> (app(f, a) === a)) |- forall(a, in(a, x) ==> (app(f, a) === a))) by Hypothesis
-    val idEmptyEq = thenHave((forall(a, in(a, x) ==> (app(f, a) === a)), in(a, x)) |- app(f, a) === a) by InstantiateForall(a)
-    have((in(a, x), app(f, a) === b) |- (app(f, a) === b) /\ in(a, x)) by Restate
-    thenHave((forall(a, in(a, x) ==> (app(f, a) === a)), in(a, x), app(f, a) === b) |- (a === b) /\ in(a, x)) by Substitution.ApplyRules(idEmptyEq)
-    thenHave((forall(a, in(a, x) ==> (app(f, a) === a)), in(a, x) /\ (app(f, a) === b)) |- (a === b) /\ in(a, x)) by LeftAnd
-    thenHave((forall(a, in(a, x) ==> (app(f, a) === a)), in(a, x) /\ (app(f, a) === b)) |- exists(a, (a === b) /\ in(a, x))) by RightExists
-    thenHave((forall(a, in(a, x) ==> (app(f, a) === a)), exists(a, in(a, x) /\ (app(f, a) === b))) |- exists(a, (a === b) /\ in(a, x))) by LeftExists
-    have((forall(a, in(a, x) ==> (app(f, a) === a)), surjective(f, x, y), in(b, y)) |- exists(a, (a === b) /\ in(a, x))) by Cut(surjectiveElim, lastStep)
-    thenHave((forall(a, in(a, x) ==> (app(f, a) === a)), surjective(f, x, y), in(b, y)) |- in(b, x)) by Substitution.ApplyRules(onePointRule of (Q := lambda(z, in(z, x)), x := app(f, a), y := b))
-    thenHave((forall(a, in(a, x) ==> (app(f, a) === a)), surjective(f, x, y)) |- in(b, y) ==> in(b, x)) by RightImplies
-    val backward = have((nonIdentitySet(f, x) === emptySet, surjective(f, x, y)) |- in(b, y) ==> in(b, x)) by Cut(emptyIdSetProp, lastStep)
+      have(forall(a, in(a, x) ==> (app(f, a) === a)) |- forall(a, in(a, x) ==> (app(f, a) === a))) by Hypothesis
+      val idEmptyEq = thenHave((forall(a, in(a, x) ==> (app(f, a) === a)), in(a, x)) |- app(f, a) === a) by InstantiateForall(a)
+      have((in(a, x), app(f, a) === b) |- (app(f, a) === b) /\ in(a, x)) by Restate
+      thenHave((forall(a, in(a, x) ==> (app(f, a) === a)), in(a, x), app(f, a) === b) |- (a === b) /\ in(a, x)) by Substitution.ApplyRules(idEmptyEq)
+      thenHave((forall(a, in(a, x) ==> (app(f, a) === a)), in(a, x) /\ (app(f, a) === b)) |- (a === b) /\ in(a, x)) by LeftAnd
+      thenHave((forall(a, in(a, x) ==> (app(f, a) === a)), in(a, x) /\ (app(f, a) === b)) |- exists(a, (a === b) /\ in(a, x))) by RightExists
+      thenHave((forall(a, in(a, x) ==> (app(f, a) === a)), exists(a, in(a, x) /\ (app(f, a) === b))) |- exists(a, (a === b) /\ in(a, x))) by LeftExists
+      thenHave((forall(a, in(a, x) ==> (app(f, a) === a)), surjective(f, x, y), in(b, y)) |- exists(a, (a === b) /\ in(a, x))) by Substitution.ApplyRules(surjectiveRangeMembership)
+      thenHave((forall(a, in(a, x) ==> (app(f, a) === a)), surjective(f, x, y), in(b, y)) |- in(b, x)) by Substitution.ApplyRules(onePointRule of (Q := lambda(z, in(z, x)), x := app(f, a), y := b))
+      have((nonIdentitySet(f, x) === emptySet, surjective(f, x, y), in(b, y)) |- in(b, x)) by Cut(emptyIdSetProp, lastStep)
+    }
 
     have((nonIdentitySet(f, x) === emptySet, surjective(f, x, y)) |- in(a, x) <=> in(a, y)) by RightIff(forward, backward of (b := a))
     thenHave((nonIdentitySet(f, x) === emptySet, surjective(f, x, y)) |- forall(a, in(a, x) <=> in(a, y))) by RightForall
@@ -354,7 +354,7 @@ object Segments extends lisa.Main {
       have((strictWellOrder(r, x), fIsIsomorphism, isLeastElement(a, nonIdentitySet(f, x), r, x), in(a, x), 
       bijective(f, x, initialSegment(b, r, x)), functionFrom(f, x, initialSegment(b, r, x)), in(pair(a, app(f, a)), r)) |- ()) by Cut(functionFromAppInCodomain of (y := initialSegment(b, r, x)), lastStep)
       have((strictWellOrder(r, x), fIsIsomorphism, isLeastElement(a, nonIdentitySet(f, x), r, x), in(a, x), 
-      bijective(f, x, initialSegment(b, r, x)), in(pair(a, app(f, a)), r)) |- ()) by Cut(bijectiveIsFunction of (y := initialSegment(b, r, x)), lastStep)
+      bijective(f, x, initialSegment(b, r, x)), in(pair(a, app(f, a)), r)) |- ()) by Cut(bijectiveIsFunctionFrom of (y := initialSegment(b, r, x)), lastStep)
       have((strictWellOrder(r, x), fIsIsomorphism, isLeastElement(a, nonIdentitySet(f, x), r, x), in(a, x), 
       in(pair(a, app(f, a)), r)) |- ()) by Cut(relationIsomorphismBijective of (r1 := r, r2 := initialSegmentOrder(b, r, x), y := initialSegment(b, r, x)), lastStep)
     }

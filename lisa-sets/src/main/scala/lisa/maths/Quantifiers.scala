@@ -61,7 +61,6 @@ object Quantifiers extends lisa.Main {
     thenHave(∀(y, (x === y) <=> P(y)) |- P(x)) by InstFunSchema(Map(y -> x))
     thenHave(∀(y, (x === y) <=> P(y)) |- ∃(x, P(x))) by RightExists
     thenHave(∃(x, ∀(y, (x === y) <=> P(y))) |- ∃(x, P(x))) by LeftExists
-    thenHave(thesis) by Restate
   }
 
   val existsOneImpliesUniqueness = Theorem(
@@ -80,6 +79,12 @@ object Quantifiers extends lisa.Main {
     thenHave(thesis) by LeftExistsOne
   }
 
+  /**
+   * Theorem --- Top level existential quantifiers can be swapped.
+   */
+  val existentialSwap = Lemma(∃(x, ∃(y, R(x, y))) <=> ∃(y, ∃(x, R(x, y)))) {
+    have(thesis) by Tableau
+  }
 
 
   /**
@@ -128,7 +133,6 @@ object Quantifiers extends lisa.Main {
       have(P(x) /\ (y === x) |- P(x) /\ (y === x)) by Hypothesis
       thenHave(P(x) /\ (y === x) |- exists(x, P(x) /\ (y === x))) by RightExists
       thenHave(P(y) /\ (y === y) |- exists(x, P(x) /\ (y === x))) by InstFunSchema(Map(x -> y))
-      thenHave(thesis) by Restate
     }
     val backward = thenHave(P(y) ==> exists(x, P(x) /\ (y === x))) by Restate
 
@@ -220,8 +224,7 @@ object Quantifiers extends lisa.Main {
       lastStep,
       existentialEquivalenceDistribution of (P -> lambda(z, forall(y, (y === z) <=> P(y))), Q -> lambda(z, forall(y, (y === z) <=> Q(y))))
     )
-
-    thenHave(thesis) by Restate
+    
   }
 
   /**
@@ -244,8 +247,6 @@ object Quantifiers extends lisa.Main {
       thenHave((P(x), exists(y, (!(x === y) /\ P(y)) \/ ((x === y) /\ !P(y)))) |- exists(x, exists(y, P(x) /\ P(y) /\ !(x === y)))) by LeftExists
       thenHave((P(x), forall(x, exists(y, (!(x === y) /\ P(y)) \/ ((x === y) /\ !P(y))))) |- exists(x, exists(y, P(x) /\ P(y) /\ !(x === y)))) by LeftForall
       thenHave((exists(x, P(x)), forall(x, exists(y, (!(x === y) /\ P(y)) \/ ((x === y) /\ !P(y))))) |- exists(x, exists(y, P(x) /\ P(y) /\ !(x === y)))) by LeftExists
-
-      thenHave(thesis) by Restate
     }
 
     val backward = have(exists(x, exists(y, P(x) /\ P(y) /\ !(x === y))) ==> (exists(x, P(x)) /\ !existsOne(x, P(x)))) subproof {
@@ -267,8 +268,6 @@ object Quantifiers extends lisa.Main {
       have(P(x) /\ P(y) /\ !(x === y) |- exists(x, P(x)) /\ !existsOne(z, P(z))) by Tautology.from(ex, uex)
       thenHave(exists(y, P(x) /\ P(y) /\ !(x === y)) |- exists(x, P(x)) /\ !existsOne(z, P(z))) by LeftExists
       thenHave(exists(x, exists(y, P(x) /\ P(y) /\ !(x === y))) |- exists(x, P(x)) /\ !existsOne(z, P(z))) by LeftExists
-
-      thenHave(thesis) by Restate
     }
 
     have(thesis) by Tautology.from(forward, backward)
@@ -288,7 +287,6 @@ object Quantifiers extends lisa.Main {
       assume(Q(y))
       thenHave((y === y) /\ Q(y)) by Restate
       thenHave(∃(x, (x === y) /\ Q(x))) by RightExists
-      thenHave(thesis) by Restate.from
     }
     have(thesis) by Tautology.from(s1, s2)
   }

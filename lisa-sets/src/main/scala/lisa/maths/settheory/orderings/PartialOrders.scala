@@ -79,6 +79,18 @@ object PartialOrders extends lisa.Main {
   }
 
   /**
+   * Theorem --- A strict partial order is asymmetric
+   * 
+   *  `strictPartialOrder(r, x) ⊢ asymmetric(r, x)`
+   */
+  val strictPartialOrderAsymmetric = Lemma(
+    strictPartialOrder(r, x) |- asymmetric(r, x)
+  ) {
+    have((strictPartialOrder(r, x), transitive(r, x)) |- asymmetric(r, x)) by Cut(strictPartialOrderIrreflexive, antiReflexiveTransitiveIsAsymmetric)
+    have(thesis) by Cut(strictPartialOrderTransitive, lastStep)
+  }
+
+  /**
    * Theorem --- A strict partial order is a relation
    *
    *   `strictPartialOrder(r, x) ⊢ relationBetween(r, x, x)`
@@ -115,16 +127,16 @@ object PartialOrders extends lisa.Main {
   /**
    * Theorem --- The restriction of a strict partial order remains a strict partial order
    *
-   *   `strictPartialOrder(r, x), y ⊆ x |- strictPartialOrder(relationRestriction(r, y, y), y)`
+   *   `strictPartialOrder(r, x) |- strictPartialOrder(relationRestriction(r, y, y), y)`
    */
   val relationRestrictionStrictPartialOrder = Lemma(
-    (strictPartialOrder(r, x), subset(y, x)) |- strictPartialOrder(relationRestriction(r, y, y), y)
+    strictPartialOrder(r, x) |- strictPartialOrder(relationRestriction(r, y, y), y)
   ) {
-    have((irreflexive(r, x), transitive(relationRestriction(r, y, y), y), subset(y, x)) |- strictPartialOrder(relationRestriction(r, y, y), y)) by
+    have((irreflexive(r, x), transitive(relationRestriction(r, y, y), y)) |- strictPartialOrder(relationRestriction(r, y, y), y)) by
       Cut(relationRestrictionIrreflexive, strictPartialOrderIntro of (r := relationRestriction(r, y, y), x := y))
-    have((irreflexive(r, x), transitive(r, x), subset(y, x)) |- strictPartialOrder(relationRestriction(r, y, y), y)) by
+    have((irreflexive(r, x), transitive(r, x)) |- strictPartialOrder(relationRestriction(r, y, y), y)) by
       Cut(relationRestrictionTransitive, lastStep)
-    have((strictPartialOrder(r, x), transitive(r, x), subset(y, x)) |- strictPartialOrder(relationRestriction(r, y, y), y)) by
+    have((strictPartialOrder(r, x), transitive(r, x)) |- strictPartialOrder(relationRestriction(r, y, y), y)) by
       Cut(strictPartialOrderIrreflexive, lastStep)
     have(thesis) by Cut(strictPartialOrderTransitive, lastStep)
   }
@@ -201,16 +213,21 @@ object PartialOrders extends lisa.Main {
     *   `isLeastElement(a, y, r, x), (a, b) ∈ r ⊢ b ∉ y`
     */
   val belowLeastElement = Lemma((isLeastElement(a, y, r, x), in(pair(b, a), r)) |- !in(b, y)) {
-    sorry
+    val left = have((strictPartialOrder(r, x), in(pair(b, a), r)) |- !(a === b)) by Cut(strictPartialOrderIrreflexive, pairInAntiReflexiveRelation of (a := b, b := a))
+    val right = have((strictPartialOrder(r, x), in(pair(b, a), r)) |- !in(pair(a, b), r)) by Cut(strictPartialOrderAsymmetric, asymmetricElim of (y := b, z := a))
+
+    have((strictPartialOrder(r, x), in(pair(b, a), r)) |- !(in(pair(a, b), r) \/ (a === b))) by RightAnd(left, right)
+    have((isLeastElement(a, y, r, x), strictPartialOrder(r, x), in(pair(b, a), r), in(b, y)) |- ()) by RightAnd(lastStep, isLeastElementElim)
+    have((isLeastElement(a, y, r, x), in(pair(b, a), r), in(b, y)) |- ()) by Cut(isLeastElementInStrictPartialOrder, lastStep)
   }
 
   /**
    * Theorem --- Least elements are preserved under relation restriction
    *
-   *   `isLeastElement(a, z, r, x), z ⊆ y ⊆ x |- isLeastElement(a, z, relationRestriction(r, y, y), y)`
+   *   `isLeastElement(a, z, r, x), z ⊆ y |- isLeastElement(a, z, relationRestriction(r, y, y), y)`
    */
   val relationRestrictionLeastElement = Lemma(
-    (isLeastElement(a, z, r, x), subset(z, y), subset(y, x)) |- isLeastElement(a, z, relationRestriction(r, y, y), y)
+    (isLeastElement(a, z, r, x), subset(z, y)) |- isLeastElement(a, z, relationRestriction(r, y, y), y)
   ) {
     have((in(pair(a, b), r) \/ (a === b), in(a, y), in(b, y)) |- in(pair(a, b), relationRestriction(r, y, y)) \/ (a === b)) by Tautology.from(relationRestrictionIntroPair of (x := y))
     have((isLeastElement(a, z, r, x), in(b, z), in(a, y), in(b, y)) |- in(pair(a, b), relationRestriction(r, y, y)) \/ (a === b)) by Cut(isLeastElementElim of (y := z), lastStep)
@@ -227,7 +244,7 @@ object PartialOrders extends lisa.Main {
       isLeastElementInSubset of (y := z),
       lastStep
     )
-    have((isLeastElement(a, z, r, x), strictPartialOrder(r, x), subset(y, x), subset(z, y)) |- isLeastElement(a, z, relationRestriction(r, y, y), y)) by Cut(
+    have((isLeastElement(a, z, r, x), strictPartialOrder(r, x), subset(z, y)) |- isLeastElement(a, z, relationRestriction(r, y, y), y)) by Cut(
       relationRestrictionStrictPartialOrder,
       lastStep
     )
@@ -325,7 +342,7 @@ object PartialOrders extends lisa.Main {
   val relationRestrictionStrictTotalOrder = Lemma(
     (strictTotalOrder(r, x), subset(y, x)) |- strictTotalOrder(relationRestriction(r, y, y), y)
   ) {
-    have((strictPartialOrder(r, x), connected(relationRestriction(r, y, y), y), subset(y, x)) |- strictTotalOrder(relationRestriction(r, y, y), y)) by
+    have((strictPartialOrder(r, x), connected(relationRestriction(r, y, y), y)) |- strictTotalOrder(relationRestriction(r, y, y), y)) by
       Cut(relationRestrictionStrictPartialOrder, strictTotalOrderIntro of (r := relationRestriction(r, y, y), x := y))
     have((strictPartialOrder(r, x), connected(r, x), subset(y, x)) |- strictTotalOrder(relationRestriction(r, y, y), y)) by
       Cut(relationRestrictionConnected, lastStep)
@@ -480,7 +497,7 @@ object PartialOrders extends lisa.Main {
       isLimitElementStrictTotalOrder,
       isPredecessorIntro of (a -> c, b -> a)
     )
-    have((isLimitElement(a, r, x), in(pair(c, a), r), forall(b, !in(pair(c, b), r) \/ !in(pair(b, a), r))) |- isPredecessor(c, a, r, x) /\ !isPredecessor(c, a, r, x)) by RightAnd(
+    have((isLimitElement(a, r, x), in(pair(c, a), r), forall(b, !in(pair(c, b), r) \/ !in(pair(b, a), r))) |- ()) by RightAnd(
       lastStep,
       isLimitElementElim of (b -> c)
     )
@@ -595,9 +612,9 @@ object PartialOrders extends lisa.Main {
   val relationRestrictionStrictWellOrder = Lemma(
     (strictWellOrder(r, x), subset(y, x)) |- strictWellOrder(relationRestriction(r, y, y), y)
   ) {
-    have((isLeastElement(a, z, r, x), subset(z, y), subset(y, x)) |- exists(a, isLeastElement(a, z, relationRestriction(r, y, y), y))) by RightExists(relationRestrictionLeastElement)
-    thenHave((exists(a, isLeastElement(a, z, r, x)), subset(z, y), subset(y, x)) |- exists(a, isLeastElement(a, z, relationRestriction(r, y, y), y))) by LeftExists
-    have((strictWellOrder(r, x), subset(z, x), !(z === emptySet), subset(z, y), subset(y, x)) |- exists(a, isLeastElement(a, z, relationRestriction(r, y, y), y))) by Cut(
+    have((isLeastElement(a, z, r, x), subset(z, y)) |- exists(a, isLeastElement(a, z, relationRestriction(r, y, y), y))) by RightExists(relationRestrictionLeastElement)
+    thenHave((exists(a, isLeastElement(a, z, r, x)), subset(z, y)) |- exists(a, isLeastElement(a, z, relationRestriction(r, y, y), y))) by LeftExists
+    have((strictWellOrder(r, x), subset(z, x), !(z === emptySet), subset(z, y)) |- exists(a, isLeastElement(a, z, relationRestriction(r, y, y), y))) by Cut(
       strictWellOrderElim of (y := z),
       lastStep
     )
@@ -686,7 +703,7 @@ object PartialOrders extends lisa.Main {
   val relationIsomorphismAppInCodomain = Lemma(
     (relationIsomorphism(f, r1, x, r2, y), in(a, x)) |- in(app(f, a), y)
   ) {
-    have(relationIsomorphism(f, r1, x, r2, y) |- functionFrom(f, x, y)) by Cut(relationIsomorphismBijective, bijectiveIsFunction)
+    have(relationIsomorphism(f, r1, x, r2, y) |- functionFrom(f, x, y)) by Cut(relationIsomorphismBijective, bijectiveIsFunctionFrom)
     have(thesis) by Cut(lastStep, functionFromAppInCodomain)
   }
 

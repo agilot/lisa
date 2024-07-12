@@ -456,13 +456,6 @@ private [adt] object ADTHelperTheorems extends lisa.Main {
   }
 
   /**
-   * Lemma --- Top level existential quantifiers can be swapped.
-   */
-  val existentialSwap = Lemma(∃(x, ∃(y, P2(x, y))) <=> ∃(y, ∃(x, P2(x, y)))) {
-    have(thesis) by Tableau
-  }
-
-  /**
    * Lemma --- Modus ponens for reversed equivalence.
    */
   val equivalenceRevApply = Lemma((p2 <=> p1, p1) |- p2) {
