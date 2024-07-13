@@ -51,8 +51,8 @@ class ComprehensionsTests extends AnyFunSuite {
     ) {
       val r = singleton(∅).collect(lambda(x, top), f)
 
-      have(in(x, r) <=> (x === f(∅))) by Substitution.ApplyRules(singletonMap)(r.elim(x))
-      thenHave(∀(x, in(x, r) <=> (x === f(∅)))) by RightForall
+      have(x ∈ r <=> (x === f(∅))) by Substitution.ApplyRules(singletonMap)(r.elim(x))
+      thenHave(∀(x, x ∈ r <=> (x === f(∅)))) by RightForall
       thenHave(thesis) by RightExists
     }
 
@@ -60,20 +60,20 @@ class ComprehensionsTests extends AnyFunSuite {
       ∃(s, ∀(x, in(x, s) <=> (x === f(∅))))
     ) {
       val r = singleton(∅).map(f)
-      have(in(x, r) <=> (x === f(∅))) by Substitution.ApplyRules(singletonMap)(r.elim(x))
-      thenHave(∀(x, in(x, r) <=> (x === f(∅)))) by RightForall
+      have(x ∈ r <=> (x === f(∅))) by Substitution.ApplyRules(singletonMap)(r.elim(x))
+      thenHave(∀(x, x ∈ r <=> (x === f(∅)))) by RightForall
       thenHave(thesis) by RightExists
     }
 
     val testFilter = Theorem(
-      ∃(x, Q(x)) |- ∃(z, ∀(t, in(t, z) <=> ∀(y, Q(y) ==> in(t, y))))
+      ∃(x, Q(x)) |- ∃(z, ∀(t, in(t, z) <=> ∀(y, Q(y) ==> t ∈ y)))
     ) {
       val s1 = assume(∃(x_1, Q(x_1)))
       val x = witness(s1)
-      val z = x.filter(lambda(t, ∀(y, Q(y) ==> in(t, y))))
-      have(∀(y, Q(y) ==> in(t, y)) <=> ((t ∈ x) /\ ∀(y, Q(y) ==> in(t, y)))) by Tableau
+      val z = x.filter(lambda(t, ∀(y, Q(y) ==> t ∈ y)))
+      have(∀(y, Q(y) ==> t ∈ y) <=> ((t ∈ x) /\ ∀(y, Q(y) ==> t ∈ y))) by Tableau
       have(in(t, z) <=> ∀(y, Q(y) ==> (t ∈ y))) by Substitution.ApplyRules(lastStep)(z.elim(t))
-      thenHave(∀(t, in(t, z) <=> ∀(y, Q(y) ==> in(t, y)))) by RightForall
+      thenHave(∀(t, in(t, z) <=> ∀(y, Q(y) ==> t ∈ y))) by RightForall
       thenHave(thesis) by RightExists
 
     }

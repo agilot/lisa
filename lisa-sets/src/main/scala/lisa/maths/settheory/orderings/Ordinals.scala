@@ -65,15 +65,15 @@ object Ordinals extends lisa.Main {
    *
    *   `∀ z. ∀ y. z ∈ y ⇒ y ∈ x ⇒ z ∈ x`
    */
-  val transitiveSet = DEF(x) --> forall(y, in(y, x) ==> subset(y, x))
+  val transitiveSet = DEF(x) --> ∀(y, y ∈ x ==> y ⊆ x)
 
   /**
    * Theorem --- Transitive set introduction rule
    *
    *     `∀ y. y ∈ x ⇒ y ⊆ x |- transitiveSet(x)`
    */
-  val transitiveSetIntro = Lemma(forall(y, in(y, x) ==> subset(y, x)) |- transitiveSet(x)) {
-    have(forall(y, in(y, x) ==> subset(y, x)) |- forall(y, in(y, x) ==> subset(y, x))) by Hypothesis
+  val transitiveSetIntro = Lemma(∀(y, y ∈ x ==> y ⊆ x) |- transitiveSet(x)) {
+    have(∀(y, y ∈ x ==> y ⊆ x) |- ∀(y, y ∈ x ==> y ⊆ x)) by Hypothesis
     thenHave(thesis) by Substitution.ApplyRules(transitiveSet.definition)
   }
 
@@ -82,9 +82,9 @@ object Ordinals extends lisa.Main {
    *
    *     `transitiveSet(x), y ∈ x |- y ⊆ x`
    */
-  val transitiveSetElim = Lemma((transitiveSet(x), in(y, x)) |- subset(y, x)) {
-    have(forall(y, in(y, x) ==> subset(y, x)) |- forall(y, in(y, x) ==> subset(y, x))) by Hypothesis
-    thenHave((forall(y, in(y, x) ==> subset(y, x)), in(y, x)) |- subset(y, x)) by InstantiateForall(y)
+  val transitiveSetElim = Lemma((transitiveSet(x), y ∈ x) |- y ⊆ x) {
+    have(∀(y, y ∈ x ==> y ⊆ x) |- ∀(y, y ∈ x ==> y ⊆ x)) by Hypothesis
+    thenHave((∀(y, y ∈ x ==> y ⊆ x), y ∈ x) |- y ⊆ x) by InstantiateForall(y)
     thenHave(thesis) by Substitution.ApplyRules(transitiveSet.definition)
   }
 
@@ -94,28 +94,28 @@ object Ordinals extends lisa.Main {
    *
    *    `(∀ y. y ∈ x ⇒ y ⊆ x) <=> (∀ z. ∀ y. z ∈ y ⇒ y ∈ x ⇒ z ∈ x)`
    */
-  val transitiveSetAltDef = Lemma(transitiveSet(x) <=> forall(z, forall(y, (in(z, y) /\ in(y, x)) ==> in(z, x)))) {
+  val transitiveSetAltDef = Lemma(transitiveSet(x) <=> ∀(z, ∀(y, (z ∈ y /\ y ∈ x) ==> z ∈ x))) {
 
-    val lhs = have(forall(y, in(y, x) ==> subset(y, x)) ==> forall(z, forall(y, (in(z, y) /\ in(y, x)) ==> in(z, x)))) subproof {
-      have(forall(y, in(y, x) ==> subset(y, x)) |- forall(y, in(y, x) ==> subset(y, x))) by Hypothesis
-      thenHave((forall(y, in(y, x) ==> subset(y, x)), in(y, x)) |- subset(y, x)) by InstantiateForall(y)
-      have((forall(y, in(y, x) ==> subset(y, x)), in(y, x), in(z, y)) |- in(z, x)) by Cut(lastStep, subsetElim of (x := y, y := x))
-      thenHave((forall(y, in(y, x) ==> subset(y, x))) |- (in(z, y) /\ in(y, x)) ==> in(z, x)) by Restate
-      thenHave((forall(y, in(y, x) ==> subset(y, x))) |- forall(y, (in(z, y) /\ in(y, x)) ==> in(z, x))) by RightForall
-      thenHave((forall(y, in(y, x) ==> subset(y, x))) |- forall(z, forall(y, (in(z, y) /\ in(y, x)) ==> in(z, x)))) by RightForall
+    val lhs = have(∀(y, y ∈ x ==> y ⊆ x) ==> ∀(z, ∀(y, (z ∈ y /\ y ∈ x) ==> z ∈ x))) subproof {
+      have(∀(y, y ∈ x ==> y ⊆ x) |- ∀(y, y ∈ x ==> y ⊆ x)) by Hypothesis
+      thenHave((∀(y, y ∈ x ==> y ⊆ x), y ∈ x) |- y ⊆ x) by InstantiateForall(y)
+      have((∀(y, y ∈ x ==> y ⊆ x), y ∈ x, z ∈ y) |- z ∈ x) by Cut(lastStep, subsetElim of (x := y, y := x))
+      thenHave((∀(y, y ∈ x ==> y ⊆ x)) |- (z ∈ y /\ y ∈ x) ==> z ∈ x) by Restate
+      thenHave((∀(y, y ∈ x ==> y ⊆ x)) |- ∀(y, (z ∈ y /\ y ∈ x) ==> z ∈ x)) by RightForall
+      thenHave((∀(y, y ∈ x ==> y ⊆ x)) |- ∀(z, ∀(y, (z ∈ y /\ y ∈ x) ==> z ∈ x))) by RightForall
     }
 
-    val rhs = have(forall(z, forall(y, (in(z, y) /\ in(y, x)) ==> in(z, x))) ==> forall(y, in(y, x) ==> subset(y, x))) subproof {
-      have(forall(z, forall(y, (in(z, y) /\ in(y, x)) ==> in(z, x))) |- forall(z, forall(y, (in(z, y) /\ in(y, x)) ==> in(z, x)))) by Hypothesis
-      thenHave(forall(z, forall(y, (in(z, y) /\ in(y, x)) ==> in(z, x))) |- forall(y, (in(z, y) /\ in(y, x)) ==> in(z, x))) by InstantiateForall(z)
-      thenHave(forall(z, forall(y, (in(z, y) /\ in(y, x)) ==> in(z, x))) /\ in(y, x) |- (in(z, y)) ==> in(z, x)) by InstantiateForall(y)
-      thenHave(forall(z, forall(y, (in(z, y) /\ in(y, x)) ==> in(z, x))) /\ in(y, x) |- forall(z, in(z, y) ==> in(z, x))) by RightForall
-      have(forall(z, forall(y, (in(z, y) /\ in(y, x)) ==> in(z, x))) /\ in(y, x) |- subset(y, x)) by Cut(lastStep, subsetIntro of (x -> y, y -> x))
-      thenHave(forall(z, forall(y, (in(z, y) /\ in(y, x)) ==> in(z, x))) |- in(y, x) ==> subset(y, x)) by Restate
-      thenHave(forall(z, forall(y, (in(z, y) /\ in(y, x)) ==> in(z, x))) |- forall(y, in(y, x) ==> subset(y, x))) by RightForall
+    val rhs = have(∀(z, ∀(y, (z ∈ y /\ y ∈ x) ==> z ∈ x)) ==> ∀(y, y ∈ x ==> y ⊆ x)) subproof {
+      have(∀(z, ∀(y, (z ∈ y /\ y ∈ x) ==> z ∈ x)) |- ∀(z, ∀(y, (z ∈ y /\ y ∈ x) ==> z ∈ x))) by Hypothesis
+      thenHave(∀(z, ∀(y, (z ∈ y /\ y ∈ x) ==> z ∈ x)) |- ∀(y, (z ∈ y /\ y ∈ x) ==> z ∈ x)) by InstantiateForall(z)
+      thenHave(∀(z, ∀(y, (z ∈ y /\ y ∈ x) ==> z ∈ x)) /\ y ∈ x |- (z ∈ y) ==> z ∈ x) by InstantiateForall(y)
+      thenHave(∀(z, ∀(y, (z ∈ y /\ y ∈ x) ==> z ∈ x)) /\ y ∈ x |- ∀(z, z ∈ y ==> z ∈ x)) by RightForall
+      have(∀(z, ∀(y, (z ∈ y /\ y ∈ x) ==> z ∈ x)) /\ y ∈ x |- y ⊆ x) by Cut(lastStep, subsetIntro of (x -> y, y -> x))
+      thenHave(∀(z, ∀(y, (z ∈ y /\ y ∈ x) ==> z ∈ x)) |- y ∈ x ==> y ⊆ x) by Restate
+      thenHave(∀(z, ∀(y, (z ∈ y /\ y ∈ x) ==> z ∈ x)) |- ∀(y, y ∈ x ==> y ⊆ x)) by RightForall
     }
 
-    have(forall(y, in(y, x) ==> subset(y, x)) <=> forall(z, forall(y, (in(z, y) /\ in(y, x)) ==> in(z, x)))) by RightIff(lhs, rhs)
+    have(∀(y, y ∈ x ==> y ⊆ x) <=> ∀(z, ∀(y, (z ∈ y /\ y ∈ x) ==> z ∈ x))) by RightIff(lhs, rhs)
     thenHave(thesis) by Substitution.ApplyRules(transitiveSet.definition)
   }
 
@@ -124,7 +124,7 @@ object Ordinals extends lisa.Main {
    *
    *     `∀ z. ∀ y. z ∈ y ⇒ y ∈ x ⇒ z ∈ x |- transitiveSet(x)`
    */
-  val transitiveSetAltIntro = Lemma(forall(z, forall(y, (in(z, y) /\ in(y, x)) ==> in(z, x))) |- transitiveSet(x)) {
+  val transitiveSetAltIntro = Lemma(∀(z, ∀(y, (z ∈ y /\ y ∈ x) ==> z ∈ x)) |- transitiveSet(x)) {
     have(thesis) by Weakening(transitiveSetAltDef)
   }
 
@@ -133,10 +133,10 @@ object Ordinals extends lisa.Main {
    *
    *     `transitiveSet(x), z ∈ y, y ∈ x |- z ∈ x`
    */
-  val transitiveSetAltElim = Lemma((transitiveSet(x), in(z, y), in(y, x)) |- in(z, x)) {
-    have(forall(z, forall(y, (in(z, y) /\ in(y, x)) ==> in(z, x))) |- forall(z, forall(y, (in(z, y) /\ in(y, x)) ==> in(z, x)))) by Hypothesis
-    thenHave(forall(z, forall(y, (in(z, y) /\ in(y, x)) ==> in(z, x))) |- forall(y, (in(z, y) /\ in(y, x)) ==> in(z, x))) by InstantiateForall(z)
-    thenHave((forall(z, forall(y, (in(z, y) /\ in(y, x)) ==> in(z, x))), in(z, y), in(y, x)) |- in(z, x)) by InstantiateForall(y)
+  val transitiveSetAltElim = Lemma((transitiveSet(x), z ∈ y, y ∈ x) |- z ∈ x) {
+    have(∀(z, ∀(y, (z ∈ y /\ y ∈ x) ==> z ∈ x)) |- ∀(z, ∀(y, (z ∈ y /\ y ∈ x) ==> z ∈ x))) by Hypothesis
+    thenHave(∀(z, ∀(y, (z ∈ y /\ y ∈ x) ==> z ∈ x)) |- ∀(y, (z ∈ y /\ y ∈ x) ==> z ∈ x)) by InstantiateForall(z)
+    thenHave((∀(z, ∀(y, (z ∈ y /\ y ∈ x) ==> z ∈ x)), z ∈ y, y ∈ x) |- z ∈ x) by InstantiateForall(y)
     thenHave(thesis) by Substitution.ApplyRules(transitiveSetAltDef)
   }
 
@@ -145,10 +145,10 @@ object Ordinals extends lisa.Main {
    *
    *   `transitiveSet(∅)`
    */
-  val emptySetTransitive = Lemma(transitiveSet(emptySet)) {
-    have(in(y, emptySet) ==> subset(y, emptySet)) by Weakening(emptySetAxiom of (x -> y))
-    thenHave(forall(y, in(y, emptySet) ==> subset(y, emptySet))) by RightForall
-    have(thesis) by Cut(lastStep, transitiveSetIntro of (x := emptySet))
+  val emptySetTransitive = Lemma(transitiveSet(∅)) {
+    have(y ∈ ∅ ==> y ⊆ ∅) by Weakening(emptySetAxiom of (x -> y))
+    thenHave(∀(y, y ∈ ∅ ==> y ⊆ ∅)) by RightForall
+    have(thesis) by Cut(lastStep, transitiveSetIntro of (x := ∅))
   }
 
   /**
@@ -156,16 +156,16 @@ object Ordinals extends lisa.Main {
     * 
     *  `∀ x ∈ y. transitiveSet(x) |- transitiveSet(∪ y)
     */
-  val unionTransitive = Lemma(forall(x, in(x, y) ==> transitiveSet(x)) |- transitiveSet(union(y))) {
+  val unionTransitive = Lemma(∀(x, x ∈ y ==> transitiveSet(x)) |- transitiveSet(union(y))) {
 
-    have((transitiveSet(x), in(w, z), in(z, x), in(x, y)) |- in(w, union(y))) by Cut(transitiveSetAltElim of (z := w, y := z), unionIntro of (z := w, x := y, y := x))
-    thenHave((in(x, y) ==> transitiveSet(x), in(w, z), in(z, x) /\ in(x, y)) |- in(w, union(y))) by Tautology
-    thenHave((forall(x, in(x, y) ==> transitiveSet(x)), in(w, z), in(z, x) /\ in(x, y)) |- in(w, union(y))) by LeftForall
-    thenHave((forall(x, in(x, y) ==> transitiveSet(x)), in(w, z), exists(x, in(z, x) /\ in(x, y))) |- in(w, union(y))) by LeftExists
-    have((forall(x, in(x, y) ==> transitiveSet(x)), in(w, z), in(z, union(y))) |- in(w, union(y))) by Cut(unionElim of (x := y), lastStep)
-    thenHave(forall(x, in(x, y) ==> transitiveSet(x)) |- in(w, z) /\ in(z, union(y)) ==> in(w, union(y))) by Restate
-    thenHave(forall(x, in(x, y) ==> transitiveSet(x)) |- forall(z, in(w, z) /\ in(z, union(y)) ==> in(w, union(y)))) by RightForall
-    thenHave(forall(x, in(x, y) ==> transitiveSet(x)) |- forall(w, forall(z, in(w, z) /\ in(z, union(y)) ==> in(w, union(y))))) by RightForall
+    have((transitiveSet(x), w ∈ z, z ∈ x, x ∈ y) |- w ∈ union(y)) by Cut(transitiveSetAltElim of (z := w, y := z), unionIntro of (z := w, x := y, y := x))
+    thenHave((x ∈ y ==> transitiveSet(x), w ∈ z, z ∈ x /\ x ∈ y) |- w ∈ union(y)) by Tautology
+    thenHave((∀(x, x ∈ y ==> transitiveSet(x)), w ∈ z, z ∈ x /\ x ∈ y) |- w ∈ union(y)) by LeftForall
+    thenHave((∀(x, x ∈ y ==> transitiveSet(x)), w ∈ z, ∃(x, z ∈ x /\ x ∈ y)) |- w ∈ union(y)) by LeftExists
+    have((∀(x, x ∈ y ==> transitiveSet(x)), w ∈ z, z ∈ union(y)) |- w ∈ union(y)) by Cut(unionElim of (x := y), lastStep)
+    thenHave(∀(x, x ∈ y ==> transitiveSet(x)) |- w ∈ z /\ z ∈ union(y) ==> w ∈ union(y)) by Restate
+    thenHave(∀(x, x ∈ y ==> transitiveSet(x)) |- ∀(z, w ∈ z /\ z ∈ union(y) ==> w ∈ union(y))) by RightForall
+    thenHave(∀(x, x ∈ y ==> transitiveSet(x)) |- ∀(w, ∀(z, w ∈ z /\ z ∈ union(y) ==> w ∈ union(y)))) by RightForall
     have(thesis) by Cut(lastStep, transitiveSetAltIntro of (x := union(y)))
   }
 
@@ -174,16 +174,16 @@ object Ordinals extends lisa.Main {
     * 
     *  `∀ x ∈ y. transitiveSet(x) |- transitiveSet((∪ y) ∪ y)`
     */
-  val transitiveSetUnionAndElement = Lemma(forall(x, in(x, y) ==> transitiveSet(x)) |- transitiveSet(setUnion(union(y), y))) {
+  val transitiveSetUnionAndElement = Lemma(∀(x, x ∈ y ==> transitiveSet(x)) |- transitiveSet(setUnion(union(y), y))) {
     
-    have((in(z, setUnion(union(y), y)), in(w, z)) |- (in(z, union(y)), in(w, union(y)))) by Cut(setUnionElim of (x := union(y)), unionIntro of (z := w, y := z, x := y))
-    have((in(z, setUnion(union(y), y)), in(w, z)) |- (in(z, union(y)), in(w, setUnion(union(y), y)))) by Cut(lastStep, setUnionLeftIntro of (z := w, x := union(y)))
-    have((in(z, setUnion(union(y), y)), in(w, z), transitiveSet(union(y))) |- (in(w, union(y)), in(w, setUnion(union(y), y)))) by Cut(lastStep, transitiveSetAltElim of (z := w, y := z, x := union(y)))
-    have((in(z, setUnion(union(y), y)), in(w, z), transitiveSet(union(y))) |- in(w, setUnion(union(y), y))) by Cut(lastStep, setUnionLeftIntro of (z := w, x := union(y)))
-    have((in(z, setUnion(union(y), y)), in(w, z), forall(x, in(x, y) ==> transitiveSet(x))) |- in(w, setUnion(union(y), y))) by Cut(unionTransitive, lastStep)
-    thenHave(forall(x, in(x, y) ==> transitiveSet(x)) |- in(w, z) /\ in(z, setUnion(union(y), y)) ==> in(w, setUnion(union(y), y))) by Restate
-    thenHave(forall(x, in(x, y) ==> transitiveSet(x)) |- forall(z, in(w, z) /\ in(z, setUnion(union(y), y)) ==> in(w, setUnion(union(y), y)))) by RightForall
-    thenHave(forall(x, in(x, y) ==> transitiveSet(x)) |- forall(w, forall(z, in(w, z) /\ in(z, setUnion(union(y), y)) ==> in(w, setUnion(union(y), y))))) by RightForall
+    have((z ∈ setUnion(union(y), y), w ∈ z) |- (z ∈ union(y), w ∈ union(y))) by Cut(setUnionElim of (x := union(y)), unionIntro of (z := w, y := z, x := y))
+    have((z ∈ setUnion(union(y), y), w ∈ z) |- (z ∈ union(y), w ∈ setUnion(union(y), y))) by Cut(lastStep, setUnionLeftIntro of (z := w, x := union(y)))
+    have((z ∈ setUnion(union(y), y), w ∈ z, transitiveSet(union(y))) |- (w ∈ union(y), w ∈ setUnion(union(y), y))) by Cut(lastStep, transitiveSetAltElim of (z := w, y := z, x := union(y)))
+    have((z ∈ setUnion(union(y), y), w ∈ z, transitiveSet(union(y))) |- w ∈ setUnion(union(y), y)) by Cut(lastStep, setUnionLeftIntro of (z := w, x := union(y)))
+    have((z ∈ setUnion(union(y), y), w ∈ z, ∀(x, x ∈ y ==> transitiveSet(x))) |- w ∈ setUnion(union(y), y)) by Cut(unionTransitive, lastStep)
+    thenHave(∀(x, x ∈ y ==> transitiveSet(x)) |- w ∈ z /\ z ∈ setUnion(union(y), y) ==> w ∈ setUnion(union(y), y)) by Restate
+    thenHave(∀(x, x ∈ y ==> transitiveSet(x)) |- ∀(z, w ∈ z /\ z ∈ setUnion(union(y), y) ==> w ∈ setUnion(union(y), y))) by RightForall
+    thenHave(∀(x, x ∈ y ==> transitiveSet(x)) |- ∀(w, ∀(z, w ∈ z /\ z ∈ setUnion(union(y), y) ==> w ∈ setUnion(union(y), y)))) by RightForall
     have(thesis) by Cut(lastStep, transitiveSetAltIntro of (x := setUnion(union(y), y)))
   }
 
@@ -192,23 +192,23 @@ object Ordinals extends lisa.Main {
     * 
     *   `transitive(∈_x, x), transitiveSet(x), y ∈ x |- transitiveSet(y)`
     */
-  val transitiveSetRelationTransitiveSet = Lemma((transitiveSet(x), transitive(membershipRelation(x), x), in(y, x)) |- transitiveSet(y)) {
-    have((transitive(membershipRelation(x), x), in(pair(w, z), membershipRelation(x)), in(pair(z, y), membershipRelation(x))) |- in(w, y)) by Cut(transitiveElim of (y := z, z := y, r := membershipRelation(x)), membershipRelationIsMembershipPair of (a := w, b := y))
-    have((transitive(membershipRelation(x), x), in(w, z), in(w, x), in(z, x), in(pair(z, y), membershipRelation(x))) |- in(w, y)) by Cut(membershipRelationIntro of (a := w, b := z), lastStep)
-    have((transitive(membershipRelation(x), x), in(w, z), in(w, x), in(z, x), in(z, y), in(y, x)) |- in(w, y)) by Cut(membershipRelationIntro of (a := z, b := y), lastStep)
-    have((transitiveSet(x), transitive(membershipRelation(x), x), in(w, z), in(z, x), in(z, y), in(y, x)) |- in(w, y)) by Cut(transitiveSetAltElim of (z := w, y := z), lastStep)
-    have((transitiveSet(x), transitive(membershipRelation(x), x), in(w, z), in(z, y), in(y, x)) |- in(w, y)) by Cut(transitiveSetAltElim, lastStep)
-    thenHave((transitiveSet(x), transitive(membershipRelation(x), x), in(y, x)) |- (in(w, z) /\ in(z, y)) ==> in(w, y)) by Restate
-    thenHave((transitiveSet(x), transitive(membershipRelation(x), x), in(y, x)) |- forall(z, (in(w, z) /\ in(z, y)) ==> in(w, y))) by RightForall
-    thenHave((transitiveSet(x), transitive(membershipRelation(x), x), in(y, x)) |- forall(w, forall(z, (in(w, z) /\ in(z, y)) ==> in(w, y)))) by RightForall
+  val transitiveSetRelationTransitiveSet = Lemma((transitiveSet(x), transitive(membershipRelation(x), x), y ∈ x) |- transitiveSet(y)) {
+    have((transitive(membershipRelation(x), x), pair(w, z) ∈ membershipRelation(x), pair(z, y) ∈ membershipRelation(x)) |- w ∈ y) by Cut(transitiveElim of (y := z, z := y, r := membershipRelation(x)), membershipRelationIsMembershipPair of (a := w, b := y))
+    have((transitive(membershipRelation(x), x), w ∈ z, w ∈ x, z ∈ x, pair(z, y) ∈ membershipRelation(x)) |- w ∈ y) by Cut(membershipRelationIntro of (a := w, b := z), lastStep)
+    have((transitive(membershipRelation(x), x), w ∈ z, w ∈ x, z ∈ x, z ∈ y, y ∈ x) |- w ∈ y) by Cut(membershipRelationIntro of (a := z, b := y), lastStep)
+    have((transitiveSet(x), transitive(membershipRelation(x), x), w ∈ z, z ∈ x, z ∈ y, y ∈ x) |- w ∈ y) by Cut(transitiveSetAltElim of (z := w, y := z), lastStep)
+    have((transitiveSet(x), transitive(membershipRelation(x), x), w ∈ z, z ∈ y, y ∈ x) |- w ∈ y) by Cut(transitiveSetAltElim, lastStep)
+    thenHave((transitiveSet(x), transitive(membershipRelation(x), x), y ∈ x) |- (w ∈ z /\ z ∈ y) ==> w ∈ y) by Restate
+    thenHave((transitiveSet(x), transitive(membershipRelation(x), x), y ∈ x) |- ∀(z, (w ∈ z /\ z ∈ y) ==> w ∈ y)) by RightForall
+    thenHave((transitiveSet(x), transitive(membershipRelation(x), x), y ∈ x) |- ∀(w, ∀(z, (w ∈ z /\ z ∈ y) ==> w ∈ y))) by RightForall
     have(thesis) by Cut(lastStep, transitiveSetAltIntro of (x := y)) 
   }
 
   
-  val membershipRelationInTransitiveSets = Lemma((transitiveSet(x), in(y, x), in(pair(a, b), membershipRelation(y))) |- in(pair(a, b), membershipRelation(x))) {
-    have((transitiveSet(x), in(a, b), in(a, y), in(b, x), in(y, x)) |- in(pair(a, b), membershipRelation(x))) by Cut(transitiveSetAltElim of (z := a), membershipRelationIntro)
-    have((transitiveSet(x), in(a, b), in(a, y), in(b, y), in(y, x)) |- in(pair(a, b), membershipRelation(x))) by Cut(transitiveSetAltElim of (z := b), lastStep)
-    thenHave((transitiveSet(x), in(a, b) /\ in(a, y) /\ in(b, y), in(y, x)) |- in(pair(a, b), membershipRelation(x))) by Restate
+  val membershipRelationInTransitiveSets = Lemma((transitiveSet(x), y ∈ x, pair(a, b) ∈ membershipRelation(y)) |- pair(a, b) ∈ membershipRelation(x)) {
+    have((transitiveSet(x), a ∈ b, a ∈ y, b ∈ x, y ∈ x) |- pair(a, b) ∈ membershipRelation(x)) by Cut(transitiveSetAltElim of (z := a), membershipRelationIntro)
+    have((transitiveSet(x), a ∈ b, a ∈ y, b ∈ y, y ∈ x) |- pair(a, b) ∈ membershipRelation(x)) by Cut(transitiveSetAltElim of (z := b), lastStep)
+    thenHave((transitiveSet(x), a ∈ b /\ a ∈ y /\ b ∈ y, y ∈ x) |- pair(a, b) ∈ membershipRelation(x)) by Restate
     have(thesis) by Cut(membershipRelationElimPair of (x := y), lastStep)
   }
 
@@ -217,19 +217,19 @@ object Ordinals extends lisa.Main {
     * 
     *   `transitive(∈_x, x), transitiveSet(x), y ∈ x |- transitive(∈_y, y)`
     */
-  val transitiveSetRelationTransitive = Lemma((transitiveSet(x), transitive(membershipRelation(x), x), in(y, x)) |- transitive(membershipRelation(y), y)) {
-    have((transitive(membershipRelation(x), x), in(pair(a, b), membershipRelation(x)), in(pair(b, c), membershipRelation(x))) |- in(a, c)) by Cut(transitiveElim of (w := a, y := b, z := c, r := membershipRelation(x)), membershipRelationIsMembershipPair of (b := c))
-    have((transitive(membershipRelation(x), x), transitiveSet(x), in(y, x), in(pair(a, b), membershipRelation(y)), in(pair(b, c), membershipRelation(x))) |- in(a, c)) by Cut(membershipRelationInTransitiveSets, lastStep)
-    have((transitive(membershipRelation(x), x), transitiveSet(x), in(y, x), in(pair(a, b), membershipRelation(y)), in(pair(b, c), membershipRelation(y))) |- in(a, c)) by Cut(membershipRelationInTransitiveSets of (a := b, b := c), lastStep)
-    have((transitive(membershipRelation(x), x), transitiveSet(x), in(y, x), in(pair(a, b), membershipRelation(y)), in(pair(b, c), membershipRelation(y))) |- in(a, y) /\ in(b, y) /\ in(a, c)) by RightAnd(membershipRelationInDomainPair of (x := y), lastStep)
-    have((transitive(membershipRelation(x), x), transitiveSet(x), in(y, x), in(pair(a, b), membershipRelation(y)), in(pair(b, c), membershipRelation(y))) |- in(a, y) /\ in(b, y) /\ in(c, y) /\ in(a, c)) by RightAnd(membershipRelationInDomainPair of (x := y, a := b, b := c), lastStep)
-    thenHave((transitive(membershipRelation(x), x), transitiveSet(x), in(y, x), in(pair(a, b), membershipRelation(y)), in(pair(b, c), membershipRelation(y))) |- in(a, y) /\ in(c, y) /\ in(a, c)) by Weakening
-    thenHave((transitive(membershipRelation(x), x), transitiveSet(x), in(y, x), in(pair(a, b), membershipRelation(y)), in(pair(b, c), membershipRelation(y))) |- in(pair(a, c), membershipRelation(y))) by Substitution.ApplyRules(membershipRelationElemPair of (b := c, x := y))
-    thenHave((transitive(membershipRelation(x), x), transitiveSet(x), in(y, x)) |- (in(pair(a, b), membershipRelation(y)) /\ in(pair(b, c), membershipRelation(y))) ==> in(pair(a, c), membershipRelation(y))) by Restate
-    thenHave((transitive(membershipRelation(x), x), transitiveSet(x), in(y, x)) |- forall(c, (in(pair(a, b), membershipRelation(y)) /\ in(pair(b, c), membershipRelation(y))) ==> in(pair(a, c), membershipRelation(y)))) by RightForall
-    thenHave((transitive(membershipRelation(x), x), transitiveSet(x), in(y, x)) |- forall(b, forall(c, (in(pair(a, b), membershipRelation(y)) /\ in(pair(b, c), membershipRelation(y))) ==> in(pair(a, c), membershipRelation(y))))) by RightForall
-    thenHave((transitive(membershipRelation(x), x), transitiveSet(x), in(y, x)) |- forall(a, forall(b, forall(c, (in(pair(a, b), membershipRelation(y)) /\ in(pair(b, c), membershipRelation(y))) ==> in(pair(a, c), membershipRelation(y)))))) by RightForall
-    have((transitiveSet(x), transitive(membershipRelation(x), x), in(y, x), relationBetween(membershipRelation(y), y, y)) |- transitive(membershipRelation(y), y)) by Cut(lastStep, transitiveIntro of (r := membershipRelation(y), x := y))
+  val transitiveSetRelationTransitive = Lemma((transitiveSet(x), transitive(membershipRelation(x), x), y ∈ x) |- transitive(membershipRelation(y), y)) {
+    have((transitive(membershipRelation(x), x), pair(a, b) ∈ membershipRelation(x), pair(b, c) ∈ membershipRelation(x)) |- a ∈ c) by Cut(transitiveElim of (w := a, y := b, z := c, r := membershipRelation(x)), membershipRelationIsMembershipPair of (b := c))
+    have((transitive(membershipRelation(x), x), transitiveSet(x), y ∈ x, pair(a, b) ∈ membershipRelation(y), pair(b, c) ∈ membershipRelation(x)) |- a ∈ c) by Cut(membershipRelationInTransitiveSets, lastStep)
+    have((transitive(membershipRelation(x), x), transitiveSet(x), y ∈ x, pair(a, b) ∈ membershipRelation(y), pair(b, c) ∈ membershipRelation(y)) |- a ∈ c) by Cut(membershipRelationInTransitiveSets of (a := b, b := c), lastStep)
+    have((transitive(membershipRelation(x), x), transitiveSet(x), y ∈ x, pair(a, b) ∈ membershipRelation(y), pair(b, c) ∈ membershipRelation(y)) |- a ∈ y /\ b ∈ y /\ a ∈ c) by RightAnd(membershipRelationInDomainPair of (x := y), lastStep)
+    have((transitive(membershipRelation(x), x), transitiveSet(x), y ∈ x, pair(a, b) ∈ membershipRelation(y), pair(b, c) ∈ membershipRelation(y)) |- a ∈ y /\ b ∈ y /\ c ∈ y /\ a ∈ c) by RightAnd(membershipRelationInDomainPair of (x := y, a := b, b := c), lastStep)
+    thenHave((transitive(membershipRelation(x), x), transitiveSet(x), y ∈ x, pair(a, b) ∈ membershipRelation(y), pair(b, c) ∈ membershipRelation(y)) |- a ∈ y /\ c ∈ y /\ a ∈ c) by Weakening
+    thenHave((transitive(membershipRelation(x), x), transitiveSet(x), y ∈ x, pair(a, b) ∈ membershipRelation(y), pair(b, c) ∈ membershipRelation(y)) |- pair(a, c) ∈ membershipRelation(y)) by Substitution.ApplyRules(membershipRelationElemPair of (b := c, x := y))
+    thenHave((transitive(membershipRelation(x), x), transitiveSet(x), y ∈ x) |- (pair(a, b) ∈ membershipRelation(y) /\ pair(b, c) ∈ membershipRelation(y)) ==> pair(a, c) ∈ membershipRelation(y)) by Restate
+    thenHave((transitive(membershipRelation(x), x), transitiveSet(x), y ∈ x) |- ∀(c, (pair(a, b) ∈ membershipRelation(y) /\ pair(b, c) ∈ membershipRelation(y)) ==> pair(a, c) ∈ membershipRelation(y))) by RightForall
+    thenHave((transitive(membershipRelation(x), x), transitiveSet(x), y ∈ x) |- ∀(b, ∀(c, (pair(a, b) ∈ membershipRelation(y) /\ pair(b, c) ∈ membershipRelation(y)) ==> pair(a, c) ∈ membershipRelation(y)))) by RightForall
+    thenHave((transitive(membershipRelation(x), x), transitiveSet(x), y ∈ x) |- ∀(a, ∀(b, ∀(c, (pair(a, b) ∈ membershipRelation(y) /\ pair(b, c) ∈ membershipRelation(y)) ==> pair(a, c) ∈ membershipRelation(y))))) by RightForall
+    have((transitiveSet(x), transitive(membershipRelation(x), x), y ∈ x, relationBetween(membershipRelation(y), y, y)) |- transitive(membershipRelation(y), y)) by Cut(lastStep, transitiveIntro of (r := membershipRelation(y), x := y))
     have(thesis) by Cut(membershipRelationIsARelation of (x := y), lastStep)
 
   }
@@ -239,9 +239,9 @@ object Ordinals extends lisa.Main {
     * 
     *   `strictPartialOrder(∈_x, x), transitiveSet(x), y ∈ x |- strictPartialOrder(∈_y, y)`
     */
-  val transitiveStrictPartialOrderElem = Lemma((transitiveSet(x), strictPartialOrder(membershipRelation(x), x), in(y, x)) |- strictPartialOrder(membershipRelation(y), y)) {
+  val transitiveStrictPartialOrderElem = Lemma((transitiveSet(x), strictPartialOrder(membershipRelation(x), x), y ∈ x) |- strictPartialOrder(membershipRelation(y), y)) {
     have(transitive(membershipRelation(y), y) |- strictPartialOrder(membershipRelation(y), y)) by Cut(membershipRelationIrreflexive of (x := y), strictPartialOrderIntro of (r := membershipRelation(y), x := y))
-    have((transitiveSet(x), transitive(membershipRelation(x), x), in(y, x)) |- strictPartialOrder(membershipRelation(y), y)) by Cut(transitiveSetRelationTransitive, lastStep)
+    have((transitiveSet(x), transitive(membershipRelation(x), x), y ∈ x) |- strictPartialOrder(membershipRelation(y), y)) by Cut(transitiveSetRelationTransitive, lastStep)
     have(thesis) by Cut(strictPartialOrderTransitive of (r := membershipRelation(x)), lastStep)
   }
 
@@ -250,25 +250,25 @@ object Ordinals extends lisa.Main {
     * 
     *   `connected(∈_x, x), transitiveSet(x), y ∈ x |- connected(∈_y, y)`
     */
-  val transitiveConnectedMembershipRelation = Lemma((transitiveSet(x), connected(membershipRelation(x), x), in(y, x)) |- connected(membershipRelation(y), y)) {
+  val transitiveConnectedMembershipRelation = Lemma((transitiveSet(x), connected(membershipRelation(x), x), y ∈ x) |- connected(membershipRelation(y), y)) {
 
-    have((in(pair(a, b), membershipRelation(x)), in(a, y), in(b, y)) |- in(pair(a, b), membershipRelation(y))) by Cut(membershipRelationIsMembershipPair, membershipRelationIntro of (x := y))
-    val left = thenHave((in(pair(a, b), membershipRelation(x)), in(a, y), in(b, y)) |- in(pair(a, b), membershipRelation(y)) \/ in(pair(b, a), membershipRelation(y)) \/ (a === b)) by Weakening
+    have((pair(a, b) ∈ membershipRelation(x), a ∈ y, b ∈ y) |- pair(a, b) ∈ membershipRelation(y)) by Cut(membershipRelationIsMembershipPair, membershipRelationIntro of (x := y))
+    val left = thenHave((pair(a, b) ∈ membershipRelation(x), a ∈ y, b ∈ y) |- pair(a, b) ∈ membershipRelation(y) \/ (pair(b, a) ∈ membershipRelation(y)) \/ (a === b)) by Weakening
 
-    have((in(pair(b, a), membershipRelation(x)), in(a, y), in(b, y)) |- in(pair(b, a), membershipRelation(y))) by Cut(membershipRelationIsMembershipPair of (a := b, b := a), membershipRelationIntro of (x := y, a := b, b := a))
-    val right = thenHave((in(pair(b, a), membershipRelation(x)), in(a, y), in(b, y)) |- in(pair(a, b), membershipRelation(y)) \/ in(pair(b, a), membershipRelation(y)) \/ (a === b)) by Weakening
+    have((pair(b, a) ∈ membershipRelation(x), a ∈ y, b ∈ y) |- pair(b, a) ∈ membershipRelation(y)) by Cut(membershipRelationIsMembershipPair of (a := b, b := a), membershipRelationIntro of (x := y, a := b, b := a))
+    val right = thenHave((pair(b, a) ∈ membershipRelation(x), a ∈ y, b ∈ y) |- pair(a, b) ∈ membershipRelation(y) \/ (pair(b, a) ∈ membershipRelation(y)) \/ (a === b)) by Weakening
 
-    have(a === b |- in(pair(a, b), membershipRelation(y)) \/ in(pair(b, a), membershipRelation(y)) \/ (a === b)) by Restate
-    have((in(pair(b, a), membershipRelation(x)) \/ (a === b), in(a, y), in(b, y)) |- in(pair(a, b), membershipRelation(y)) \/ in(pair(b, a), membershipRelation(y)) \/ (a === b)) by LeftOr(right, lastStep)
-    have((in(pair(a, b), membershipRelation(x)) \/ in(pair(b, a), membershipRelation(x)) \/ (a === b), in(a, y), in(b, y)) |- in(pair(a, b), membershipRelation(y)) \/ in(pair(b, a), membershipRelation(y)) \/ (a === b)) by LeftOr(left, lastStep)
-    have((connected(membershipRelation(x), x), in(a, x), in(b, x), in(a, y), in(b, y)) |- in(pair(a, b), membershipRelation(y)) \/ in(pair(b, a), membershipRelation(y)) \/ (a === b)) by Cut(connectedElim of (y := a, z := b, r := membershipRelation(x)), lastStep)
-    have((connected(membershipRelation(x), x), transitiveSet(x), in(y, x), in(b, x), in(a, y), in(b, y)) |- in(pair(a, b), membershipRelation(y)) \/ in(pair(b, a), membershipRelation(y)) \/ (a === b)) by Cut(transitiveSetAltElim of (z := a), lastStep)
-    have((connected(membershipRelation(x), x), transitiveSet(x), in(y, x), in(a, y), in(b, y)) |- in(pair(a, b), membershipRelation(y)) \/ in(pair(b, a), membershipRelation(y)) \/ (a === b)) by Cut(transitiveSetAltElim of (z := b), lastStep)
-    thenHave((connected(membershipRelation(x), x), transitiveSet(x), in(y, x), in(a, y), in(b, y)) |- in(pair(a, b), membershipRelation(y)) \/ in(pair(b, a), membershipRelation(y)) \/ (a === b)) by Restate
-    thenHave((connected(membershipRelation(x), x), transitiveSet(x), in(y, x)) |- (in(a, y) /\ in(b, y)) ==> (in(pair(a, b), membershipRelation(y)) \/ in(pair(b, a), membershipRelation(y)) \/ (a === b))) by Restate
-    thenHave((connected(membershipRelation(x), x), transitiveSet(x), in(y, x)) |- ∀(b, (in(a, y) /\ in(b, y)) ==> (in(pair(a, b), membershipRelation(y)) \/ in(pair(b, a), membershipRelation(y)) \/ (a === b)))) by RightForall
-    thenHave((connected(membershipRelation(x), x), transitiveSet(x), in(y, x)) |- ∀(a, ∀(b, (in(a, y) /\ in(b, y)) ==> (in(pair(a, b), membershipRelation(y)) \/ in(pair(b, a), membershipRelation(y)) \/ (a === b))))) by RightForall
-    have((connected(membershipRelation(x), x), transitiveSet(x), in(y, x), relationBetween(membershipRelation(y), y, y)) |- connected(membershipRelation(y), y)) by Cut(lastStep, connectedIntro of (r -> membershipRelation(y), x -> y)) 
+    have(a === b |- pair(a, b) ∈ membershipRelation(y) \/ (pair(b, a) ∈ membershipRelation(y)) \/ (a === b)) by Restate
+    have((pair(b, a) ∈ membershipRelation(x) \/ (a === b), a ∈ y, b ∈ y) |- pair(a, b) ∈ membershipRelation(y) \/ (pair(b, a) ∈ membershipRelation(y)) \/ (a === b)) by LeftOr(right, lastStep)
+    have((pair(a, b) ∈ membershipRelation(x) \/ (pair(b, a) ∈ membershipRelation(x)) \/ (a === b), a ∈ y, b ∈ y) |- pair(a, b) ∈ membershipRelation(y) \/ (pair(b, a) ∈ membershipRelation(y)) \/ (a === b)) by LeftOr(left, lastStep)
+    have((connected(membershipRelation(x), x), a ∈ x, b ∈ x, a ∈ y, b ∈ y) |- pair(a, b) ∈ membershipRelation(y) \/ (pair(b, a) ∈ membershipRelation(y)) \/ (a === b)) by Cut(connectedElim of (y := a, z := b, r := membershipRelation(x)), lastStep)
+    have((connected(membershipRelation(x), x), transitiveSet(x), y ∈ x, b ∈ x, a ∈ y, b ∈ y) |- pair(a, b) ∈ membershipRelation(y) \/ (pair(b, a) ∈ membershipRelation(y)) \/ (a === b)) by Cut(transitiveSetAltElim of (z := a), lastStep)
+    have((connected(membershipRelation(x), x), transitiveSet(x), y ∈ x, a ∈ y, b ∈ y) |- pair(a, b) ∈ membershipRelation(y) \/ (pair(b, a) ∈ membershipRelation(y)) \/ (a === b)) by Cut(transitiveSetAltElim of (z := b), lastStep)
+    thenHave((connected(membershipRelation(x), x), transitiveSet(x), y ∈ x, a ∈ y, b ∈ y) |- pair(a, b) ∈ membershipRelation(y) \/ (pair(b, a) ∈ membershipRelation(y)) \/ (a === b)) by Restate
+    thenHave((connected(membershipRelation(x), x), transitiveSet(x), y ∈ x) |- (a ∈ y /\ b ∈ y) ==> (pair(a, b) ∈ membershipRelation(y) \/ (pair(b, a) ∈ membershipRelation(y)) \/ (a === b))) by Restate
+    thenHave((connected(membershipRelation(x), x), transitiveSet(x), y ∈ x) |- ∀(b, (a ∈ y /\ b ∈ y) ==> (pair(a, b) ∈ membershipRelation(y) \/ (pair(b, a) ∈ membershipRelation(y)) \/ (a === b)))) by RightForall
+    thenHave((connected(membershipRelation(x), x), transitiveSet(x), y ∈ x) |- ∀(a, ∀(b, (a ∈ y /\ b ∈ y) ==> (pair(a, b) ∈ membershipRelation(y) \/ (pair(b, a) ∈ membershipRelation(y)) \/ (a === b))))) by RightForall
+    have((connected(membershipRelation(x), x), transitiveSet(x), y ∈ x, relationBetween(membershipRelation(y), y, y)) |- connected(membershipRelation(y), y)) by Cut(lastStep, connectedIntro of (r -> membershipRelation(y), x -> y)) 
     have(thesis) by Cut(membershipRelationIsARelation of (x -> y), lastStep)
   }
 
@@ -277,29 +277,29 @@ object Ordinals extends lisa.Main {
     * 
     *   `strictTotalOrder(∈_x, x), transitiveSet(x), y ∈ x |- strictTotalOrder(∈_y, y)`
     */
-  val transitiveStrictTotalOrderElem = Lemma((transitiveSet(x), strictTotalOrder(membershipRelation(x), x), in(y, x)) |- strictTotalOrder(membershipRelation(y), y)) {
-    have((transitiveSet(x), connected(membershipRelation(y), y), strictPartialOrder(membershipRelation(x), x), in(y, x)) |- strictTotalOrder(membershipRelation(y), y)) by Cut(transitiveStrictPartialOrderElem, strictTotalOrderIntro of (r := membershipRelation(y), x := y))
-    have((transitiveSet(x), connected(membershipRelation(x), x), strictPartialOrder(membershipRelation(x), x), in(y, x)) |- strictTotalOrder(membershipRelation(y), y)) by Cut(transitiveConnectedMembershipRelation, lastStep)
-    have((transitiveSet(x), strictTotalOrder(membershipRelation(x), x), strictPartialOrder(membershipRelation(x), x), in(y, x)) |- strictTotalOrder(membershipRelation(y), y)) by Cut(strictTotalOrderConnected of (r := membershipRelation(x)), lastStep)
+  val transitiveStrictTotalOrderElem = Lemma((transitiveSet(x), strictTotalOrder(membershipRelation(x), x), y ∈ x) |- strictTotalOrder(membershipRelation(y), y)) {
+    have((transitiveSet(x), connected(membershipRelation(y), y), strictPartialOrder(membershipRelation(x), x), y ∈ x) |- strictTotalOrder(membershipRelation(y), y)) by Cut(transitiveStrictPartialOrderElem, strictTotalOrderIntro of (r := membershipRelation(y), x := y))
+    have((transitiveSet(x), connected(membershipRelation(x), x), strictPartialOrder(membershipRelation(x), x), y ∈ x) |- strictTotalOrder(membershipRelation(y), y)) by Cut(transitiveConnectedMembershipRelation, lastStep)
+    have((transitiveSet(x), strictTotalOrder(membershipRelation(x), x), strictPartialOrder(membershipRelation(x), x), y ∈ x) |- strictTotalOrder(membershipRelation(y), y)) by Cut(strictTotalOrderConnected of (r := membershipRelation(x)), lastStep)
     have(thesis) by Cut(strictTotalOrderIsPartial of (r := membershipRelation(x)), lastStep)
   }
 
-  val transitiveSetLeastElement = Lemma((transitiveSet(x), isLeastElement(a, z, membershipRelation(x), x), in(y, x), subset(z, y)) |- isLeastElement(a, z, membershipRelation(y), y)) {
+  val transitiveSetLeastElement = Lemma((transitiveSet(x), isLeastElement(a, z, membershipRelation(x), x), y ∈ x, z ⊆ y) |- isLeastElement(a, z, membershipRelation(y), y)) {
  
-    val eqCase = have(a === b |- in(pair(a, b), membershipRelation(y)) \/ (a === b)) by Restate
+    val eqCase = have(a === b |- pair(a, b) ∈ membershipRelation(y) \/ (a === b)) by Restate
 
-    have((in(pair(a, b), membershipRelation(x)), in(a, y), in(b, y)) |- in(pair(a, b), membershipRelation(y))) by Cut(membershipRelationIsMembershipPair, membershipRelationIntro of (x := y))
-    have((in(pair(a, b), membershipRelation(x)), in(a, z), subset(z, y), in(b, y)) |- in(pair(a, b), membershipRelation(y))) by Cut(subsetElim of (z := a, x := z), lastStep)
-    have((in(pair(a, b), membershipRelation(x)), in(a, z), subset(z, y), in(b, z)) |- in(pair(a, b), membershipRelation(y))) by Cut(subsetElim of (z := b, x := z), lastStep)
-    thenHave((in(pair(a, b), membershipRelation(x)), in(a, z), subset(z, y), in(b, z)) |- in(pair(a, b), membershipRelation(y)) \/ (a === b)) by Weakening
+    have((pair(a, b) ∈ membershipRelation(x), a ∈ y, b ∈ y) |- pair(a, b) ∈ membershipRelation(y)) by Cut(membershipRelationIsMembershipPair, membershipRelationIntro of (x := y))
+    have((pair(a, b) ∈ membershipRelation(x), a ∈ z, z ⊆ y, b ∈ y) |- pair(a, b) ∈ membershipRelation(y)) by Cut(subsetElim of (z := a, x := z), lastStep)
+    have((pair(a, b) ∈ membershipRelation(x), a ∈ z, z ⊆ y, b ∈ z) |- pair(a, b) ∈ membershipRelation(y)) by Cut(subsetElim of (z := b, x := z), lastStep)
+    thenHave((pair(a, b) ∈ membershipRelation(x), a ∈ z, z ⊆ y, b ∈ z) |- pair(a, b) ∈ membershipRelation(y) \/ (a === b)) by Weakening
 
-    have((in(pair(a, b), membershipRelation(x)) \/ (a === b), in(a, z), subset(z, y), in(b, z)) |- in(pair(a, b), membershipRelation(y)) \/ (a === b)) by LeftOr(lastStep, eqCase)
-    have((isLeastElement(a, z, membershipRelation(x), x), in(a, z), subset(z, y), in(b, z)) |- in(pair(a, b), membershipRelation(y)) \/ (a === b)) by Cut(isLeastElementElim of (r := membershipRelation(x), y := z), lastStep)
-    thenHave((isLeastElement(a, z, membershipRelation(x), x), in(a, z), subset(z, y)) |- in(b, z) ==> in(pair(a, b), membershipRelation(y)) \/ (a === b)) by RightImplies
-    thenHave((isLeastElement(a, z, membershipRelation(x), x), in(a, z), subset(z, y)) |- forall(b, in(b, z) ==> in(pair(a, b), membershipRelation(y)) \/ (a === b))) by RightForall
-    have((isLeastElement(a, z, membershipRelation(x), x), in(a, z), subset(z, y), strictPartialOrder(membershipRelation(y), y)) |- isLeastElement(a, z, membershipRelation(y), y)) by Cut(lastStep, isLeastElementIntro of (r := membershipRelation(y), y := z, x := y))
-    have((isLeastElement(a, z, membershipRelation(x), x), subset(z, y), strictPartialOrder(membershipRelation(y), y)) |- isLeastElement(a, z, membershipRelation(y), y)) by Cut(isLeastElementInSubset of (y := z, r := membershipRelation(x)), lastStep)
-    have((isLeastElement(a, z, membershipRelation(x), x), subset(z, y), transitiveSet(x), in(y, x), strictPartialOrder(membershipRelation(x), x)) |- isLeastElement(a, z, membershipRelation(y), y)) by Cut(transitiveStrictPartialOrderElem, lastStep)
+    have((pair(a, b) ∈ membershipRelation(x) \/ (a === b), a ∈ z, z ⊆ y, b ∈ z) |- pair(a, b) ∈ membershipRelation(y) \/ (a === b)) by LeftOr(lastStep, eqCase)
+    have((isLeastElement(a, z, membershipRelation(x), x), a ∈ z, z ⊆ y, b ∈ z) |- pair(a, b) ∈ membershipRelation(y) \/ (a === b)) by Cut(isLeastElementElim of (r := membershipRelation(x), y := z), lastStep)
+    thenHave((isLeastElement(a, z, membershipRelation(x), x), a ∈ z, z ⊆ y) |- b ∈ z ==> pair(a, b) ∈ membershipRelation(y) \/ (a === b)) by RightImplies
+    thenHave((isLeastElement(a, z, membershipRelation(x), x), a ∈ z, z ⊆ y) |- ∀(b, b ∈ z ==> pair(a, b) ∈ membershipRelation(y) \/ (a === b))) by RightForall
+    have((isLeastElement(a, z, membershipRelation(x), x), a ∈ z, z ⊆ y, strictPartialOrder(membershipRelation(y), y)) |- isLeastElement(a, z, membershipRelation(y), y)) by Cut(lastStep, isLeastElementIntro of (r := membershipRelation(y), y := z, x := y))
+    have((isLeastElement(a, z, membershipRelation(x), x), z ⊆ y, strictPartialOrder(membershipRelation(y), y)) |- isLeastElement(a, z, membershipRelation(y), y)) by Cut(isLeastElementInSubset of (y := z, r := membershipRelation(x)), lastStep)
+    have((isLeastElement(a, z, membershipRelation(x), x), z ⊆ y, transitiveSet(x), y ∈ x, strictPartialOrder(membershipRelation(x), x)) |- isLeastElement(a, z, membershipRelation(y), y)) by Cut(transitiveStrictPartialOrderElem, lastStep)
     have(thesis) by Cut(isLeastElementInStrictPartialOrder of (r := membershipRelation(x), y := z), lastStep) 
   }
   
@@ -308,16 +308,16 @@ object Ordinals extends lisa.Main {
     * 
     *   `strictWellOrder(∈_x, x), transitiveSet(x), y ∈ x |- strictWellOrder(∈_y, y)`
     */
-  val transitiveStrictWellOrderElem = Lemma((transitiveSet(x), strictWellOrder(membershipRelation(x), x), in(y, x)) |- strictWellOrder(membershipRelation(y), y)) {
-    have((transitiveSet(x), isLeastElement(a, z, membershipRelation(x), x), in(y, x), subset(z, y)) |- exists(a, isLeastElement(a, z, membershipRelation(y), y))) by RightExists(transitiveSetLeastElement)
-    thenHave((transitiveSet(x), exists(a, isLeastElement(a, z, membershipRelation(x), x)), in(y, x), subset(z, y)) |- exists(a, isLeastElement(a, z, membershipRelation(y), y))) by LeftExists
-    have((transitiveSet(x), strictWellOrder(membershipRelation(x), x), subset(z, x), !(z === emptySet), in(y, x), subset(z, y)) |- exists(a, isLeastElement(a, z, membershipRelation(y), y))) by Cut(strictWellOrderElim of (y := z, r := membershipRelation(x)), lastStep)
-    have((transitiveSet(x), strictWellOrder(membershipRelation(x), x), !(z === emptySet), in(y, x), subset(y, x), subset(z, y)) |- exists(a, isLeastElement(a, z, membershipRelation(y), y))) by Cut(subsetTransitivity of (x := z, z := x), lastStep)
-    have((transitiveSet(x), strictWellOrder(membershipRelation(x), x), !(z === emptySet), in(y, x), subset(z, y)) |- exists(a, isLeastElement(a, z, membershipRelation(y), y))) by Cut(transitiveSetElim, lastStep)
-    thenHave((transitiveSet(x), strictWellOrder(membershipRelation(x), x), in(y, x)) |- (subset(z, y) /\ !(z === emptySet)) ==> exists(a, isLeastElement(a, z, membershipRelation(y), y))) by Restate
-    thenHave((transitiveSet(x), strictWellOrder(membershipRelation(x), x), in(y, x)) |- forall(z, (subset(z, y) /\ !(z === emptySet)) ==> exists(a, isLeastElement(a, z, membershipRelation(y), y)))) by RightForall
-    have((transitiveSet(x), strictWellOrder(membershipRelation(x), x), in(y, x), strictTotalOrder(membershipRelation(y), y)) |- strictWellOrder(membershipRelation(y), y)) by Cut(lastStep, strictWellOrderIntro of (r := membershipRelation(y), x := y))
-    have((transitiveSet(x), strictWellOrder(membershipRelation(x), x), in(y, x), strictTotalOrder(membershipRelation(x), x)) |- strictWellOrder(membershipRelation(y), y)) by Cut(transitiveStrictTotalOrderElem, lastStep)
+  val transitiveStrictWellOrderElem = Lemma((transitiveSet(x), strictWellOrder(membershipRelation(x), x), y ∈ x) |- strictWellOrder(membershipRelation(y), y)) {
+    have((transitiveSet(x), isLeastElement(a, z, membershipRelation(x), x), y ∈ x, z ⊆ y) |- ∃(a, isLeastElement(a, z, membershipRelation(y), y))) by RightExists(transitiveSetLeastElement)
+    thenHave((transitiveSet(x), ∃(a, isLeastElement(a, z, membershipRelation(x), x)), y ∈ x, z ⊆ y) |- ∃(a, isLeastElement(a, z, membershipRelation(y), y))) by LeftExists
+    have((transitiveSet(x), strictWellOrder(membershipRelation(x), x), z ⊆ x, !(z === ∅), y ∈ x, z ⊆ y) |- ∃(a, isLeastElement(a, z, membershipRelation(y), y))) by Cut(strictWellOrderElim of (y := z, r := membershipRelation(x)), lastStep)
+    have((transitiveSet(x), strictWellOrder(membershipRelation(x), x), !(z === ∅), y ∈ x, y ⊆ x, z ⊆ y) |- ∃(a, isLeastElement(a, z, membershipRelation(y), y))) by Cut(subsetTransitivity of (x := z, z := x), lastStep)
+    have((transitiveSet(x), strictWellOrder(membershipRelation(x), x), !(z === ∅), y ∈ x, z ⊆ y) |- ∃(a, isLeastElement(a, z, membershipRelation(y), y))) by Cut(transitiveSetElim, lastStep)
+    thenHave((transitiveSet(x), strictWellOrder(membershipRelation(x), x), y ∈ x) |- (z ⊆ y /\ !(z === ∅)) ==> ∃(a, isLeastElement(a, z, membershipRelation(y), y))) by Restate
+    thenHave((transitiveSet(x), strictWellOrder(membershipRelation(x), x), y ∈ x) |- ∀(z, (z ⊆ y /\ !(z === ∅)) ==> ∃(a, isLeastElement(a, z, membershipRelation(y), y)))) by RightForall
+    have((transitiveSet(x), strictWellOrder(membershipRelation(x), x), y ∈ x, strictTotalOrder(membershipRelation(y), y)) |- strictWellOrder(membershipRelation(y), y)) by Cut(lastStep, strictWellOrderIntro of (r := membershipRelation(y), x := y))
+    have((transitiveSet(x), strictWellOrder(membershipRelation(x), x), y ∈ x, strictTotalOrder(membershipRelation(x), x)) |- strictWellOrder(membershipRelation(y), y)) by Cut(transitiveStrictTotalOrderElem, lastStep)
     have(thesis) by Cut(strictWellOrderTotal of (r := membershipRelation(x)), lastStep)
   }
   
@@ -376,10 +376,10 @@ object Ordinals extends lisa.Main {
    *    `0 ∈ Ord`
    */
   val emptySetOrdinal = Lemma(
-    ordinal(emptySet)
+    ordinal(∅)
   ) {
-    have(strictWellOrder(membershipRelation(emptySet), emptySet) |- ordinal(emptySet)) by Cut(emptySetTransitive, ordinalIntro of (a := emptySet))
-    thenHave(strictWellOrder(emptySet, emptySet) |- ordinal(emptySet)) by Substitution.ApplyRules(emptyMembershipRelation)
+    have(strictWellOrder(membershipRelation(∅), ∅) |- ordinal(∅)) by Cut(emptySetTransitive, ordinalIntro of (a := ∅))
+    thenHave(strictWellOrder(∅, ∅) |- ordinal(∅)) by Substitution.ApplyRules(emptyMembershipRelation)
     have(thesis) by Cut(emptyStrictWellOrder, lastStep)
   }
 
@@ -389,12 +389,12 @@ object Ordinals extends lisa.Main {
    *   `a ∈ Ord, b ∈ a |- b ∈ Ord`
    */
   val elementsOfOrdinalsAreOrdinals = Lemma(
-    (ordinal(a), in(b, a)) |- ordinal(b)
+    (ordinal(a), b ∈ a) |- ordinal(b)
   ) {
-    have((transitiveSet(a), strictWellOrder(membershipRelation(a), a), in(b, a), transitiveSet(b)) |- ordinal(b)) by Cut(transitiveStrictWellOrderElem of (x := a, y := b), ordinalIntro of (a := b))
-    have((transitiveSet(a), strictWellOrder(membershipRelation(a), a), in(b, a), transitive(membershipRelation(a), a)) |- ordinal(b)) by Cut(transitiveSetRelationTransitiveSet of (x := a, y := b), lastStep)
-    have((transitiveSet(a), strictWellOrder(membershipRelation(a), a), in(b, a)) |- ordinal(b)) by Cut(strictWellOrderTransitive of (r := membershipRelation(a), x := a), lastStep)
-    have((transitiveSet(a), ordinal(a), in(b, a)) |- ordinal(b)) by Cut(ordinalStrictWellOrder, lastStep)
+    have((transitiveSet(a), strictWellOrder(membershipRelation(a), a), b ∈ a, transitiveSet(b)) |- ordinal(b)) by Cut(transitiveStrictWellOrderElem of (x := a, y := b), ordinalIntro of (a := b))
+    have((transitiveSet(a), strictWellOrder(membershipRelation(a), a), b ∈ a, transitive(membershipRelation(a), a)) |- ordinal(b)) by Cut(transitiveSetRelationTransitiveSet of (x := a, y := b), lastStep)
+    have((transitiveSet(a), strictWellOrder(membershipRelation(a), a), b ∈ a) |- ordinal(b)) by Cut(strictWellOrderTransitive of (r := membershipRelation(a), x := a), lastStep)
+    have((transitiveSet(a), ordinal(a), b ∈ a) |- ordinal(b)) by Cut(ordinalStrictWellOrder, lastStep)
     have(thesis) by Cut(ordinalTransitiveSet, lastStep)
   }
 
@@ -404,25 +404,25 @@ object Ordinals extends lisa.Main {
     *   `c ∈ Ord, a ∈ b ∈ c |- a ∈ c` 
     */
   val ordinalTransitive = Lemma(
-    (ordinal(c), in(a, b), in(b, c)) |- in(a, c)
+    (ordinal(c), a ∈ b, b ∈ c) |- a ∈ c
   ) {
     have(thesis) by Cut(ordinalTransitiveSet of (a := c), transitiveSetAltElim of (x := c, y := b, z := a))
   }
 
   val elementOfOrdinalIsInitialSegment = Lemma(
-    (ordinal(a), in(b, a)) |- b === initialSegment(b, membershipRelation(a), a)
+    (ordinal(a), b ∈ a) |- b === initialSegment(b, membershipRelation(a), a)
   ) {
-    have((strictWellOrder(membershipRelation(a), a), in(x, a), in(b, a), in(x, b)) |- in(x, initialSegment(b, membershipRelation(a), a))) by Cut(membershipRelationIntro of (a := x, x := a), initialSegmentIntro of (r := membershipRelation(a), x := a, a := x))
-    have((ordinal(a), in(x, a), in(b, a), in(x, b)) |- in(x, initialSegment(b, membershipRelation(a), a))) by Cut(ordinalStrictWellOrder, lastStep)
-    have((ordinal(a), in(b, a), in(x, b)) |- in(x, initialSegment(b, membershipRelation(a), a))) by Cut(ordinalTransitive of (c := a, a := x, b := b), lastStep)
-    val forward = thenHave((ordinal(a), in(b, a)) |- in(x, b) ==> in(x, initialSegment(b, membershipRelation(a), a))) by RightImplies
+    have((strictWellOrder(membershipRelation(a), a), x ∈ a, b ∈ a, x ∈ b) |- x ∈ initialSegment(b, membershipRelation(a), a)) by Cut(membershipRelationIntro of (a := x, x := a), initialSegmentIntro of (r := membershipRelation(a), x := a, a := x))
+    have((ordinal(a), x ∈ a, b ∈ a, x ∈ b) |- x ∈ initialSegment(b, membershipRelation(a), a)) by Cut(ordinalStrictWellOrder, lastStep)
+    have((ordinal(a), b ∈ a, x ∈ b) |- x ∈ initialSegment(b, membershipRelation(a), a)) by Cut(ordinalTransitive of (c := a, a := x, b := b), lastStep)
+    val forward = thenHave((ordinal(a), b ∈ a) |- x ∈ b ==> x ∈ initialSegment(b, membershipRelation(a), a)) by RightImplies
     
-    have((strictWellOrder(membershipRelation(a), a), in(x, initialSegment(b, membershipRelation(a), a))) |- in(x, b)) by Cut(initialSegmentElim of (r := membershipRelation(a), x := a, a := x), membershipRelationIsMembershipPair of (a := x, x := a))
-    have((ordinal(a), in(x, initialSegment(b, membershipRelation(a), a))) |- in(x, b)) by Cut(ordinalStrictWellOrder, lastStep)
-    val backward = thenHave(ordinal(a) |- in(x, initialSegment(b, membershipRelation(a), a)) ==> in(x, b)) by RightImplies
+    have((strictWellOrder(membershipRelation(a), a), x ∈ initialSegment(b, membershipRelation(a), a)) |- x ∈ b) by Cut(initialSegmentElim of (r := membershipRelation(a), x := a, a := x), membershipRelationIsMembershipPair of (a := x, x := a))
+    have((ordinal(a), x ∈ initialSegment(b, membershipRelation(a), a)) |- x ∈ b) by Cut(ordinalStrictWellOrder, lastStep)
+    val backward = thenHave(ordinal(a) |- x ∈ initialSegment(b, membershipRelation(a), a) ==> x ∈ b) by RightImplies
 
-    have((ordinal(a), in(b, a)) |- in(x, b) <=> in(x, initialSegment(b, membershipRelation(a), a))) by RightIff(forward, backward)
-    thenHave((ordinal(a), in(b, a)) |- forall(x, in(x, b) <=> in(x, initialSegment(b, membershipRelation(a), a)))) by RightForall
+    have((ordinal(a), b ∈ a) |- x ∈ b <=> x ∈ initialSegment(b, membershipRelation(a), a)) by RightIff(forward, backward)
+    thenHave((ordinal(a), b ∈ a) |- ∀(x, x ∈ b <=> x ∈ initialSegment(b, membershipRelation(a), a))) by RightForall
     thenHave(thesis) by Substitution.ApplyRules(extensionalityAxiom of (x := b, y := initialSegment(b, membershipRelation(a), a)))
   }
 
@@ -444,84 +444,84 @@ object Ordinals extends lisa.Main {
     val ordIsomorphism = relationIsomorphism(f, membershipRelation(a), a, membershipRelation(b), b)
     val sLeastElem = isLeastElement(s, nonIdentitySet(f, a), membershipRelation(a), a)
 
-    val forward = have((ordIsomorphism, ordinal(a), sLeastElem, in(s, a)) |- subset(s, app(f, s))) subproof {
-      have((in(t, a), in(pair(t, s), membershipRelation(a)), sLeastElem) |- app(f, t) === t) by Cut(belowLeastElement of (a := s, y := nonIdentitySet(f, a), r := membershipRelation(a), x := a, b := t), notInNonIdentitySetElim of (x := a))
-      have((ordIsomorphism, sLeastElem, in(t, a), in(pair(t, s), membershipRelation(a))) |- in(pair(t, app(f, s)), membershipRelation(b))) by Substitution.ApplyRules(lastStep)(relationIsomorphismElimForward of (r1 := membershipRelation(a), x := a, r2 := membershipRelation(b), y := b, a := t, b := s))
-      have((ordIsomorphism, sLeastElem, in(t, a), in(pair(t, s), membershipRelation(a))) |- in(t, app(f, s))) by Cut(lastStep, membershipRelationIsMembershipPair of (x := b, a := t, b := app(f, s)))
-      have((ordIsomorphism, sLeastElem, in(t, a), in(t, s), in(s, a)) |- in(t, app(f, s))) by Cut(membershipRelationIntro of (x := a, a := t, b := s), lastStep)
-      have((ordIsomorphism, ordinal(a), sLeastElem, in(t, s), in(s, a)) |- in(t, app(f, s))) by Cut(ordinalTransitive of (a := t, b := s, c := a), lastStep)
-      thenHave((ordIsomorphism, ordinal(a), sLeastElem, in(s, a)) |- in(t, s) ==> in(t, app(f, s))) by RightImplies
-      thenHave((ordIsomorphism, ordinal(a), sLeastElem, in(s, a)) |- forall(t, in(t, s) ==> in(t, app(f, s)))) by RightForall
+    val forward = have((ordIsomorphism, ordinal(a), sLeastElem, s ∈ a) |- s ⊆ app(f, s)) subproof {
+      have((t ∈ a, pair(t, s) ∈ membershipRelation(a), sLeastElem) |- app(f, t) === t) by Cut(belowLeastElement of (a := s, y := nonIdentitySet(f, a), r := membershipRelation(a), x := a, b := t), notInNonIdentitySetElim of (x := a))
+      have((ordIsomorphism, sLeastElem, t ∈ a, pair(t, s) ∈ membershipRelation(a)) |- pair(t, app(f, s)) ∈ membershipRelation(b)) by Substitution.ApplyRules(lastStep)(relationIsomorphismElimForward of (r1 := membershipRelation(a), x := a, r2 := membershipRelation(b), y := b, a := t, b := s))
+      have((ordIsomorphism, sLeastElem, t ∈ a, pair(t, s) ∈ membershipRelation(a)) |- t ∈ app(f, s)) by Cut(lastStep, membershipRelationIsMembershipPair of (x := b, a := t, b := app(f, s)))
+      have((ordIsomorphism, sLeastElem, t ∈ a, t ∈ s, s ∈ a) |- t ∈ app(f, s)) by Cut(membershipRelationIntro of (x := a, a := t, b := s), lastStep)
+      have((ordIsomorphism, ordinal(a), sLeastElem, t ∈ s, s ∈ a) |- t ∈ app(f, s)) by Cut(ordinalTransitive of (a := t, b := s, c := a), lastStep)
+      thenHave((ordIsomorphism, ordinal(a), sLeastElem, s ∈ a) |- t ∈ s ==> t ∈ app(f, s)) by RightImplies
+      thenHave((ordIsomorphism, ordinal(a), sLeastElem, s ∈ a) |- ∀(t, t ∈ s ==> t ∈ app(f, s))) by RightForall
       have(thesis) by Cut(lastStep, subsetIntro of (x := s, y := app(f, s)))
     }
 
-    val backward = have((ordIsomorphism, ordinal(b), sLeastElem, in(s, a)) |- subset(app(f, s), s)) subproof { 
+    val backward = have((ordIsomorphism, ordinal(b), sLeastElem, s ∈ a) |- app(f, s) ⊆ s) subproof { 
 
-      val inverseFunctionBelow = have((ordIsomorphism, bijective(f, a, b), in(t, b), in(app(inverseRelation(f), t), a), in(s, a), in(pair(t, app(f, s)), membershipRelation(b))) |- in(pair(app(inverseRelation(f), t), s), membershipRelation(a))) by Substitution.ApplyRules(inverseRelationRightCancel of (b := t, x := a, y := b))(relationIsomorphismElimBackward of (r1 := membershipRelation(a), x := a, r2 := membershipRelation(b), y := b, a := app(inverseRelation(f), t), b := s))
-      have((ordIsomorphism, sLeastElem, bijective(f, a, b), in(t, b), in(app(inverseRelation(f), t), a), in(s, a), in(pair(t, app(f, s)), membershipRelation(b))) |- !in(app(inverseRelation(f), t), nonIdentitySet(f, a))) by Cut(lastStep, belowLeastElement of (a := s, y := nonIdentitySet(f, a), r := membershipRelation(a), x := a, b := app(inverseRelation(f), t)))
-      have((ordIsomorphism, sLeastElem, bijective(f, a, b), in(t, b), in(app(inverseRelation(f), t), a), in(s, a), in(pair(t, app(f, s)), membershipRelation(b))) |- app(f, app(inverseRelation(f), t)) === app(inverseRelation(f), t)) by Cut(lastStep, notInNonIdentitySetElim of (x := a, t := app(inverseRelation(f), t)))
-      thenHave((ordIsomorphism, sLeastElem, bijective(f, a, b), in(t, b), in(app(inverseRelation(f), t), a), in(s, a), in(pair(t, app(f, s)), membershipRelation(b))) |- t === app(inverseRelation(f), t)) by Substitution.ApplyRules(inverseRelationRightCancel of (b := t, x := a, y := b))
-      have((ordIsomorphism, sLeastElem, bijective(f, a, b), in(t, b), in(app(inverseRelation(f), t), a), in(s, a), in(pair(t, app(f, s)), membershipRelation(b))) |- in(pair(t, s), membershipRelation(a))) by Substitution.ApplyRules(lastStep)(inverseFunctionBelow)
-      have((ordIsomorphism, sLeastElem, bijective(f, a, b), in(t, b), in(app(inverseRelation(f), t), a), in(s, a), in(pair(t, app(f, s)), membershipRelation(b))) |- in(t, s)) by Cut(lastStep, membershipRelationIsMembershipPair of (x := a, a := t, b := s))
-      have((ordIsomorphism, sLeastElem, bijective(f, a, b), in(t, b), in(app(f, s), b), in(app(inverseRelation(f), t), a), in(s, a), in(t, app(f, s))) |- in(t, s)) by Cut(membershipRelationIntro of (x := b, a := t, b := app(f, s)),lastStep)
-      have((ordIsomorphism, sLeastElem, bijective(f, a, b), in(t, b), in(app(f, s), b), in(s, a), in(t, app(f, s))) |- in(t, s)) by Cut(inverseFunctionImageInDomain of (b := t, x := a, y := b), lastStep)
-      have((ordIsomorphism, sLeastElem, bijective(f, a, b), ordinal(b), in(app(f, s), b), in(s, a), in(t, app(f, s))) |- in(t, s)) by Cut(ordinalTransitive of (a := t, b := app(f, s), c := b), lastStep)
-      have((ordIsomorphism, sLeastElem, bijective(f, a, b), ordinal(b), in(s, a), in(t, app(f, s))) |- in(t, s)) by Cut(relationIsomorphismAppInCodomain of (r1 := membershipRelation(a), x := a, r2 := membershipRelation(b), y := b, a := s), lastStep)
-      have((ordIsomorphism, sLeastElem, ordinal(b), in(s, a), in(t, app(f, s))) |- in(t, s)) by Cut(relationIsomorphismBijective of (r1 := membershipRelation(a), x := a, r2 := membershipRelation(b), y := b), lastStep)
-      thenHave((ordIsomorphism, sLeastElem, ordinal(b), in(s, a)) |- in(t, app(f, s)) ==> in(t, s)) by RightImplies
-      thenHave((ordIsomorphism, sLeastElem, ordinal(b), in(s, a)) |- forall(t, in(t, app(f, s)) ==> in(t, s))) by RightForall
+      val inverseFunctionBelow = have((ordIsomorphism, bijective(f, a, b), t ∈ b, app(inverseRelation(f), t) ∈ a, s ∈ a, pair(t, app(f, s)) ∈ membershipRelation(b)) |- pair(app(inverseRelation(f), t), s) ∈ membershipRelation(a)) by Substitution.ApplyRules(inverseRelationRightCancel of (b := t, x := a, y := b))(relationIsomorphismElimBackward of (r1 := membershipRelation(a), x := a, r2 := membershipRelation(b), y := b, a := app(inverseRelation(f), t), b := s))
+      have((ordIsomorphism, sLeastElem, bijective(f, a, b), t ∈ b, app(inverseRelation(f), t) ∈ a, s ∈ a, pair(t, app(f, s)) ∈ membershipRelation(b)) |- app(inverseRelation(f), t) ∉ nonIdentitySet(f, a)) by Cut(lastStep, belowLeastElement of (a := s, y := nonIdentitySet(f, a), r := membershipRelation(a), x := a, b := app(inverseRelation(f), t)))
+      have((ordIsomorphism, sLeastElem, bijective(f, a, b), t ∈ b, app(inverseRelation(f), t) ∈ a, s ∈ a, pair(t, app(f, s)) ∈ membershipRelation(b)) |- app(f, app(inverseRelation(f), t)) === app(inverseRelation(f), t)) by Cut(lastStep, notInNonIdentitySetElim of (x := a, t := app(inverseRelation(f), t)))
+      thenHave((ordIsomorphism, sLeastElem, bijective(f, a, b), t ∈ b, app(inverseRelation(f), t) ∈ a, s ∈ a, pair(t, app(f, s)) ∈ membershipRelation(b)) |- t === app(inverseRelation(f), t)) by Substitution.ApplyRules(inverseRelationRightCancel of (b := t, x := a, y := b))
+      have((ordIsomorphism, sLeastElem, bijective(f, a, b), t ∈ b, app(inverseRelation(f), t) ∈ a, s ∈ a, pair(t, app(f, s)) ∈ membershipRelation(b)) |- pair(t, s) ∈ membershipRelation(a)) by Substitution.ApplyRules(lastStep)(inverseFunctionBelow)
+      have((ordIsomorphism, sLeastElem, bijective(f, a, b), t ∈ b, app(inverseRelation(f), t) ∈ a, s ∈ a, pair(t, app(f, s)) ∈ membershipRelation(b)) |- t ∈ s) by Cut(lastStep, membershipRelationIsMembershipPair of (x := a, a := t, b := s))
+      have((ordIsomorphism, sLeastElem, bijective(f, a, b), t ∈ b, app(f, s) ∈ b, app(inverseRelation(f), t) ∈ a, s ∈ a, t ∈ app(f, s)) |- t ∈ s) by Cut(membershipRelationIntro of (x := b, a := t, b := app(f, s)),lastStep)
+      have((ordIsomorphism, sLeastElem, bijective(f, a, b), t ∈ b, app(f, s) ∈ b, s ∈ a, t ∈ app(f, s)) |- t ∈ s) by Cut(inverseFunctionImageInDomain of (b := t, x := a, y := b), lastStep)
+      have((ordIsomorphism, sLeastElem, bijective(f, a, b), ordinal(b), app(f, s) ∈ b, s ∈ a, t ∈ app(f, s)) |- t ∈ s) by Cut(ordinalTransitive of (a := t, b := app(f, s), c := b), lastStep)
+      have((ordIsomorphism, sLeastElem, bijective(f, a, b), ordinal(b), s ∈ a, t ∈ app(f, s)) |- t ∈ s) by Cut(relationIsomorphismAppInCodomain of (r1 := membershipRelation(a), x := a, r2 := membershipRelation(b), y := b, a := s), lastStep)
+      have((ordIsomorphism, sLeastElem, ordinal(b), s ∈ a, t ∈ app(f, s)) |- t ∈ s) by Cut(relationIsomorphismBijective of (r1 := membershipRelation(a), x := a, r2 := membershipRelation(b), y := b), lastStep)
+      thenHave((ordIsomorphism, sLeastElem, ordinal(b), s ∈ a) |- t ∈ app(f, s) ==> t ∈ s) by RightImplies
+      thenHave((ordIsomorphism, sLeastElem, ordinal(b), s ∈ a) |- ∀(t, t ∈ app(f, s) ==> t ∈ s)) by RightForall
       have(thesis) by Cut(lastStep, subsetIntro of (x := app(f, s), y := s))
     }
     
-    have((ordIsomorphism, ordinal(a), sLeastElem, in(s, a), subset(app(f, s), s)) |- s === app(f, s)) by Cut(forward, subsetAntisymmetry of (x := s, y := app(f, s)))
-    have((ordIsomorphism, ordinal(a), ordinal(b), sLeastElem, in(s, a)) |- s === app(f, s)) by Cut(backward, lastStep)
-    have((ordIsomorphism, ordinal(a), ordinal(b), sLeastElem, in(s, a)) |- !in(s, nonIdentitySet(f, a))) by Cut(lastStep, notInNonIdentitySetIntro of (x := a, t := s))
-    have((ordIsomorphism, ordinal(a), ordinal(b), sLeastElem) |- !in(s, nonIdentitySet(f, a))) by Cut(isLeastElementInDomain of (a := s, y := nonIdentitySet(f, a), r := membershipRelation(a), x := a), lastStep)
+    have((ordIsomorphism, ordinal(a), sLeastElem, s ∈ a, app(f, s) ⊆ s) |- s === app(f, s)) by Cut(forward, subsetAntisymmetry of (x := s, y := app(f, s)))
+    have((ordIsomorphism, ordinal(a), ordinal(b), sLeastElem, s ∈ a) |- s === app(f, s)) by Cut(backward, lastStep)
+    have((ordIsomorphism, ordinal(a), ordinal(b), sLeastElem, s ∈ a) |- s ∉ nonIdentitySet(f, a)) by Cut(lastStep, notInNonIdentitySetIntro of (x := a, t := s))
+    have((ordIsomorphism, ordinal(a), ordinal(b), sLeastElem) |- s ∉ nonIdentitySet(f, a)) by Cut(isLeastElementInDomain of (a := s, y := nonIdentitySet(f, a), r := membershipRelation(a), x := a), lastStep)
     have((ordIsomorphism, ordinal(a), ordinal(b), sLeastElem) |- ()) by RightAnd(lastStep, isLeastElementInSubset of (a := s, y := nonIdentitySet(f, a), r := membershipRelation(a), x := a))
-    thenHave((ordIsomorphism, ordinal(a), ordinal(b), exists(s, sLeastElem)) |- ()) by LeftExists
-    have((strictWellOrder(membershipRelation(a), a), ordIsomorphism, ordinal(a), ordinal(b), subset(nonIdentitySet(f, a), a), !(nonIdentitySet(f, a) === emptySet)) |- ()) by Cut(strictWellOrderElim of (y := nonIdentitySet(f, a), r := membershipRelation(a), x := a), lastStep)
-    have((strictWellOrder(membershipRelation(a), a), ordIsomorphism, ordinal(a), ordinal(b), !(nonIdentitySet(f, a) === emptySet)) |- ()) by Cut(nonIdentitySetSubsetDomain of (x := a), lastStep)
-    thenHave((strictWellOrder(membershipRelation(a), a), ordIsomorphism, ordinal(a), ordinal(b)) |- nonIdentitySet(f, a) === emptySet) by Restate
-    have((ordIsomorphism, ordinal(a), ordinal(b)) |-  nonIdentitySet(f, a) === emptySet) by Cut(ordinalStrictWellOrder, lastStep)
+    thenHave((ordIsomorphism, ordinal(a), ordinal(b), ∃(s, sLeastElem)) |- ()) by LeftExists
+    have((strictWellOrder(membershipRelation(a), a), ordIsomorphism, ordinal(a), ordinal(b), nonIdentitySet(f, a) ⊆ a, !(nonIdentitySet(f, a) === ∅)) |- ()) by Cut(strictWellOrderElim of (y := nonIdentitySet(f, a), r := membershipRelation(a), x := a), lastStep)
+    have((strictWellOrder(membershipRelation(a), a), ordIsomorphism, ordinal(a), ordinal(b), !(nonIdentitySet(f, a) === ∅)) |- ()) by Cut(nonIdentitySetSubsetDomain of (x := a), lastStep)
+    thenHave((strictWellOrder(membershipRelation(a), a), ordIsomorphism, ordinal(a), ordinal(b)) |- nonIdentitySet(f, a) === ∅) by Restate
+    have((ordIsomorphism, ordinal(a), ordinal(b)) |-  nonIdentitySet(f, a) === ∅) by Cut(ordinalStrictWellOrder, lastStep)
     have((ordIsomorphism, ordinal(a), ordinal(b), surjective(f, a, b)) |- a === b) by Cut(lastStep, nonIdentitySetEmpty of (x := a, y := b))
     have((ordIsomorphism, ordinal(a), ordinal(b), bijective(f, a, b)) |- a === b) by Cut(bijectiveSurjective of (x := a, y := b), lastStep)
     have(thesis) by Cut(relationIsomorphismBijective of (r1 := membershipRelation(a), x := a, r2 := membershipRelation(b), y := b), lastStep)
   }
 
   val ordinalCases = Lemma(
-    (ordinal(a), ordinal(b)) |- (in(a, b), in(b, a), (a === b))
+    (ordinal(a), ordinal(b)) |- (a ∈ b, b ∈ a, (a === b))
   ) {
-    val middle = have((ordinal(a), ordinal(b), relationIsomorphism(f, membershipRelation(a), a, membershipRelation(b), b)) |- (in(a, b), in(b, a), a === b)) by Weakening(isomorphicOrdinalsAreEqual)
+    val middle = have((ordinal(a), ordinal(b), relationIsomorphism(f, membershipRelation(a), a, membershipRelation(b), b)) |- (a ∈ b, b ∈ a, a === b)) by Weakening(isomorphicOrdinalsAreEqual)
 
-    have(in(c, a) |- in(c, a)) by Hypothesis
-    thenHave((ordinal(c), ordinal(b), in(c, a), relationIsomorphism(f, membershipRelation(c), c, membershipRelation(b), b)) |- in(b, a)) by Substitution.ApplyRules(isomorphicOrdinalsAreEqual of (a := c))
-    thenHave((ordinal(c), ordinal(b), ordinal(a), in(c, a), relationIsomorphism(f, membershipRelation(initialSegment(c, membershipRelation(a), a)), initialSegment(c, membershipRelation(a), a), membershipRelation(b), b)) |- in(b, a)) by Substitution.ApplyRules(elementOfOrdinalIsInitialSegment of (b := c))
-    thenHave((ordinal(c), ordinal(b), ordinal(a), in(c, a), relationIsomorphism(f, initialSegmentOrder(c, membershipRelation(a), a), initialSegment(c, membershipRelation(a), a), membershipRelation(b), b)) |- in(b, a)) by Substitution.ApplyRules(membershipRelationInitialSegment of (b := c))
-    have((ordinal(b), ordinal(a), in(c, a), relationIsomorphism(f, initialSegmentOrder(c, membershipRelation(a), a), initialSegment(c, membershipRelation(a), a), membershipRelation(b), b)) |- in(b, a)) by Cut(elementsOfOrdinalsAreOrdinals of (b := c), lastStep)
-    thenHave((ordinal(b), ordinal(a), in(c, a) /\ relationIsomorphism(f, initialSegmentOrder(c, membershipRelation(a), a), initialSegment(c, membershipRelation(a), a), membershipRelation(b), b)) |- (in(a, b), in(b, a), a === b)) by Weakening
-    val right = thenHave((ordinal(b), ordinal(a), exists(c, in(c, a) /\ relationIsomorphism(f, initialSegmentOrder(c, membershipRelation(a), a), initialSegment(c, membershipRelation(a), a), membershipRelation(b), b))) |- (in(a, b), in(b, a), a === b)) by LeftExists
+    have(c ∈ a |- c ∈ a) by Hypothesis
+    thenHave((ordinal(c), ordinal(b), c ∈ a, relationIsomorphism(f, membershipRelation(c), c, membershipRelation(b), b)) |- b ∈ a) by Substitution.ApplyRules(isomorphicOrdinalsAreEqual of (a := c))
+    thenHave((ordinal(c), ordinal(b), ordinal(a), c ∈ a, relationIsomorphism(f, membershipRelation(initialSegment(c, membershipRelation(a), a)), initialSegment(c, membershipRelation(a), a), membershipRelation(b), b)) |- b ∈ a) by Substitution.ApplyRules(elementOfOrdinalIsInitialSegment of (b := c))
+    thenHave((ordinal(c), ordinal(b), ordinal(a), c ∈ a, relationIsomorphism(f, initialSegmentOrder(c, membershipRelation(a), a), initialSegment(c, membershipRelation(a), a), membershipRelation(b), b)) |- b ∈ a) by Substitution.ApplyRules(membershipRelationInitialSegment of (b := c))
+    have((ordinal(b), ordinal(a), c ∈ a, relationIsomorphism(f, initialSegmentOrder(c, membershipRelation(a), a), initialSegment(c, membershipRelation(a), a), membershipRelation(b), b)) |- b ∈ a) by Cut(elementsOfOrdinalsAreOrdinals of (b := c), lastStep)
+    thenHave((ordinal(b), ordinal(a), c ∈ a /\ relationIsomorphism(f, initialSegmentOrder(c, membershipRelation(a), a), initialSegment(c, membershipRelation(a), a), membershipRelation(b), b)) |- (a ∈ b, b ∈ a, a === b)) by Weakening
+    val right = thenHave((ordinal(b), ordinal(a), ∃(c, c ∈ a /\ relationIsomorphism(f, initialSegmentOrder(c, membershipRelation(a), a), initialSegment(c, membershipRelation(a), a), membershipRelation(b), b))) |- (a ∈ b, b ∈ a, a === b)) by LeftExists
 
-    have(in(c, b) |- in(c, b)) by Hypothesis
-    thenHave((ordinal(a), ordinal(c), in(c, b), relationIsomorphism(f, membershipRelation(a), a, membershipRelation(c), c)) |- in(a, b)) by Substitution.ApplyRules(isomorphicOrdinalsAreEqual of (b := c))
-    thenHave((ordinal(c), ordinal(b), ordinal(a), in(c, b), relationIsomorphism(f, membershipRelation(a), a, membershipRelation(initialSegment(c, membershipRelation(b), b)), initialSegment(c, membershipRelation(b), b))) |- in(a, b)) by Substitution.ApplyRules(elementOfOrdinalIsInitialSegment of (a := b, b := c))
-    thenHave((ordinal(c), ordinal(b), ordinal(a), in(c, b), relationIsomorphism(f, membershipRelation(a), a, initialSegmentOrder(c, membershipRelation(b), b), initialSegment(c, membershipRelation(b), b))) |- in(a, b)) by Substitution.ApplyRules(membershipRelationInitialSegment of (b := c, a := b))
-    have((ordinal(b), ordinal(a), in(c, b), relationIsomorphism(f, membershipRelation(a), a, initialSegmentOrder(c, membershipRelation(b), b), initialSegment(c, membershipRelation(b), b))) |- in(a, b)) by Cut(elementsOfOrdinalsAreOrdinals of (a := b, b := c), lastStep)
-    thenHave((ordinal(b), ordinal(a), in(c, b) /\ relationIsomorphism(f, membershipRelation(a), a, initialSegmentOrder(c, membershipRelation(b), b), initialSegment(c, membershipRelation(b), b))) |- (in(a, b), in(b, a), a === b)) by Weakening
-    val left = thenHave((ordinal(b), ordinal(a), exists(c, in(c, b) /\ relationIsomorphism(f, membershipRelation(a), a, initialSegmentOrder(c, membershipRelation(b), b), initialSegment(c, membershipRelation(b), b)))) |- (in(a, b), in(b, a), a === b)) by LeftExists
+    have(c ∈ b |- c ∈ b) by Hypothesis
+    thenHave((ordinal(a), ordinal(c), c ∈ b, relationIsomorphism(f, membershipRelation(a), a, membershipRelation(c), c)) |- a ∈ b) by Substitution.ApplyRules(isomorphicOrdinalsAreEqual of (b := c))
+    thenHave((ordinal(c), ordinal(b), ordinal(a), c ∈ b, relationIsomorphism(f, membershipRelation(a), a, membershipRelation(initialSegment(c, membershipRelation(b), b)), initialSegment(c, membershipRelation(b), b))) |- a ∈ b) by Substitution.ApplyRules(elementOfOrdinalIsInitialSegment of (a := b, b := c))
+    thenHave((ordinal(c), ordinal(b), ordinal(a), c ∈ b, relationIsomorphism(f, membershipRelation(a), a, initialSegmentOrder(c, membershipRelation(b), b), initialSegment(c, membershipRelation(b), b))) |- a ∈ b) by Substitution.ApplyRules(membershipRelationInitialSegment of (b := c, a := b))
+    have((ordinal(b), ordinal(a), c ∈ b, relationIsomorphism(f, membershipRelation(a), a, initialSegmentOrder(c, membershipRelation(b), b), initialSegment(c, membershipRelation(b), b))) |- a ∈ b) by Cut(elementsOfOrdinalsAreOrdinals of (a := b, b := c), lastStep)
+    thenHave((ordinal(b), ordinal(a), c ∈ b /\ relationIsomorphism(f, membershipRelation(a), a, initialSegmentOrder(c, membershipRelation(b), b), initialSegment(c, membershipRelation(b), b))) |- (a ∈ b, b ∈ a, a === b)) by Weakening
+    val left = thenHave((ordinal(b), ordinal(a), ∃(c, c ∈ b /\ relationIsomorphism(f, membershipRelation(a), a, initialSegmentOrder(c, membershipRelation(b), b), initialSegment(c, membershipRelation(b), b)))) |- (a ∈ b, b ∈ a, a === b)) by LeftExists
 
     have((ordinal(a), ordinal(b), 
-      exists(c, in(c, b) /\ relationIsomorphism(f, membershipRelation(a), a, initialSegmentOrder(c, membershipRelation(b), b), initialSegment(c, membershipRelation(b), b))) \/
-      exists(c, in(c, a) /\ relationIsomorphism(f, initialSegmentOrder(c, membershipRelation(a), a), initialSegment(c, membershipRelation(a), a), membershipRelation(b), b))) |- (in(a, b), in(b, a), a === b)) by LeftOr(left, right)
+      ∃(c, c ∈ b /\ relationIsomorphism(f, membershipRelation(a), a, initialSegmentOrder(c, membershipRelation(b), b), initialSegment(c, membershipRelation(b), b))) \/
+      ∃(c, c ∈ a /\ relationIsomorphism(f, initialSegmentOrder(c, membershipRelation(a), a), initialSegment(c, membershipRelation(a), a), membershipRelation(b), b))) |- (a ∈ b, b ∈ a, a === b)) by LeftOr(left, right)
     have((ordinal(a), ordinal(b), 
       relationIsomorphism(f, membershipRelation(a), a, membershipRelation(b), b) \/
-      exists(c, in(c, b) /\ relationIsomorphism(f, membershipRelation(a), a, initialSegmentOrder(c, membershipRelation(b), b), initialSegment(c, membershipRelation(b), b))) \/
-      exists(c, in(c, a) /\ relationIsomorphism(f, initialSegmentOrder(c, membershipRelation(a), a), initialSegment(c, membershipRelation(a), a), membershipRelation(b), b))) |- (in(a, b), in(b, a), a === b)) by LeftOr(middle, lastStep)
+      ∃(c, c ∈ b /\ relationIsomorphism(f, membershipRelation(a), a, initialSegmentOrder(c, membershipRelation(b), b), initialSegment(c, membershipRelation(b), b))) \/
+      ∃(c, c ∈ a /\ relationIsomorphism(f, initialSegmentOrder(c, membershipRelation(a), a), initialSegment(c, membershipRelation(a), a), membershipRelation(b), b))) |- (a ∈ b, b ∈ a, a === b)) by LeftOr(middle, lastStep)
     thenHave((ordinal(a), ordinal(b), 
-      exists(f, relationIsomorphism(f, membershipRelation(a), a, membershipRelation(b), b) \/
-      exists(c, in(c, b) /\ relationIsomorphism(f, membershipRelation(a), a, initialSegmentOrder(c, membershipRelation(b), b), initialSegment(c, membershipRelation(b), b))) \/
-      exists(c, in(c, a) /\ relationIsomorphism(f, initialSegmentOrder(c, membershipRelation(a), a), initialSegment(c, membershipRelation(a), a), membershipRelation(b), b)))) |- (in(a, b), in(b, a), (a === b))) by LeftExists
-    have((ordinal(a), ordinal(b), strictWellOrder(membershipRelation(a), a), strictWellOrder(membershipRelation(b), b)) |- (in(a, b), in(b, a), (a === b))) by Cut(initialSegmentIsomorphicCases of (r1 := membershipRelation(a), x := a, r2 := membershipRelation(b), y := b), lastStep)
-    have((ordinal(a), ordinal(b), strictWellOrder(membershipRelation(b), b)) |- (in(a, b), in(b, a), (a === b))) by Cut(ordinalStrictWellOrder, lastStep)
+      ∃(f, relationIsomorphism(f, membershipRelation(a), a, membershipRelation(b), b) \/
+      ∃(c, c ∈ b /\ relationIsomorphism(f, membershipRelation(a), a, initialSegmentOrder(c, membershipRelation(b), b), initialSegment(c, membershipRelation(b), b))) \/
+      ∃(c, c ∈ a /\ relationIsomorphism(f, initialSegmentOrder(c, membershipRelation(a), a), initialSegment(c, membershipRelation(a), a), membershipRelation(b), b)))) |- (a ∈ b, b ∈ a, (a === b))) by LeftExists
+    have((ordinal(a), ordinal(b), strictWellOrder(membershipRelation(a), a), strictWellOrder(membershipRelation(b), b)) |- (a ∈ b, b ∈ a, (a === b))) by Cut(initialSegmentIsomorphicCases of (r1 := membershipRelation(a), x := a, r2 := membershipRelation(b), y := b), lastStep)
+    have((ordinal(a), ordinal(b), strictWellOrder(membershipRelation(b), b)) |- (a ∈ b, b ∈ a, (a === b))) by Cut(ordinalStrictWellOrder, lastStep)
     have(thesis) by Cut(ordinalStrictWellOrder of (a := b), lastStep)
   }
 
@@ -531,40 +531,40 @@ object Ordinals extends lisa.Main {
    *  `a ∈ Ord, b ∈ Ord |- a ⊆ b ⇔ a ≤ b`
    */
   val leqOrdinalIsSubset = Lemma(
-    (ordinal(a), ordinal(b)) |- (in(a, b) \/ (a === b)) <=> subset(a, b)
+    (ordinal(a), ordinal(b)) |- (a ∈ b \/ (a === b)) <=> a ⊆ b
   ) {
-    val forward = have(ordinal(b) |- (in(a, b) \/ (a === b)) ==> subset(a, b)) subproof {
-      have(a === b |- subset(a, b)) by RightSubstEq.withParametersSimple(List((a, b)), lambda(x, subset(a, x)))(subsetReflexivity of (x := a))
-      have((transitiveSet(b), in(a, b) \/ (a === b)) |- subset(a, b)) by LeftOr(transitiveSetElim of (y := a, x := b), lastStep)
-      have((ordinal(b), in(a, b) \/ (a === b)) |- subset(a, b)) by Cut(ordinalTransitiveSet of (a := b), lastStep)
+    val forward = have(ordinal(b) |- (a ∈ b \/ (a === b)) ==> a ⊆ b) subproof {
+      have(a === b |- a ⊆ b) by RightSubstEq.withParametersSimple(List((a, b)), lambda(x, a ⊆ x))(subsetReflexivity of (x := a))
+      have((transitiveSet(b), a ∈ b \/ (a === b)) |- a ⊆ b) by LeftOr(transitiveSetElim of (y := a, x := b), lastStep)
+      have((ordinal(b), a ∈ b \/ (a === b)) |- a ⊆ b) by Cut(ordinalTransitiveSet of (a := b), lastStep)
     }
 
-    val backward = have((ordinal(a), ordinal(b)) |- subset(a, b) ==> (in(a, b) \/ (a === b))) subproof {
-      have((transitiveSet(a), in(b, a), subset(a, b)) |- a === b) by Cut(transitiveSetElim of (x := a, y := b), subsetAntisymmetry of (x := a, y := b))
-      have((ordinal(a), in(b, a), subset(a, b)) |- a === b) by Cut(ordinalTransitiveSet, lastStep)
-      have((ordinal(a), ordinal(b), subset(a, b)) |- (in(a, b), a === b)) by Cut(ordinalCases, lastStep)
+    val backward = have((ordinal(a), ordinal(b)) |- a ⊆ b ==> (a ∈ b \/ (a === b))) subproof {
+      have((transitiveSet(a), b ∈ a, a ⊆ b) |- a === b) by Cut(transitiveSetElim of (x := a, y := b), subsetAntisymmetry of (x := a, y := b))
+      have((ordinal(a), b ∈ a, a ⊆ b) |- a === b) by Cut(ordinalTransitiveSet, lastStep)
+      have((ordinal(a), ordinal(b), a ⊆ b) |- (a ∈ b, a === b)) by Cut(ordinalCases, lastStep)
     }
 
     have(thesis) by RightIff(forward, backward)
   }
 
   val ordinalSubsetImpliesLeq = Lemma(
-    (ordinal(a), ordinal(b), subset(a, b)) |- (in(a, b), (a === b))
+    (ordinal(a), ordinal(b), a ⊆ b) |- (a ∈ b, (a === b))
   ) {
     have(thesis) by Weakening(leqOrdinalIsSubset)
   }
 
   val ordinalLeqImpliesSubset = Lemma(
-    (ordinal(b), in(a, b) \/ (a === b)) |- subset(a, b)
+    (ordinal(b), a ∈ b \/ (a === b)) |- a ⊆ b
   ) {
     sorry
   }
 
   val ordinalLeqLtImpliesLt = Lemma(
-    (ordinal(c), in(a, b) \/ (a === b), in(b, c)) |- in(a, c) 
+    (ordinal(c), a ∈ b \/ (a === b), b ∈ c) |- a ∈ c 
   ) {
-    have(in(b, c) |- in(b, c)) by Hypothesis
-    thenHave((a === b, in(b, c)) |- in(a, c)) by RightSubstEq.withParametersSimple(List((a, b)), lambda(x, in(x, c)))
+    have(b ∈ c |- b ∈ c) by Hypothesis
+    thenHave((a === b, b ∈ c) |- a ∈ c) by RightSubstEq.withParametersSimple(List((a, b)), lambda(x, x ∈ c))
     have(thesis) by LeftOr(ordinalTransitive, lastStep)
   }
   
@@ -575,9 +575,9 @@ object Ordinals extends lisa.Main {
     *   `a ∈ b ∈ Ord |- a ⊆ b`
     */
   val elementOfOrdinalIsSubset = Lemma(
-    (ordinal(b), in(a, b)) |- subset(a, b)
+    (ordinal(b), a ∈ b) |- a ⊆ b
   ) {
-    have((ordinal(a), ordinal(b), in(a, b)) |- subset(a, b)) by Weakening(leqOrdinalIsSubset)
+    have((ordinal(a), ordinal(b), a ∈ b) |- a ⊆ b) by Weakening(leqOrdinalIsSubset)
     have(thesis) by Cut(elementsOfOrdinalsAreOrdinals of (a := b, b := a), lastStep)
   }
   
@@ -588,69 +588,69 @@ object Ordinals extends lisa.Main {
     *   `0 ≠ P ⊆ Ord |- ∃a ∈ P. ∀b ∈ P. a ≤ b`
     */ 
   val ordinalSubclassHasMinimalElement = Lemma(
-    (forall(x, P(x) ==> ordinal(x)), exists(x, P(x))) |- exists(a, P(a) /\ forall(b, P(b) ==> (in(a, b) \/ (a === b)))) 
+    (∀(x, P(x) ==> ordinal(x)), ∃(x, P(x))) |- ∃(a, P(a) /\ ∀(b, P(b) ==> (a ∈ b \/ (a === b)))) 
   ) {
 
-    val aInterP = forall(t, in(t, z) <=> (in(t, a) /\ P(t)))
+    val aInterP = ∀(t, t ∈ z <=> (t ∈ a /\ P(t)))
 
     have(aInterP |- aInterP) by Hypothesis
-    val aInterPDef = thenHave(aInterP |- in(t, z) <=> (in(t, a) /\ P(t))) by InstantiateForall(t)
-    val inAInterP = thenHave((aInterP, in(t, z)) |- in(t, a) /\ P(t)) by Weakening
-    val inAInterPRight = thenHave((aInterP, in(t, z)) |- P(t)) by Weakening
-    have((aInterP, in(t, z)) |- in(t, a)) by Weakening(inAInterP)
-    thenHave(aInterP |- in(t, z) ==> in(t, a)) by RightImplies
-    thenHave(aInterP |- forall(t, in(t, z) ==> in(t, a))) by RightForall
-    val inAInterPSubset = have(aInterP |- subset(z, a)) by Cut(lastStep, subsetIntro of (x := z, y := a))
+    val aInterPDef = thenHave(aInterP |- t ∈ z <=> (t ∈ a /\ P(t))) by InstantiateForall(t)
+    val inAInterP = thenHave((aInterP, t ∈ z) |- t ∈ a /\ P(t)) by Weakening
+    val inAInterPRight = thenHave((aInterP, t ∈ z) |- P(t)) by Weakening
+    have((aInterP, t ∈ z) |- t ∈ a) by Weakening(inAInterP)
+    thenHave(aInterP |- t ∈ z ==> t ∈ a) by RightImplies
+    thenHave(aInterP |- ∀(t, t ∈ z ==> t ∈ a)) by RightForall
+    val inAInterPSubset = have(aInterP |- z ⊆ a) by Cut(lastStep, subsetIntro of (x := z, y := a))
 
-    have(existsOne(z, aInterP)) by UniqueComprehension(a, lambda(x, P(x)))
-    val aInterPExistence = have(exists(z, aInterP)) by Cut(lastStep, existsOneImpliesExists of (P := lambda(z, forall(t, in(t, z) <=> (in(t, a) /\ P(t))))))
+    have(∃!(z, aInterP)) by UniqueComprehension(a, lambda(x, P(x)))
+    val aInterPExistence = have(∃(z, aInterP)) by Cut(lastStep, existsOneImpliesExists of (P := lambda(z, ∀(t, t ∈ z <=> (t ∈ a /\ P(t))))))
 
-    val ordClass = forall(x, P(x) ==> ordinal(x))
+    val ordClass = ∀(x, P(x) ==> ordinal(x))
     have(ordClass |- ordClass) by Hypothesis
     val ordClassMembership = thenHave((ordClass, P(x)) |- ordinal(x)) by InstantiateForall(x)
 
-    have((P(a), forall(b, P(b) ==> (in(a, b) \/ (a === b)))) |- P(a) /\ forall(b, P(b) ==> (in(a, b) \/ (a === b)))) by Restate
-    val easyCase = thenHave((P(a), forall(b, P(b) ==> (in(a, b) \/ (a === b)))) |- exists(a, P(a) /\ forall(b, P(b) ==> (in(a, b) \/ (a === b))))) by RightExists
+    have((P(a), ∀(b, P(b) ==> (a ∈ b \/ (a === b)))) |- P(a) /\ ∀(b, P(b) ==> (a ∈ b \/ (a === b)))) by Restate
+    val easyCase = thenHave((P(a), ∀(b, P(b) ==> (a ∈ b \/ (a === b)))) |- ∃(a, P(a) /\ ∀(b, P(b) ==> (a ∈ b \/ (a === b))))) by RightExists
     
-    val leastElementExists = have((aInterP, ordClass, ordinal(a), exists(b, P(b) /\ !in(a, b) /\ !(a === b))) |- exists(c, isLeastElement(c, z, membershipRelation(a), a))) subproof {
-      have((ordinal(a), ordinal(b), P(b), !in(a, b), !(a === b)) |- in(b, a) /\ P(b)) by Tautology.from(ordinalCases)
-      val bInZ = thenHave((aInterP, ordinal(a), ordinal(b), P(b), !in(a, b), !(a === b)) |- in(b, z)) by Substitution.ApplyRules(aInterPDef of (t := b))
-      have((aInterP, ordinal(a), ordinal(b), P(b), !in(a, b), !(a === b)) |- !(z === emptySet)) by Cut(lastStep, setWithElementNonEmpty of (y := b, x := z))
-      have((aInterP, ordinal(a), strictWellOrder(membershipRelation(a), a), subset(z, a), ordinal(b), P(b), !in(a, b), !(a === b)) |- exists(c, isLeastElement(c, z, membershipRelation(a), a))) by Cut(lastStep, strictWellOrderElim of (y := z, r := membershipRelation(a), x := a))
-      have((aInterP, ordinal(a), strictWellOrder(membershipRelation(a), a), ordinal(b), P(b), !in(a, b), !(a === b)) |- exists(c, isLeastElement(c, z, membershipRelation(a), a))) by Cut(inAInterPSubset, lastStep)
-      have((aInterP, ordinal(a), ordinal(b), P(b), !in(a, b), !(a === b)) |- exists(c, isLeastElement(c, z, membershipRelation(a), a))) by Cut(ordinalStrictWellOrder, lastStep)
-      have((aInterP, ordClass, ordinal(a), P(b), !in(a, b), !(a === b)) |- exists(c, isLeastElement(c, z, membershipRelation(a), a))) by Cut(ordClassMembership of (x := b), lastStep)
-      thenHave((aInterP, ordClass, ordinal(a), P(b) /\ !in(a, b) /\ !(a === b)) |- exists(c, isLeastElement(c, z, membershipRelation(a), a))) by Restate
+    val leastElementExists = have((aInterP, ordClass, ordinal(a), ∃(b, P(b) /\ a ∉ b /\ (a =/= b))) |- ∃(c, isLeastElement(c, z, membershipRelation(a), a))) subproof {
+      have((ordinal(a), ordinal(b), P(b), a ∉ b, a =/= b) |- b ∈ a /\ P(b)) by Tautology.from(ordinalCases)
+      val bInZ = thenHave((aInterP, ordinal(a), ordinal(b), P(b), a ∉ b, a =/= b) |- b ∈ z) by Substitution.ApplyRules(aInterPDef of (t := b))
+      have((aInterP, ordinal(a), ordinal(b), P(b), a ∉ b, a =/= b) |- !(z === ∅)) by Cut(lastStep, setWithElementNonEmpty of (y := b, x := z))
+      have((aInterP, ordinal(a), strictWellOrder(membershipRelation(a), a), z ⊆ a, ordinal(b), P(b), a ∉ b, a =/= b) |- ∃(c, isLeastElement(c, z, membershipRelation(a), a))) by Cut(lastStep, strictWellOrderElim of (y := z, r := membershipRelation(a), x := a))
+      have((aInterP, ordinal(a), strictWellOrder(membershipRelation(a), a), ordinal(b), P(b), a ∉ b, a =/= b) |- ∃(c, isLeastElement(c, z, membershipRelation(a), a))) by Cut(inAInterPSubset, lastStep)
+      have((aInterP, ordinal(a), ordinal(b), P(b), a ∉ b, a =/= b) |- ∃(c, isLeastElement(c, z, membershipRelation(a), a))) by Cut(ordinalStrictWellOrder, lastStep)
+      have((aInterP, ordClass, ordinal(a), P(b), a ∉ b, a =/= b) |- ∃(c, isLeastElement(c, z, membershipRelation(a), a))) by Cut(ordClassMembership of (x := b), lastStep)
+      thenHave((aInterP, ordClass, ordinal(a), P(b) /\ a ∉ b /\ (a =/= b)) |- ∃(c, isLeastElement(c, z, membershipRelation(a), a))) by Restate
       thenHave(thesis) by LeftExists
     }
 
-    val inCase = have((aInterP, isLeastElement(c, z, membershipRelation(a), a), P(t), in(t, a)) |- in(c, t) \/ (c === t)) subproof {
-      have((isLeastElement(c, z, membershipRelation(a), a), in(t, z)) |- (in(pair(c, t), membershipRelation(a)), (c === t))) by Restate.from(isLeastElementElim of (a := c, y := z, r := membershipRelation(a), x := a, b := t))
-      have((isLeastElement(c, z, membershipRelation(a), a), in(t, z)) |- (in(c, t), (c === t))) by Cut(lastStep, membershipRelationIsMembershipPair of (x := a, a := c, b := t))
-      thenHave((aInterP, isLeastElement(c, z, membershipRelation(a), a), P(t) /\ in(t, a)) |- (in(c, t), (c === t))) by Substitution.ApplyRules(aInterPDef)
+    val inCase = have((aInterP, isLeastElement(c, z, membershipRelation(a), a), P(t), t ∈ a) |- c ∈ t \/ (c === t)) subproof {
+      have((isLeastElement(c, z, membershipRelation(a), a), t ∈ z) |- (pair(c, t) ∈ membershipRelation(a), (c === t))) by Restate.from(isLeastElementElim of (a := c, y := z, r := membershipRelation(a), x := a, b := t))
+      have((isLeastElement(c, z, membershipRelation(a), a), t ∈ z) |- (c ∈ t, (c === t))) by Cut(lastStep, membershipRelationIsMembershipPair of (x := a, a := c, b := t))
+      thenHave((aInterP, isLeastElement(c, z, membershipRelation(a), a), P(t) /\ t ∈ a) |- (c ∈ t, (c === t))) by Substitution.ApplyRules(aInterPDef)
     }
 
-    have(in(c, a) |- in(c, a)) by Hypothesis
-    val eqCase = thenHave((a === t, in(c, a)) |- in(c, t)) by RightSubstEq.withParametersSimple(List((a, t)), lambda(x, in(c, x)))
-    have((ordinal(t), ordinal(a), !in(t, a)) |- (in(a, t), a === t)) by Restate.from(ordinalCases of (b := t))
-    have((ordinal(t), ordinal(a), !in(t, a), in(c, a)) |- (in(a, t), in(c, t))) by Cut(lastStep, eqCase)
-    have((ordinal(t), ordinal(a), !in(t, a), in(c, a)) |- in(c, t)) by Cut(lastStep, ordinalTransitive of (a := c, b := a, c := t))
-    have((ordinal(t), ordinal(a), !in(t, a), isLeastElement(c, z, membershipRelation(a), a)) |- in(c, t)) by Cut(isLeastElementInDomain of (a := c, y := z, r := membershipRelation(a), x := a), lastStep)
-    thenHave((ordinal(t), ordinal(a), !in(t, a), isLeastElement(c, z, membershipRelation(a), a)) |- in(c, t) \/ (c === t)) by RightOr
-    have((ordClass, P(t), ordinal(a), !in(t, a), isLeastElement(c, z, membershipRelation(a), a)) |- in(c, t) \/ (c === t)) by Cut(ordClassMembership of (x := t), lastStep)
-    have((aInterP, ordClass, P(t), ordinal(a), isLeastElement(c, z, membershipRelation(a), a)) |- in(c, t) \/ (c === t)) by LeftOr(lastStep, inCase)
-    thenHave((aInterP, ordClass, ordinal(a), isLeastElement(c, z, membershipRelation(a), a)) |- P(t) ==> (in(c, t) \/ (c === t))) by RightImplies
-    thenHave((aInterP, ordClass, ordinal(a), isLeastElement(c, z, membershipRelation(a), a)) |- forall(t, P(t) ==> (in(c, t) \/ (c === t)))) by RightForall
-    have((aInterP, ordClass, ordinal(a), in(c, z), isLeastElement(c, z, membershipRelation(a), a)) |- P(c) /\ forall(t, P(t) ==> (in(c, t) \/ (c === t)))) by RightAnd(lastStep, inAInterPRight of (t := c))
-    have((aInterP, ordClass, ordinal(a), isLeastElement(c, z, membershipRelation(a), a)) |- P(c) /\ forall(t, P(t) ==> (in(c, t) \/ (c === t)))) by Cut(isLeastElementInSubset of (a := c, y := z, r := membershipRelation(a), x := a), lastStep)
-    thenHave((aInterP, ordClass, ordinal(a), isLeastElement(c, z, membershipRelation(a), a)) |- exists(c, P(c) /\ forall(t, P(t) ==> (in(c, t) \/ (c === t))))) by RightExists
-    thenHave((aInterP, ordClass, ordinal(a), exists(c, isLeastElement(c, z, membershipRelation(a), a))) |- exists(c, P(c) /\ forall(t, P(t) ==> (in(c, t) \/ (c === t))))) by LeftExists
-    have((aInterP, ordClass, ordinal(a), exists(b, P(b) /\ !in(a, b) /\ !(a === b))) |- exists(c, P(c) /\ forall(t, P(t) ==> (in(c, t) \/ (c === t))))) by Cut(leastElementExists, lastStep)
-    have((aInterP, ordClass, P(a), exists(b, P(b) /\ !in(a, b) /\ !(a === b))) |- exists(c, P(c) /\ forall(t, P(t) ==> (in(c, t) \/ (c === t))))) by Cut(ordClassMembership of (x := a), lastStep)
-    have((aInterP, ordClass, P(a)) |- exists(c, P(c) /\ forall(t, P(t) ==> (in(c, t) \/ (c === t))))) by LeftOr(lastStep, easyCase)
-    thenHave((exists(z, aInterP), ordClass, P(a)) |- exists(c, P(c) /\ forall(t, P(t) ==> (in(c, t) \/ (c === t))))) by LeftExists
-    have((ordClass, P(a)) |- exists(c, P(c) /\ forall(t, P(t) ==> (in(c, t) \/ (c === t))))) by Cut(aInterPExistence, lastStep)
-    thenHave((ordClass, exists(a, P(a))) |- exists(c, P(c) /\ forall(t, P(t) ==> (in(c, t) \/ (c === t))))) by LeftExists
+    have(c ∈ a |- c ∈ a) by Hypothesis
+    val eqCase = thenHave((a === t, c ∈ a) |- c ∈ t) by RightSubstEq.withParametersSimple(List((a, t)), lambda(x, c ∈ x))
+    have((ordinal(t), ordinal(a), t ∉ a) |- (a ∈ t, a === t)) by Restate.from(ordinalCases of (b := t))
+    have((ordinal(t), ordinal(a), t ∉ a, c ∈ a) |- (a ∈ t, c ∈ t)) by Cut(lastStep, eqCase)
+    have((ordinal(t), ordinal(a), t ∉ a, c ∈ a) |- c ∈ t) by Cut(lastStep, ordinalTransitive of (a := c, b := a, c := t))
+    have((ordinal(t), ordinal(a), t ∉ a, isLeastElement(c, z, membershipRelation(a), a)) |- c ∈ t) by Cut(isLeastElementInDomain of (a := c, y := z, r := membershipRelation(a), x := a), lastStep)
+    thenHave((ordinal(t), ordinal(a), t ∉ a, isLeastElement(c, z, membershipRelation(a), a)) |- c ∈ t \/ (c === t)) by RightOr
+    have((ordClass, P(t), ordinal(a), t ∉ a, isLeastElement(c, z, membershipRelation(a), a)) |- c ∈ t \/ (c === t)) by Cut(ordClassMembership of (x := t), lastStep)
+    have((aInterP, ordClass, P(t), ordinal(a), isLeastElement(c, z, membershipRelation(a), a)) |- c ∈ t \/ (c === t)) by LeftOr(lastStep, inCase)
+    thenHave((aInterP, ordClass, ordinal(a), isLeastElement(c, z, membershipRelation(a), a)) |- P(t) ==> (c ∈ t \/ (c === t))) by RightImplies
+    thenHave((aInterP, ordClass, ordinal(a), isLeastElement(c, z, membershipRelation(a), a)) |- ∀(t, P(t) ==> (c ∈ t \/ (c === t)))) by RightForall
+    have((aInterP, ordClass, ordinal(a), c ∈ z, isLeastElement(c, z, membershipRelation(a), a)) |- P(c) /\ ∀(t, P(t) ==> (c ∈ t \/ (c === t)))) by RightAnd(lastStep, inAInterPRight of (t := c))
+    have((aInterP, ordClass, ordinal(a), isLeastElement(c, z, membershipRelation(a), a)) |- P(c) /\ ∀(t, P(t) ==> (c ∈ t \/ (c === t)))) by Cut(isLeastElementInSubset of (a := c, y := z, r := membershipRelation(a), x := a), lastStep)
+    thenHave((aInterP, ordClass, ordinal(a), isLeastElement(c, z, membershipRelation(a), a)) |- ∃(c, P(c) /\ ∀(t, P(t) ==> (c ∈ t \/ (c === t))))) by RightExists
+    thenHave((aInterP, ordClass, ordinal(a), ∃(c, isLeastElement(c, z, membershipRelation(a), a))) |- ∃(c, P(c) /\ ∀(t, P(t) ==> (c ∈ t \/ (c === t))))) by LeftExists
+    have((aInterP, ordClass, ordinal(a), ∃(b, P(b) /\ a ∉ b /\ (a =/= b))) |- ∃(c, P(c) /\ ∀(t, P(t) ==> (c ∈ t \/ (c === t))))) by Cut(leastElementExists, lastStep)
+    have((aInterP, ordClass, P(a), ∃(b, P(b) /\ a ∉ b /\ (a =/= b))) |- ∃(c, P(c) /\ ∀(t, P(t) ==> (c ∈ t \/ (c === t))))) by Cut(ordClassMembership of (x := a), lastStep)
+    have((aInterP, ordClass, P(a)) |- ∃(c, P(c) /\ ∀(t, P(t) ==> (c ∈ t \/ (c === t))))) by LeftOr(lastStep, easyCase)
+    thenHave((∃(z, aInterP), ordClass, P(a)) |- ∃(c, P(c) /\ ∀(t, P(t) ==> (c ∈ t \/ (c === t))))) by LeftExists
+    have((ordClass, P(a)) |- ∃(c, P(c) /\ ∀(t, P(t) ==> (c ∈ t \/ (c === t))))) by Cut(aInterPExistence, lastStep)
+    thenHave((ordClass, ∃(a, P(a))) |- ∃(c, P(c) /\ ∀(t, P(t) ==> (c ∈ t \/ (c === t))))) by LeftExists
   }
 
   /**
@@ -659,9 +659,9 @@ object Ordinals extends lisa.Main {
     *   `0 ≠ x ⊆ Ord |- ∃a ∈ x. ∀b ∈ x. a ≤ b`
     */
   val setOfOrdinalsHasLeastElement = Lemma(
-    (forall(a, in(a, x) ==> ordinal(a)), !(x === emptySet)) |- exists(a, in(a, x) /\ forall(b, in(b, x) ==> (in(a, b) \/ (a === b))))
+    (∀(a, a ∈ x ==> ordinal(a)), !(x === ∅)) |- ∃(a, a ∈ x /\ ∀(b, b ∈ x ==> (a ∈ b \/ (a === b))))
   ) {
-    have(thesis) by Cut(nonEmptySetHasAnElement, ordinalSubclassHasMinimalElement of (P := lambda(a, in(a, x))))
+    have(thesis) by Cut(nonEmptySetHasAnElement, ordinalSubclassHasMinimalElement of (P := lambda(a, a ∈ x)))
   }
 
   /**
@@ -670,29 +670,29 @@ object Ordinals extends lisa.Main {
     *   `transitiveSet(x), ∀a ∈ x. ordinal(a) |- ordinal(x)` 
     */
   val transitiveSetOfOrdinalsIsOrdinal = Lemma(
-    (forall(a, in(a, x) ==> ordinal(a)), transitiveSet(x)) |- ordinal(x)
+    (∀(a, a ∈ x ==> ordinal(a)), transitiveSet(x)) |- ordinal(x)
   ) {
 
-    val elemOrd = forall(a, in(a, x) ==> ordinal(a))
+    val elemOrd = ∀(a, a ∈ x ==> ordinal(a))
     have(elemOrd |- elemOrd) by Hypothesis
-    val membershipIsOrd = thenHave((elemOrd, in(a, x)) |- ordinal(a)) by InstantiateForall(a)
-    have((elemOrd, in(a, y), subset(y, x)) |- ordinal(a)) by Cut(subsetElim of (x := y, y := x, z := a), lastStep)
-    thenHave((elemOrd, subset(y, x)) |- in(a, y) ==> ordinal(a)) by RightImplies
-    val subsetElemOrdinals = thenHave((elemOrd, subset(y, x)) |- forall(a, in(a, y) ==> ordinal(a))) by RightForall
+    val membershipIsOrd = thenHave((elemOrd, a ∈ x) |- ordinal(a)) by InstantiateForall(a)
+    have((elemOrd, a ∈ y, y ⊆ x) |- ordinal(a)) by Cut(subsetElim of (x := y, y := x, z := a), lastStep)
+    thenHave((elemOrd, y ⊆ x) |- a ∈ y ==> ordinal(a)) by RightImplies
+    val subsetElemOrdinals = thenHave((elemOrd, y ⊆ x) |- ∀(a, a ∈ y ==> ordinal(a))) by RightForall
 
 
     val strictPartOrd = have(elemOrd |- strictPartialOrder(membershipRelation(x), x)) subproof {
-      have((in(a, b), in(b, c), in(a, x), in(c, x), ordinal(c)) |- in(pair(a, c), membershipRelation(x))) by Cut(ordinalTransitive, membershipRelationIntro of (b := c))
-      have((elemOrd, in(a, b), in(b, c), in(a, x), in(c, x)) |- in(pair(a, c), membershipRelation(x))) by Cut(membershipIsOrd of (a := c), lastStep)
-      thenHave((elemOrd, in(a, b), in(b, c), in(a, x) /\ in(b, x), in(b, x) /\ in(c, x)) |- in(pair(a, c), membershipRelation(x))) by Weakening
-      have((elemOrd, in(a, b), in(b, c), in(a, x) /\ in(b, x), in(pair(b, c), membershipRelation(x))) |- in(pair(a, c), membershipRelation(x))) by Cut(membershipRelationInDomainPair of (a := b , b := c), lastStep)
-      have((elemOrd, in(a, b), in(a, x) /\ in(b, x), in(pair(b, c), membershipRelation(x))) |- in(pair(a, c), membershipRelation(x))) by Cut(membershipRelationIsMembershipPair of (a := b, b := c), lastStep)
-      have((elemOrd, in(a, b), in(pair(a, b), membershipRelation(x)), in(pair(b, c), membershipRelation(x))) |- in(pair(a, c), membershipRelation(x))) by Cut(membershipRelationInDomainPair, lastStep)
-      have((elemOrd, in(pair(a, b), membershipRelation(x)), in(pair(b, c), membershipRelation(x))) |- in(pair(a, c), membershipRelation(x))) by Cut(membershipRelationIsMembershipPair, lastStep)
-      thenHave(elemOrd |- (in(pair(a, b), membershipRelation(x)) /\ in(pair(b, c), membershipRelation(x))) ==> in(pair(a, c), membershipRelation(x))) by Restate
-      thenHave(elemOrd |- forall(c, (in(pair(a, b), membershipRelation(x)) /\ in(pair(b, c), membershipRelation(x))) ==> in(pair(a, c), membershipRelation(x)))) by RightForall
-      thenHave(elemOrd |- forall(b, forall(c, in(pair(a, b), membershipRelation(x)) /\ in(pair(b, c), membershipRelation(x)) ==> in(pair(a, c), membershipRelation(x))))) by RightForall
-      thenHave(elemOrd |- forall(a, forall(b, forall(c, in(pair(a, b), membershipRelation(x)) /\ in(pair(b, c), membershipRelation(x)) ==> in(pair(a, c), membershipRelation(x)))))) by RightForall
+      have((a ∈ b, b ∈ c, a ∈ x, c ∈ x, ordinal(c)) |- pair(a, c) ∈ membershipRelation(x)) by Cut(ordinalTransitive, membershipRelationIntro of (b := c))
+      have((elemOrd, a ∈ b, b ∈ c, a ∈ x, c ∈ x) |- pair(a, c) ∈ membershipRelation(x)) by Cut(membershipIsOrd of (a := c), lastStep)
+      thenHave((elemOrd, a ∈ b, b ∈ c, a ∈ x /\ b ∈ x, b ∈ x /\ c ∈ x) |- pair(a, c) ∈ membershipRelation(x)) by Weakening
+      have((elemOrd, a ∈ b, b ∈ c, a ∈ x /\ b ∈ x, pair(b, c) ∈ membershipRelation(x)) |- pair(a, c) ∈ membershipRelation(x)) by Cut(membershipRelationInDomainPair of (a := b , b := c), lastStep)
+      have((elemOrd, a ∈ b, a ∈ x /\ b ∈ x, pair(b, c) ∈ membershipRelation(x)) |- pair(a, c) ∈ membershipRelation(x)) by Cut(membershipRelationIsMembershipPair of (a := b, b := c), lastStep)
+      have((elemOrd, a ∈ b, pair(a, b) ∈ membershipRelation(x), pair(b, c) ∈ membershipRelation(x)) |- pair(a, c) ∈ membershipRelation(x)) by Cut(membershipRelationInDomainPair, lastStep)
+      have((elemOrd, pair(a, b) ∈ membershipRelation(x), pair(b, c) ∈ membershipRelation(x)) |- pair(a, c) ∈ membershipRelation(x)) by Cut(membershipRelationIsMembershipPair, lastStep)
+      thenHave(elemOrd |- (pair(a, b) ∈ membershipRelation(x) /\ pair(b, c) ∈ membershipRelation(x)) ==> pair(a, c) ∈ membershipRelation(x)) by Restate
+      thenHave(elemOrd |- ∀(c, (pair(a, b) ∈ membershipRelation(x) /\ pair(b, c) ∈ membershipRelation(x)) ==> pair(a, c) ∈ membershipRelation(x))) by RightForall
+      thenHave(elemOrd |- ∀(b, ∀(c, pair(a, b) ∈ membershipRelation(x) /\ pair(b, c) ∈ membershipRelation(x) ==> pair(a, c) ∈ membershipRelation(x)))) by RightForall
+      thenHave(elemOrd |- ∀(a, ∀(b, ∀(c, pair(a, b) ∈ membershipRelation(x) /\ pair(b, c) ∈ membershipRelation(x) ==> pair(a, c) ∈ membershipRelation(x))))) by RightForall
       have((elemOrd, relationBetween(membershipRelation(x), x, x)) |- transitive(membershipRelation(x), x)) by Cut(lastStep, transitiveIntro of (r := membershipRelation(x)))
       have(elemOrd |- transitive(membershipRelation(x), x)) by Cut(membershipRelationIsARelation, lastStep)
       have((elemOrd, irreflexive(membershipRelation(x), x)) |- strictPartialOrder(membershipRelation(x), x)) by Cut(lastStep, strictPartialOrderIntro of (r := membershipRelation(x)))
@@ -700,35 +700,35 @@ object Ordinals extends lisa.Main {
     }
 
     val strictTotOrd = have(elemOrd |- strictTotalOrder(membershipRelation(x), x)) subproof {
-      have((ordinal(a), ordinal(b), in(a, x), in(b, x)) |- (in(pair(a, b), membershipRelation(x)), in(b, a), a === b)) by Cut(ordinalCases, membershipRelationIntro)
-      have((ordinal(a), ordinal(b), in(a, x), in(b, x)) |- (in(pair(a, b), membershipRelation(x)), in(pair(b, a), membershipRelation(x)), a === b)) by Cut(lastStep, membershipRelationIntro of (a := b, b := a))
-      have((elemOrd, ordinal(b), in(a, x), in(b, x)) |- (in(pair(a, b), membershipRelation(x)), in(pair(b, a), membershipRelation(x)), a === b)) by Cut(membershipIsOrd, lastStep)
-      have((elemOrd, in(a, x), in(b, x)) |- (in(pair(a, b), membershipRelation(x)), in(pair(b, a), membershipRelation(x)), a === b)) by Cut(membershipIsOrd of (a := b), lastStep)
-      thenHave(elemOrd |- (in(a, x) /\ in(b, x)) ==> (in(pair(a, b), membershipRelation(x)) \/ in(pair(b, a), membershipRelation(x)) \/ (a === b))) by Restate
-      thenHave(elemOrd |- forall(b, (in(a, x) /\ in(b, x)) ==> in(pair(a, b), membershipRelation(x)) \/ in(pair(b, a), membershipRelation(x)) \/ (a === b))) by RightForall
-      thenHave(elemOrd |- forall(a, forall(b, (in(a, x) /\ in(b, x)) ==> in(pair(a, b), membershipRelation(x)) \/ in(pair(b, a), membershipRelation(x)) \/ (a === b)))) by RightForall
+      have((ordinal(a), ordinal(b), a ∈ x, b ∈ x) |- (pair(a, b) ∈ membershipRelation(x), b ∈ a, a === b)) by Cut(ordinalCases, membershipRelationIntro)
+      have((ordinal(a), ordinal(b), a ∈ x, b ∈ x) |- (pair(a, b) ∈ membershipRelation(x), pair(b, a) ∈ membershipRelation(x), a === b)) by Cut(lastStep, membershipRelationIntro of (a := b, b := a))
+      have((elemOrd, ordinal(b), a ∈ x, b ∈ x) |- (pair(a, b) ∈ membershipRelation(x), pair(b, a) ∈ membershipRelation(x), a === b)) by Cut(membershipIsOrd, lastStep)
+      have((elemOrd, a ∈ x, b ∈ x) |- (pair(a, b) ∈ membershipRelation(x), pair(b, a) ∈ membershipRelation(x), a === b)) by Cut(membershipIsOrd of (a := b), lastStep)
+      thenHave(elemOrd |- (a ∈ x /\ b ∈ x) ==> (pair(a, b) ∈ membershipRelation(x) \/ (pair(b, a) ∈ membershipRelation(x)) \/ (a === b))) by Restate
+      thenHave(elemOrd |- ∀(b, (a ∈ x /\ b ∈ x) ==> pair(a, b) ∈ membershipRelation(x) \/ (pair(b, a) ∈ membershipRelation(x)) \/ (a === b))) by RightForall
+      thenHave(elemOrd |- ∀(a, ∀(b, (a ∈ x /\ b ∈ x) ==> pair(a, b) ∈ membershipRelation(x) \/ (pair(b, a) ∈ membershipRelation(x)) \/ (a === b)))) by RightForall
       have((elemOrd, relationBetween(membershipRelation(x), x, x)) |- connected(membershipRelation(x), x)) by Cut(lastStep, connectedIntro of (r := membershipRelation(x)))
       have(elemOrd |- connected(membershipRelation(x), x)) by Cut(membershipRelationIsARelation, lastStep)
       have((elemOrd, strictPartialOrder(membershipRelation(x), x)) |- strictTotalOrder(membershipRelation(x), x)) by Cut(lastStep, strictTotalOrderIntro of (r := membershipRelation(x)))
       have(thesis) by Cut(strictPartOrd, lastStep)
     }
 
-    have(forall(b, in(b, y) ==> (in(a, b) \/ (a === b))) |- forall(b, in(b, y) ==> (in(a, b) \/ (a === b)))) by Hypothesis
-    thenHave((forall(b, in(b, y) ==> (in(a, b) \/ (a === b))), in(b, y)) |- (in(a, b), a === b)) by InstantiateForall(b)
-    have((forall(b, in(b, y) ==> (in(a, b) \/ (a === b))), in(a, x), in(b, x), in(b, y)) |- (in(pair(a, b), membershipRelation(x)), a === b)) by Cut(lastStep, membershipRelationIntro)
-    have((forall(b, in(b, y) ==> (in(a, b) \/ (a === b))), in(a, x), subset(y, x), in(b, y)) |- (in(pair(a, b), membershipRelation(x)), a === b)) by Cut(subsetElim of (x := y, y := x, z := b), lastStep)
-    thenHave((forall(b, in(b, y) ==> (in(a, b) \/ (a === b))), in(a, x), subset(y, x)) |- in(b, y) ==> (in(pair(a, b), membershipRelation(x)) \/ (a === b))) by Restate
-    thenHave((forall(b, in(b, y) ==> (in(a, b) \/ (a === b))), in(a, x), subset(y, x)) |- forall(b, in(b, y) ==> (in(pair(a, b), membershipRelation(x)) \/ (a === b)))) by RightForall
-    have((forall(b, in(b, y) ==> (in(a, b) \/ (a === b))), in(a, x), subset(y, x), in(a, y), strictPartialOrder(membershipRelation(x), x)) |- isLeastElement(a, y, membershipRelation(x), x)) by Cut(lastStep, isLeastElementIntro of (r := membershipRelation(x)))
-    have((forall(b, in(b, y) ==> (in(a, b) \/ (a === b))), subset(y, x), in(a, y), strictPartialOrder(membershipRelation(x), x)) |- isLeastElement(a, y, membershipRelation(x), x)) by Cut(subsetElim of (x := y, y := x, z := a), lastStep)
-    have((elemOrd, forall(b, in(b, y) ==> (in(a, b) \/ (a === b))), subset(y, x), in(a, y)) |- isLeastElement(a, y, membershipRelation(x), x)) by Cut(strictPartOrd, lastStep)
-    thenHave((elemOrd, in(a, y) /\ forall(b, in(b, y) ==> (in(a, b) \/ (a === b))), subset(y, x)) |- isLeastElement(a, y, membershipRelation(x), x)) by LeftAnd
-    thenHave((elemOrd, in(a, y) /\ forall(b, in(b, y) ==> (in(a, b) \/ (a === b))), subset(y, x)) |- exists(a, isLeastElement(a, y, membershipRelation(x), x))) by RightExists
-    thenHave((elemOrd, exists(a, in(a, y) /\ forall(b, in(b, y) ==> (in(a, b) \/ (a === b)))), subset(y, x)) |- exists(a, isLeastElement(a, y, membershipRelation(x), x))) by LeftExists
-    have((elemOrd, forall(a, in(a, y) ==> ordinal(a)), subset(y, x), !(y === emptySet)) |- exists(a, isLeastElement(a, y, membershipRelation(x), x))) by Cut(setOfOrdinalsHasLeastElement of (x := y), lastStep)
-    have((elemOrd, subset(y, x), !(y === emptySet)) |- exists(a, isLeastElement(a, y, membershipRelation(x), x))) by Cut(subsetElemOrdinals, lastStep)
-    thenHave(elemOrd |- (subset(y, x) /\ !(y === emptySet)) ==> exists(a, isLeastElement(a, y, membershipRelation(x), x))) by Restate
-    thenHave(elemOrd |- forall(y, subset(y, x) /\ !(y === emptySet) ==> exists(a, isLeastElement(a, y, membershipRelation(x), x)))) by RightForall
+    have(∀(b, b ∈ y ==> (a ∈ b \/ (a === b))) |- ∀(b, b ∈ y ==> (a ∈ b \/ (a === b)))) by Hypothesis
+    thenHave((∀(b, b ∈ y ==> (a ∈ b \/ (a === b))), b ∈ y) |- (a ∈ b, a === b)) by InstantiateForall(b)
+    have((∀(b, b ∈ y ==> (a ∈ b \/ (a === b))), a ∈ x, b ∈ x, b ∈ y) |- (pair(a, b) ∈ membershipRelation(x), a === b)) by Cut(lastStep, membershipRelationIntro)
+    have((∀(b, b ∈ y ==> (a ∈ b \/ (a === b))), a ∈ x, y ⊆ x, b ∈ y) |- (pair(a, b) ∈ membershipRelation(x), a === b)) by Cut(subsetElim of (x := y, y := x, z := b), lastStep)
+    thenHave((∀(b, b ∈ y ==> (a ∈ b \/ (a === b))), a ∈ x, y ⊆ x) |- b ∈ y ==> (pair(a, b) ∈ membershipRelation(x) \/ (a === b))) by Restate
+    thenHave((∀(b, b ∈ y ==> (a ∈ b \/ (a === b))), a ∈ x, y ⊆ x) |- ∀(b, b ∈ y ==> (pair(a, b) ∈ membershipRelation(x) \/ (a === b)))) by RightForall
+    have((∀(b, b ∈ y ==> (a ∈ b \/ (a === b))), a ∈ x, y ⊆ x, a ∈ y, strictPartialOrder(membershipRelation(x), x)) |- isLeastElement(a, y, membershipRelation(x), x)) by Cut(lastStep, isLeastElementIntro of (r := membershipRelation(x)))
+    have((∀(b, b ∈ y ==> (a ∈ b \/ (a === b))), y ⊆ x, a ∈ y, strictPartialOrder(membershipRelation(x), x)) |- isLeastElement(a, y, membershipRelation(x), x)) by Cut(subsetElim of (x := y, y := x, z := a), lastStep)
+    have((elemOrd, ∀(b, b ∈ y ==> (a ∈ b \/ (a === b))), y ⊆ x, a ∈ y) |- isLeastElement(a, y, membershipRelation(x), x)) by Cut(strictPartOrd, lastStep)
+    thenHave((elemOrd, a ∈ y /\ ∀(b, b ∈ y ==> (a ∈ b \/ (a === b))), y ⊆ x) |- isLeastElement(a, y, membershipRelation(x), x)) by LeftAnd
+    thenHave((elemOrd, a ∈ y /\ ∀(b, b ∈ y ==> (a ∈ b \/ (a === b))), y ⊆ x) |- ∃(a, isLeastElement(a, y, membershipRelation(x), x))) by RightExists
+    thenHave((elemOrd, ∃(a, a ∈ y /\ ∀(b, b ∈ y ==> (a ∈ b \/ (a === b)))), y ⊆ x) |- ∃(a, isLeastElement(a, y, membershipRelation(x), x))) by LeftExists
+    have((elemOrd, ∀(a, a ∈ y ==> ordinal(a)), y ⊆ x, !(y === ∅)) |- ∃(a, isLeastElement(a, y, membershipRelation(x), x))) by Cut(setOfOrdinalsHasLeastElement of (x := y), lastStep)
+    have((elemOrd, y ⊆ x, !(y === ∅)) |- ∃(a, isLeastElement(a, y, membershipRelation(x), x))) by Cut(subsetElemOrdinals, lastStep)
+    thenHave(elemOrd |- (y ⊆ x /\ !(y === ∅)) ==> ∃(a, isLeastElement(a, y, membershipRelation(x), x))) by Restate
+    thenHave(elemOrd |- ∀(y, y ⊆ x /\ !(y === ∅) ==> ∃(a, isLeastElement(a, y, membershipRelation(x), x)))) by RightForall
     have((elemOrd, strictTotalOrder(membershipRelation(x), x)) |- strictWellOrder(membershipRelation(x), x)) by Cut(lastStep, strictWellOrderIntro of (r := membershipRelation(x)))
     have(elemOrd |- strictWellOrder(membershipRelation(x), x)) by Cut(strictTotOrd, lastStep)
     have(thesis) by Cut(lastStep, ordinalIntro of (a := x))
@@ -740,28 +740,28 @@ object Ordinals extends lisa.Main {
     *   `¬∃x. x = {a | ordinal(a)}`
     */
   val noSetOfOrdinals = Lemma(
-    !exists(x, forall(a, in(a, x) <=> ordinal(a)))
+    !(∃(x, ∀(a, a ∈ x <=> ordinal(a))))
   ) {
-    val ordinalClass = forall(a, in(a, x) <=> ordinal(a))
+    val ordinalClass = ∀(a, a ∈ x <=> ordinal(a))
 
     have(ordinalClass |- ordinalClass) by Hypothesis
-    val ordinalClassDef = thenHave(ordinalClass |- in(a, x) <=> ordinal(a)) by InstantiateForall(a)
-    thenHave(ordinalClass |- in(a, x) ==> ordinal(a)) by Weakening
-    val ordinalClassIsSetOfOrd = thenHave(ordinalClass |- forall(a, in(a, x) ==> ordinal(a))) by RightForall
+    val ordinalClassDef = thenHave(ordinalClass |- a ∈ x <=> ordinal(a)) by InstantiateForall(a)
+    thenHave(ordinalClass |- a ∈ x ==> ordinal(a)) by Weakening
+    val ordinalClassIsSetOfOrd = thenHave(ordinalClass |- ∀(a, a ∈ x ==> ordinal(a))) by RightForall
     
     have(ordinalClass |- transitiveSet(x)) subproof {
-      have((in(a, x), in(b, a), ordinalClass) |- in(b, x)) by Substitution.ApplyRules(ordinalClassDef, ordinalClassDef of (a := b))(elementsOfOrdinalsAreOrdinals)
-      thenHave(ordinalClass |- (in(b, a) /\ in(a, x)) ==> in(b, x)) by Restate
-      thenHave(ordinalClass |- forall(a, (in(b, a) /\ in(a, x)) ==> in(b, x))) by RightForall
-      thenHave(ordinalClass |- forall(b, forall(a, (in(b, a) /\ in(a, x)) ==> in(b, x)))) by RightForall
+      have((a ∈ x, b ∈ a, ordinalClass) |- b ∈ x) by Substitution.ApplyRules(ordinalClassDef, ordinalClassDef of (a := b))(elementsOfOrdinalsAreOrdinals)
+      thenHave(ordinalClass |- (b ∈ a /\ a ∈ x) ==> b ∈ x) by Restate
+      thenHave(ordinalClass |- ∀(a, (b ∈ a /\ a ∈ x) ==> b ∈ x)) by RightForall
+      thenHave(ordinalClass |- ∀(b, ∀(a, (b ∈ a /\ a ∈ x) ==> b ∈ x))) by RightForall
       have(thesis) by Cut(lastStep, transitiveSetAltIntro)
     }
 
-    have((ordinalClass, forall(a, in(a, x) ==> ordinal(a))) |- ordinal(x)) by Cut(lastStep, transitiveSetOfOrdinalsIsOrdinal)
+    have((ordinalClass, ∀(a, a ∈ x ==> ordinal(a))) |- ordinal(x)) by Cut(lastStep, transitiveSetOfOrdinalsIsOrdinal)
     have(ordinalClass |- ordinal(x)) by Cut(ordinalClassIsSetOfOrd, lastStep)
-    thenHave(ordinalClass |- in(x, x)) by Substitution.ApplyRules(ordinalClassDef)
+    thenHave(ordinalClass |- x ∈ x) by Substitution.ApplyRules(ordinalClassDef)
     have(ordinalClass |- ()) by RightAnd(lastStep, selfNonMembership)
-    thenHave(exists(x, ordinalClass) |- ()) by LeftExists
+    thenHave(∃(x, ordinalClass) |- ()) by LeftExists
   }
 
   /**
@@ -769,56 +769,56 @@ object Ordinals extends lisa.Main {
     */
 
   val transfiniteInductionOnAllOrdinals = Lemma(
-    forall(a, ordinal(a) ==> (forall(b, in(b, a) ==> P(b)) ==> P(a))) |- forall(a, ordinal(a) ==> P(a))
+    ∀(a, ordinal(a) ==> (∀(b, b ∈ a ==> P(b)) ==> P(a))) |- ∀(a, ordinal(a) ==> P(a))
   ) {
-    val ih = forall(a, ordinal(a) ==> (forall(b, in(b, a) ==> P(b)) ==> P(a)))
+    val ih = ∀(a, ordinal(a) ==> (∀(b, b ∈ a ==> P(b)) ==> P(a)))
     have(ih |- ih) by Hypothesis
-    val ihImpliesPA = thenHave((ih, ordinal(a), forall(b, in(b, a) ==> P(b))) |- P(a)) by InstantiateForall(a)
+    val ihImpliesPA = thenHave((ih, ordinal(a), ∀(b, b ∈ a ==> P(b))) |- P(a)) by InstantiateForall(a)
 
     have((ordinal(x) /\ !P(x)) ==> ordinal(x)) by Restate
-    val ordIsOrd = thenHave(forall(x, (ordinal(x) /\ !P(x)) ==> ordinal(x))) by RightForall
+    val ordIsOrd = thenHave(∀(x, (ordinal(x) /\ !P(x)) ==> ordinal(x))) by RightForall
 
-    have(a === b |- !in(b, a)) by RightSubstEq.withParametersSimple(List((a, b)), lambda(x, !in(x, a)))(selfNonMembership of (x := a))
-    val right = thenHave(in(b, a) |- !(a === b)) by Restate
-    val left = have(in(b, a) |- !in(a, b)) by Restate.from(membershipAsymmetry of (x := a, y := b))
-    val ordCases = have(in(b, a) |- !in(a, b) /\ !(a === b)) by RightAnd(left, right)
+    have(a === b |- b ∉ a) by RightSubstEq.withParametersSimple(List((a, b)), lambda(x, x ∉ a))(selfNonMembership of (x := a))
+    val right = thenHave(b ∈ a |- a =/= b) by Restate
+    val left = have(b ∈ a |- a ∉ b) by Restate.from(membershipAsymmetry of (x := a, y := b))
+    val ordCases = have(b ∈ a |- a ∉ b /\ (a =/= b)) by RightAnd(left, right)
 
-    val minElement = forall(b, ((ordinal(b) /\ !P(b)) ==> (in(a, b) \/ (a === b))))
+    val minElement = ∀(b, ((ordinal(b) /\ !P(b)) ==> (a ∈ b \/ (a === b))))
     have(minElement |- minElement) by Hypothesis
-    thenHave((minElement, ordinal(b), !in(a, b) /\ !(a === b)) |- P(b)) by InstantiateForall(b)
-    have((minElement, ordinal(b), in(b, a)) |- P(b)) by Cut(ordCases, lastStep)
-    have((minElement, ordinal(a), in(b, a)) |- P(b)) by Cut(elementsOfOrdinalsAreOrdinals, lastStep)
-    thenHave((minElement, ordinal(a)) |- in(b, a) ==> P(b)) by RightImplies
-    thenHave((minElement, ordinal(a)) |- forall(b, in(b, a) ==> P(b))) by RightForall
+    thenHave((minElement, ordinal(b), a ∉ b /\ (a =/= b)) |- P(b)) by InstantiateForall(b)
+    have((minElement, ordinal(b), b ∈ a) |- P(b)) by Cut(ordCases, lastStep)
+    have((minElement, ordinal(a), b ∈ a) |- P(b)) by Cut(elementsOfOrdinalsAreOrdinals, lastStep)
+    thenHave((minElement, ordinal(a)) |- b ∈ a ==> P(b)) by RightImplies
+    thenHave((minElement, ordinal(a)) |- ∀(b, b ∈ a ==> P(b))) by RightForall
     have((minElement, ordinal(a), ih) |- P(a)) by Cut(lastStep, ihImpliesPA)
     thenHave((ordinal(a) /\ !P(a) /\ minElement, ih) |- ()) by Restate
-    thenHave((exists(a, ordinal(a) /\ !P(a) /\ minElement), ih) |- ()) by LeftExists
-    have((forall(x, (ordinal(x) /\ !P(x)) ==> ordinal(x)), exists(x, ordinal(x) /\ !P(x)), ih) |- ()) by Cut(ordinalSubclassHasMinimalElement of (P := lambda(x, ordinal(x) /\ !P(x))), lastStep)
-    have((ih, exists(x, ordinal(x) /\ !P(x))) |- ()) by Cut(ordIsOrd, lastStep)
+    thenHave((∃(a, ordinal(a) /\ !P(a) /\ minElement), ih) |- ()) by LeftExists
+    have((∀(x, (ordinal(x) /\ !P(x)) ==> ordinal(x)), ∃(x, ordinal(x) /\ !P(x)), ih) |- ()) by Cut(ordinalSubclassHasMinimalElement of (P := lambda(x, ordinal(x) /\ !P(x))), lastStep)
+    have((ih, ∃(x, ordinal(x) /\ !P(x))) |- ()) by Cut(ordIsOrd, lastStep)
   }
 
   val transfiniteInductionOnOrdinal = Lemma(
-    (ordinal(x), forall(a, in(a, x) ==> (forall(b, in(b, a) ==> P(b)) ==> P(a)))) |- forall(a, in(a, x) ==> P(a))
+    (ordinal(x), ∀(a, a ∈ x ==> (∀(b, b ∈ a ==> P(b)) ==> P(a)))) |- ∀(a, a ∈ x ==> P(a))
   ) {
-    val ih = have((forall(b, in(b, a) ==> (in(b, x) ==> P(b))), in(a, x), ordinal(x)) |- forall(b, in(b, a) ==> P(b))) subproof {
-      have(forall(b, in(b, a) ==> (in(b, x) ==> P(b))) |- forall(b, in(b, a) ==> (in(b, x) ==> P(b)))) by Hypothesis
-      thenHave((forall(b, in(b, a) ==> (in(b, x) ==> P(b))), in(b, a), in(b, x)) |- P(b)) by InstantiateForall(b)
-      have((forall(b, in(b, a) ==> (in(b, x) ==> P(b))), in(b, a), in(a, x), ordinal(x)) |- P(b)) by Cut(ordinalTransitive of (a := b, b := a, c := x), lastStep)
-      thenHave((forall(b, in(b, a) ==> (in(b, x) ==> P(b))), in(a, x), ordinal(x)) |- in(b, a) ==> P(b)) by RightImplies
+    val ih = have((∀(b, b ∈ a ==> (b ∈ x ==> P(b))), a ∈ x, ordinal(x)) |- ∀(b, b ∈ a ==> P(b))) subproof {
+      have(∀(b, b ∈ a ==> (b ∈ x ==> P(b))) |- ∀(b, b ∈ a ==> (b ∈ x ==> P(b)))) by Hypothesis
+      thenHave((∀(b, b ∈ a ==> (b ∈ x ==> P(b))), b ∈ a, b ∈ x) |- P(b)) by InstantiateForall(b)
+      have((∀(b, b ∈ a ==> (b ∈ x ==> P(b))), b ∈ a, a ∈ x, ordinal(x)) |- P(b)) by Cut(ordinalTransitive of (a := b, b := a, c := x), lastStep)
+      thenHave((∀(b, b ∈ a ==> (b ∈ x ==> P(b))), a ∈ x, ordinal(x)) |- b ∈ a ==> P(b)) by RightImplies
       thenHave(thesis) by RightForall
     }
 
-    val assumptions = in(a, x) ==> (forall(b, in(b, a) ==> P(b)) ==> P(a))
+    val assumptions = a ∈ x ==> (∀(b, b ∈ a ==> P(b)) ==> P(a))
 
-    have((assumptions, forall(b, in(b, a) ==> P(b)), in(a, x)) |- P(a)) by Restate
-    have((assumptions, in(a, x), forall(b, in(b, a) ==> (in(b, x) ==> P(b))), ordinal(x)) |- P(a)) by Cut(ih, lastStep)
-    thenHave((forall(a, assumptions), in(a, x), forall(b, in(b, a) ==> (in(b, x) ==> P(b))), ordinal(x)) |- P(a)) by LeftForall
-    thenHave((forall(a, assumptions), ordinal(x)) |-  ordinal(a) ==> (forall(b, in(b, a) ==> (in(b, x) ==> P(b))) ==> (in(a, x) ==> P(a)))) by Weakening
-    thenHave((forall(a, assumptions), ordinal(x)) |-  forall(a, ordinal(a) ==> (forall(b, in(b, a) ==> (in(b, x) ==> P(b))) ==> (in(a, x) ==> P(a))))) by RightForall
-    have((forall(a, assumptions), ordinal(x)) |- forall(a, ordinal(a) ==> (in(a, x) ==> P(a)))) by Cut(lastStep, transfiniteInductionOnAllOrdinals of (P := lambda(a, in(a, x) ==> P(a))))
-    thenHave((forall(a, assumptions), ordinal(x), ordinal(a), in(a, x)) |- P(a)) by InstantiateForall(a)
-    have((forall(a, assumptions), ordinal(x), in(a, x)) |- P(a)) by Cut(elementsOfOrdinalsAreOrdinals of (b := a, a := x), lastStep)
-    thenHave((forall(a, assumptions), ordinal(x)) |- in(a, x) ==> P(a)) by RightImplies
+    have((assumptions, ∀(b, b ∈ a ==> P(b)), a ∈ x) |- P(a)) by Restate
+    have((assumptions, a ∈ x, ∀(b, b ∈ a ==> (b ∈ x ==> P(b))), ordinal(x)) |- P(a)) by Cut(ih, lastStep)
+    thenHave((∀(a, assumptions), a ∈ x, ∀(b, b ∈ a ==> (b ∈ x ==> P(b))), ordinal(x)) |- P(a)) by LeftForall
+    thenHave((∀(a, assumptions), ordinal(x)) |-  ordinal(a) ==> (∀(b, b ∈ a ==> (b ∈ x ==> P(b))) ==> (a ∈ x ==> P(a)))) by Weakening
+    thenHave((∀(a, assumptions), ordinal(x)) |-  ∀(a, ordinal(a) ==> (∀(b, b ∈ a ==> (b ∈ x ==> P(b))) ==> (a ∈ x ==> P(a))))) by RightForall
+    have((∀(a, assumptions), ordinal(x)) |- ∀(a, ordinal(a) ==> (a ∈ x ==> P(a)))) by Cut(lastStep, transfiniteInductionOnAllOrdinals of (P := lambda(a, a ∈ x ==> P(a))))
+    thenHave((∀(a, assumptions), ordinal(x), ordinal(a), a ∈ x) |- P(a)) by InstantiateForall(a)
+    have((∀(a, assumptions), ordinal(x), a ∈ x) |- P(a)) by Cut(elementsOfOrdinalsAreOrdinals of (b := a, a := x), lastStep)
+    thenHave((∀(a, assumptions), ordinal(x)) |- a ∈ x ==> P(a)) by RightImplies
     thenHave(thesis) by RightForall
   }
 
@@ -831,26 +831,26 @@ object Ordinals extends lisa.Main {
    *
    *     `a < a + 1`
    */
-  val inSuccessor = Lemma(in(a, successor(a))) {
-    have(in(a, singleton(a)) |- in(a, successor(a))) by Substitution.ApplyRules(successor.shortDefinition)(setUnionRightIntro of (x := a, y := singleton(a), z := a))
+  val inSuccessor = Lemma(a ∈ successor(a)) {
+    have(a ∈ singleton(a) |- a ∈ successor(a)) by Substitution.ApplyRules(successor.shortDefinition)(setUnionRightIntro of (x := a, y := singleton(a), z := a))
     have(thesis) by Cut(singletonIntro of (x := a), lastStep)
   }
 
-  val inSuccessorLeq = Lemma(in(b, successor(a)) |- (in(b, a), a === b)) {
-    have(in(b, setUnion(a, singleton(a))) |-  (in(b, a), a === b)) by Cut(setUnionElim of (x := a, y := singleton(a), z := b), singletonElim of (y := b, x := a))
+  val inSuccessorLeq = Lemma(b ∈ successor(a) |- (b ∈ a, a === b)) {
+    have(b ∈ setUnion(a, singleton(a)) |-  (b ∈ a, a === b)) by Cut(setUnionElim of (x := a, y := singleton(a), z := b), singletonElim of (y := b, x := a))
     thenHave(thesis) by Substitution.ApplyRules(successor.shortDefinition)
   }
 
-  val inSuccessorSubset = Lemma((ordinal(a), in(b, successor(a))) |- subset(b, a)) {
-    have(in(b, successor(a)) |- in(b, a) \/ (a === b)) by Restate.from(inSuccessorLeq)
+  val inSuccessorSubset = Lemma((ordinal(a), b ∈ successor(a)) |- b ⊆ a) {
+    have(b ∈ successor(a) |- b ∈ a \/ (a === b)) by Restate.from(inSuccessorLeq)
     have(thesis) by Cut(lastStep, ordinalLeqImpliesSubset of (b := a, a := b))
   }
 
   val successorIsTransitiveSet = Lemma(transitiveSet(a) |- transitiveSet(successor(a))) {
     have(transitiveSet(a) |- transitiveSet(a)) by Hypothesis
-    thenHave((transitiveSet(a), in(x, singleton(a))) |- transitiveSet(x)) by Substitution.ApplyRules(singletonElim)
-    thenHave(transitiveSet(a) |- in(x, singleton(a)) ==> transitiveSet(x)) by RightImplies
-    thenHave(transitiveSet(a) |- forall(x, in(x, singleton(a)) ==> transitiveSet(x))) by RightForall
+    thenHave((transitiveSet(a), x ∈ singleton(a)) |- transitiveSet(x)) by Substitution.ApplyRules(singletonElim)
+    thenHave(transitiveSet(a) |- x ∈ singleton(a) ==> transitiveSet(x)) by RightImplies
+    thenHave(transitiveSet(a) |- ∀(x, x ∈ singleton(a) ==> transitiveSet(x))) by RightForall
     have(transitiveSet(a) |- transitiveSet(setUnion(union(singleton(a)), singleton(a)))) by Cut(lastStep, transitiveSetUnionAndElement of (y := singleton(a)))
     thenHave(transitiveSet(a) |- transitiveSet(setUnion(a, singleton(a)))) by Substitution.ApplyRules(unionSingleton)
     thenHave(thesis) by Substitution.ApplyRules(successor.shortDefinition)
@@ -859,38 +859,38 @@ object Ordinals extends lisa.Main {
   val successorIsOrdinal = Lemma(ordinal(a) |- ordinal(successor(a))) {
     have(ordinal(a) |- ordinal(a)) by Hypothesis
     thenHave((ordinal(a), a === b) |- ordinal(b)) by RightSubstEq.withParametersSimple(List((b, a)), lambda(x, ordinal(x)))
-    have((ordinal(a), in(b, successor(a))) |- (in(b, a), ordinal(b))) by Cut(inSuccessorLeq, lastStep)
-    have((ordinal(a), in(b, successor(a))) |- ordinal(b)) by Cut(lastStep, elementsOfOrdinalsAreOrdinals)
-    thenHave(ordinal(a) |- in(b, successor(a)) ==> ordinal(b)) by RightImplies
-    thenHave(ordinal(a) |- forall(b, in(b, successor(a)) ==> ordinal(b))) by RightForall
+    have((ordinal(a), b ∈ successor(a)) |- (b ∈ a, ordinal(b))) by Cut(inSuccessorLeq, lastStep)
+    have((ordinal(a), b ∈ successor(a)) |- ordinal(b)) by Cut(lastStep, elementsOfOrdinalsAreOrdinals)
+    thenHave(ordinal(a) |- b ∈ successor(a) ==> ordinal(b)) by RightImplies
+    thenHave(ordinal(a) |- ∀(b, b ∈ successor(a) ==> ordinal(b))) by RightForall
     have((ordinal(a), transitiveSet(successor(a))) |- ordinal(successor(a))) by Cut(lastStep, transitiveSetOfOrdinalsIsOrdinal of (x := successor(a)))
     have((ordinal(a), transitiveSet(a)) |- ordinal(successor(a))) by Cut(successorIsTransitiveSet, lastStep)
     have(thesis) by Cut(ordinalTransitiveSet, lastStep)
   }
 
-  val ordinalLeqImpliesInSuccessor = Lemma((ordinal(a), in(b, a) \/ (a === b)) |- in(b, successor(a))) {
-    have((ordinal(successor(a)), in(b, a) \/ (a === b)) |- in(b, successor(a))) by Cut(inSuccessor, ordinalLeqLtImpliesLt of (a := b, b := a, c := successor(a)))
+  val ordinalLeqImpliesInSuccessor = Lemma((ordinal(a), b ∈ a \/ (a === b)) |- b ∈ successor(a)) {
+    have((ordinal(successor(a)), b ∈ a \/ (a === b)) |- b ∈ successor(a)) by Cut(inSuccessor, ordinalLeqLtImpliesLt of (a := b, b := a, c := successor(a)))
     have(thesis) by Cut(successorIsOrdinal, lastStep)
   }
 
-  val ordinalSubsetImpliesInSuccessor = Lemma((ordinal(a), ordinal(b), subset(b, a)) |- in(b, successor(a))) {
-    have((ordinal(a), ordinal(b), subset(b, a)) |- in(b, a) \/ (a === b)) by Restate.from(ordinalSubsetImpliesLeq of (b := a, a := b))
+  val ordinalSubsetImpliesInSuccessor = Lemma((ordinal(a), ordinal(b), b ⊆ a) |- b ∈ successor(a)) {
+    have((ordinal(a), ordinal(b), b ⊆ a) |- b ∈ a \/ (a === b)) by Restate.from(ordinalSubsetImpliesLeq of (b := a, a := b))
     have(thesis) by Cut(lastStep, ordinalLeqImpliesInSuccessor)
   }
 
-  val ordinalSubsetIffInSuccessor = Lemma((ordinal(a), ordinal(b)) |- subset(b, a) <=> in(b, successor(a))) {
-    val forward = have((ordinal(a), ordinal(b)) |- subset(b, a) ==> in(b, successor(a))) by RightImplies(ordinalSubsetImpliesInSuccessor)
-    val backward = have(ordinal(a) |- in(b, successor(a)) ==> subset(b, a)) by RightImplies(inSuccessorSubset)
+  val ordinalSubsetIffInSuccessor = Lemma((ordinal(a), ordinal(b)) |- b ⊆ a <=> b ∈ successor(a)) {
+    val forward = have((ordinal(a), ordinal(b)) |- b ⊆ a ==> b ∈ successor(a)) by RightImplies(ordinalSubsetImpliesInSuccessor)
+    val backward = have(ordinal(a) |- b ∈ successor(a) ==> b ⊆ a) by RightImplies(inSuccessorSubset)
     have(thesis) by RightIff(forward, backward)
   }
   
 
   val successorNoInBetween = Lemma(
-    (in(a, b), in(b, successor(a))) |- ()
+    (a ∈ b, b ∈ successor(a)) |- ()
   ) {
-    val subst = have((in(a, b), in(b, successor(a))) |- a === b) by Cut(inSuccessorLeq, membershipAsymmetry of (x := a, y := b))
-    have(in(a, b) |- in(a, b)) by Hypothesis
-    thenHave((in(a, b), in(b, successor(a))) |- in(a, a)) by Substitution.ApplyRules(subst)
+    val subst = have((a ∈ b, b ∈ successor(a)) |- a === b) by Cut(inSuccessorLeq, membershipAsymmetry of (x := a, y := b))
+    have(a ∈ b |- a ∈ b) by Hypothesis
+    thenHave((a ∈ b, b ∈ successor(a)) |- a ∈ a) by Substitution.ApplyRules(subst)
     have(thesis) by RightAnd(lastStep, selfNonMembership of (x := a))
   }
 
@@ -898,7 +898,7 @@ object Ordinals extends lisa.Main {
     have(thesis) by Cut(inSuccessor, elementsOfOrdinalsAreOrdinals of (b := a, a := successor(a)))
   }
 
-  val successorPreservesSubset = Lemma(subset(a, b) |- subset(successor(a), successor(b))) {
+  val successorPreservesSubset = Lemma(a ⊆ b |- successor(a) ⊆ successor(b)) {
     sorry
   }
 
@@ -911,7 +911,7 @@ object Ordinals extends lisa.Main {
    * 
    *   `a ≠ 0`
    */
-  val successorNonEmpty = Lemma(!(successor(a) === emptySet)) {
+  val successorNonEmpty = Lemma(!(successor(a) === ∅)) {
     have(thesis) by Cut(inSuccessor, setWithElementNonEmpty of (y := a, x := successor(a)))
   }
 
@@ -920,23 +920,23 @@ object Ordinals extends lisa.Main {
     * 
     *    `a ⊆ a + 1`
     */
-  val subsetSuccessor = Lemma(subset(a, successor(a))) {
+  val subsetSuccessor = Lemma(a ⊆ successor(a)) {
     have(thesis) by Substitution.ApplyRules(successor.shortDefinition)(setUnionLeftSubset of (b := singleton(a)))
   }
 
 
 
 
-  val successorOrdinal = DEF(a) --> ordinal(a) /\ exists(b, a === successor(b))
-  val nonsuccessorOrdinal = DEF(a) --> ordinal(a) /\ !exists(b, a === successor(b))
+  val successorOrdinal = DEF(a) --> ordinal(a) /\ ∃(b, a === successor(b))
+  val nonsuccessorOrdinal = DEF(a) --> ordinal(a) /\ !(∃(b, a === successor(b)))
 
   val successorOrdinalIntro = Lemma(
     (ordinal(a), a === successor(b)) |- successorOrdinal(a)
   ) {
     have(a === successor(b) |- a === successor(b)) by Hypothesis
-    val right = thenHave(a === successor(b) |- exists(b, a === successor(b))) by RightExists
+    val right = thenHave(a === successor(b) |- ∃(b, a === successor(b))) by RightExists
     val left = have(ordinal(a) |- ordinal(a)) by Hypothesis
-    have((ordinal(a), a === successor(b)) |- ordinal(a) /\ exists(b, a === successor(b))) by RightAnd(left, right)
+    have((ordinal(a), a === successor(b)) |- ordinal(a) /\ ∃(b, a === successor(b))) by RightAnd(left, right)
     thenHave(thesis) by Substitution.ApplyRules(successorOrdinal.definition)
   }
 
@@ -953,22 +953,22 @@ object Ordinals extends lisa.Main {
     have(thesis) by Cut(successorIsOrdinal, lastStep)
   }
 
-  val intersectionInOrdinal = Lemma((ordinal(a), in(b, a)) |- a ∩ b === b) {
+  val intersectionInOrdinal = Lemma((ordinal(a), b ∈ a) |- a ∩ b === b) {
     have(thesis) by Cut(elementOfOrdinalIsSubset of (a := b, b := a), setIntersectionOfSubsetBackward of (y := b, x := a))
   }
 
   val nonsuccessorOrdinalElim = Lemma(
     nonsuccessorOrdinal(a) |- !(a === successor(b))
   ) {
-    have(nonsuccessorOrdinal(a) |- forall(b, !(a === successor(b)))) by Weakening(nonsuccessorOrdinal.definition)
+    have(nonsuccessorOrdinal(a) |- ∀(b, !(a === successor(b)))) by Weakening(nonsuccessorOrdinal.definition)
     thenHave(thesis) by InstantiateForall(b)
   }
 
-  val nonsuccessorOrdinalIsInductive = Lemma((nonsuccessorOrdinal(a), in(b, a)) |- in(successor(b), a)) {
-    have((ordinal(a), ordinal(successor(b)), in(b, a)) |- (in(successor(b), a), a === successor(b))) by Cut(ordinalCases of (b := successor(b)), successorNoInBetween of (a := b, b := a))
-    have((nonsuccessorOrdinal(a), ordinal(a), ordinal(successor(b)), in(b, a)) |- in(successor(b), a)) by RightAnd(nonsuccessorOrdinalElim, lastStep)
-    have((nonsuccessorOrdinal(a), ordinal(a), ordinal(b), in(b, a)) |- in(successor(b), a)) by Cut(successorIsOrdinal of (a := b), lastStep)
-    have((nonsuccessorOrdinal(a), ordinal(a), in(b, a)) |- in(successor(b), a)) by Cut(elementsOfOrdinalsAreOrdinals, lastStep)
+  val nonsuccessorOrdinalIsInductive = Lemma((nonsuccessorOrdinal(a), b ∈ a) |- successor(b) ∈ a) {
+    have((ordinal(a), ordinal(successor(b)), b ∈ a) |- (successor(b) ∈ a, a === successor(b))) by Cut(ordinalCases of (b := successor(b)), successorNoInBetween of (a := b, b := a))
+    have((nonsuccessorOrdinal(a), ordinal(a), ordinal(successor(b)), b ∈ a) |- successor(b) ∈ a) by RightAnd(nonsuccessorOrdinalElim, lastStep)
+    have((nonsuccessorOrdinal(a), ordinal(a), ordinal(b), b ∈ a) |- successor(b) ∈ a) by Cut(successorIsOrdinal of (a := b), lastStep)
+    have((nonsuccessorOrdinal(a), ordinal(a), b ∈ a) |- successor(b) ∈ a) by Cut(elementsOfOrdinalsAreOrdinals, lastStep)
     have(thesis) by Cut(nonsuccessorOrdinalIsOrdinal, lastStep)
   }
 
@@ -983,7 +983,7 @@ object Ordinals extends lisa.Main {
     sorry
   }
 
-  val leqOrdinalDef = Lemma(ordinal(n) |- subset(m, n) <=> m ∈ successor(n)) {
+  val leqOrdinalDef = Lemma(ordinal(n) |- m ⊆ n <=> m ∈ successor(n)) {
     sorry
   }
 

@@ -24,29 +24,29 @@ object SetTheory2 extends lisa.Main {
   private val Map = function[1]
 
   val primReplacement = Theorem(
-    ∀(x, in(x, A) ==> ∀(y, ∀(z, (P(x, y) /\ P(x, z)) ==> (y === z)))) |-
-      ∃(B, forall(y, in(y, B) <=> ∃(x, in(x, A) /\ P(x, y))))
+    ∀(x, x ∈ A ==> ∀(y, ∀(z, (P(x, y) /\ P(x, z)) ==> (y === z)))) |-
+      ∃(B, forall(y, y ∈ B <=> ∃(x, x ∈ A /\ P(x, y))))
   ) {
     have(thesis) by Restate.from(replacementSchema of (A := A, x := x, P := P))
   }
 
   val manyForall = Lemma(
-    ∀(x, in(x, A) ==> ∀(y, ∀(z, (P(x, y) /\ P(x, z)) ==> (y === z)))).substitute(P := lambda((A, B), P(A, B) /\ ∀(C, P(A, C) ==> (B === C)))) <=> top
+    ∀(x, x ∈ A ==> ∀(y, ∀(z, (P(x, y) /\ P(x, z)) ==> (y === z)))).substitute(P := lambda((A, B), P(A, B) /\ ∀(C, P(A, C) ==> (B === C)))) <=> top
   ) {
     have(thesis) by Tableau
   }
 
   val functionalIsFunctional = Lemma(
-    ∀(x, in(x, A) ==> ∀(y, ∀(z, (P(x, y) /\ P(x, z)) ==> (y === z)))).substitute(P := lambda((A, B), Filter(A) /\ (B === Map(A)))) <=> top
+    ∀(x, x ∈ A ==> ∀(y, ∀(z, (P(x, y) /\ P(x, z)) ==> (y === z)))).substitute(P := lambda((A, B), Filter(A) /\ (B === Map(A)))) <=> top
   ) {
 
     have(y === Map(x) |- (y === Map(x))) by Restate
     thenHave((y === Map(x), z === Map(x)) |- y === z) by Substitution.ApplyRules(Map(x) === z)
-    thenHave(in(x, A) |- ((Filter(x) /\ (y === Map(x)) /\ (z === Map(x))) ==> (y === z))) by Weakening
-    thenHave(in(x, A) |- ∀(z, ((Filter(x) /\ (y === Map(x)) /\ (z === Map(x))) ==> (y === z)))) by RightForall
-    thenHave(in(x, A) |- ∀(y, ∀(z, ((Filter(x) /\ (y === Map(x)) /\ (z === Map(x))) ==> (y === z))))) by RightForall
-    thenHave(in(x, A) ==> ∀(y, ∀(z, ((Filter(x) /\ (y === Map(x)) /\ (z === Map(x))) ==> (y === z))))) by Restate
-    thenHave(∀(x, in(x, A) ==> ∀(y, ∀(z, ((Filter(x) /\ (y === Map(x)) /\ (z === Map(x))) ==> (y === z)))))) by RightForall
+    thenHave(x ∈ A |- ((Filter(x) /\ (y === Map(x)) /\ (z === Map(x))) ==> (y === z))) by Weakening
+    thenHave(x ∈ A |- ∀(z, ((Filter(x) /\ (y === Map(x)) /\ (z === Map(x))) ==> (y === z)))) by RightForall
+    thenHave(x ∈ A |- ∀(y, ∀(z, ((Filter(x) /\ (y === Map(x)) /\ (z === Map(x))) ==> (y === z))))) by RightForall
+    thenHave(x ∈ A ==> ∀(y, ∀(z, ((Filter(x) /\ (y === Map(x)) /\ (z === Map(x))) ==> (y === z))))) by Restate
+    thenHave(∀(x, x ∈ A ==> ∀(y, ∀(z, ((Filter(x) /\ (y === Map(x)) /\ (z === Map(x))) ==> (y === z)))))) by RightForall
     thenHave(thesis) by Restate
 
   }
@@ -55,7 +55,7 @@ object SetTheory2 extends lisa.Main {
    * Theorem --- the refined replacement axiom. Easier to use as a rule than primReplacement.
    */
   val replacement = Theorem(
-    ∃(B, ∀(y, in(y, B) <=> ∃(x, in(x, A) /\ P(x, y) /\ ∀(z, P(x, z) ==> (z === y)))))
+    ∃(B, ∀(y, y ∈ B <=> ∃(x, x ∈ A /\ P(x, y) /\ ∀(z, P(x, z) ==> (z === y)))))
   ) {
     have(thesis) by Tautology.from(manyForall, primReplacement of (P := lambda((A, B), P(A, B) /\ ∀(C, P(A, C) ==> (B === C)))))
   }

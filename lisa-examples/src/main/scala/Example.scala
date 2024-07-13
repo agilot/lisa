@@ -72,7 +72,7 @@ object Example extends lisa.Main {
   val succ = DEF(x) --> union(unorderedPair(x, singleton(x)))
   show
 
-  val inductiveSet = DEF(x) --> in(∅, x) /\ forall(y, in(y, x) ==> in(succ(y), x))
+  val inductiveSet = DEF(x) --> in(∅, x) /\ forall(y, y ∈ x ==> in(succ(y), x))
   show
 
    */

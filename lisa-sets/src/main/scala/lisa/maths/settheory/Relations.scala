@@ -41,47 +41,47 @@ object Relations extends lisa.Main {
    * the [[cartesianProduct]] of `a` and `b`, `a * b`. We say `x r y`, `r(x,
    * y)`, or `r relates x to y` for `(x, y) ∈ r`.
    */
-  val relationBetween = DEF(r, a, b) --> subset(r, cartesianProduct(a, b))
+  val relationBetween = DEF(r, a, b) --> r ⊆ cartesianProduct(a, b)
 
   val pairReconstructionInRelationBetween = Lemma(
-    (relationBetween(r, a, b), in(p, r)) |- p === pair(firstInPair(p), secondInPair(p))
+    (relationBetween(r, a, b), p ∈ r) |- p === pair(firstInPair(p), secondInPair(p))
   ) {
-    have(relationBetween(r, a, b) |- subset(r, cartesianProduct(a, b))) by Weakening(relationBetween.definition)
-    have((relationBetween(r, a, b), in(p, r)) |- in(p, cartesianProduct(a, b))) by Cut(lastStep, subsetElim of (z := p, x := r, y := cartesianProduct(a, b)))
+    have(relationBetween(r, a, b) |- r ⊆ cartesianProduct(a, b)) by Weakening(relationBetween.definition)
+    have((relationBetween(r, a, b), p ∈ r) |- p ∈ cartesianProduct(a, b)) by Cut(lastStep, subsetElim of (z := p, x := r, y := cartesianProduct(a, b)))
     have(thesis) by Cut(lastStep, pairReconstructionInCartesianProduct of (t := p, x := a, y := b))
   }
 
   /**
    * Lemma --- Pair in Relation
    *
-   * If a pair `(x, y)` exists in a relation `r` from `a` to `b`,
+   * If a pair `(x, y)` ∃ in a relation `r` from `a` to `b`,
    * then `x` and `y` are elements of `a` and `b` respectively.
    */
   val relationBetweenElimPair = Lemma(
-    (relationBetween(r, a, b), in(pair(x, y), r)) |- in(x, a) /\ in(y, b)
+    (relationBetween(r, a, b), pair(x, y) ∈ r) |- x ∈ a /\ y ∈ b
   ) {
-    have((relationBetween(r, a, b), in(pair(x, y), r)) |- in(pair(x, y), cartesianProduct(a, b))) by Substitution.ApplyRules(relationBetween.definition)(
+    have((relationBetween(r, a, b), pair(x, y) ∈ r) |- pair(x, y) ∈ cartesianProduct(a, b)) by Substitution.ApplyRules(relationBetween.definition)(
       subsetElim of (z := pair(x, y), x := r, y := cartesianProduct(a, b))
     )
     have(thesis) by Cut(lastStep, cartesianProductElimPair of (x := a, y := b, a := x, b := y))
   }
 
   val relationBetweenElim = Lemma(
-    (relationBetween(r, a, b), in(p, r)) |- in(firstInPair(p), a) /\ in(secondInPair(p), b)
+    (relationBetween(r, a, b), p ∈ r) |- firstInPair(p) ∈ a /\ secondInPair(p) ∈ b
   ) {
     have(thesis) by Substitution.ApplyRules(pairReconstructionInRelationBetween)(relationBetweenElimPair of (x := firstInPair(p), y := secondInPair(p)))
   }
 
   val relationBetweenIntro = Lemma(
-    subset(r, cartesianProduct(a, b)) |- relationBetween(r, a, b)
+    r ⊆ cartesianProduct(a, b) |- relationBetween(r, a, b)
   ) {
     have(thesis) by Weakening(relationBetween.definition)
   }
 
   val relationBetweenSubset = Lemma(
-    (subset(r1, r2), relationBetween(r2, a, b)) |- relationBetween(r1, a, b)
+    (r1 ⊆ r2, relationBetween(r2, a, b)) |- relationBetween(r1, a, b)
   ) {
-    have((subset(r1, r2), relationBetween(r2, a, b)) |- subset(r1, cartesianProduct(a, b))) by
+    have((r1 ⊆ r2, relationBetween(r2, a, b)) |- r1 ⊆ cartesianProduct(a, b)) by
       Substitution.ApplyRules(relationBetween.definition)(subsetTransitivity of (x := r1, y := r2, z := cartesianProduct(a, b)))
     thenHave(thesis) by Substitution.ApplyRules(relationBetween.definition)
   }
@@ -90,24 +90,24 @@ object Relations extends lisa.Main {
    * Lemma --- the empty set is a relation, the empty relation, between any two sets.
    */
   val emptySetRelation = Lemma(
-    relationBetween(emptySet, a, b)
+    relationBetween(∅, a, b)
   ) {
-    have(thesis) by Cut(emptySetSubset of (x := cartesianProduct(a, b)), relationBetweenIntro of (r := emptySet))
+    have(thesis) by Cut(emptySetSubset of (x := cartesianProduct(a, b)), relationBetweenIntro of (r := ∅))
   }
 
   val relationBetweenLeftEmptyIsEmpty = Lemma(
-    relationBetween(r, emptySet, b) |- r === emptySet
+    relationBetween(r, ∅, b) |- r === ∅
   ) {
-    have(subset(r, emptySet) |- r === emptySet) by Weakening(subsetEmptySet of (x := r))
-    thenHave(subset(r, cartesianProduct(emptySet, b)) |- r === emptySet) by Substitution.ApplyRules(cartesianProductLeftEmpty of (y := b))
+    have(subset(r, ∅) |- r === ∅) by Weakening(subsetEmptySet of (x := r))
+    thenHave(subset(r, cartesianProduct(∅, b)) |- r === ∅) by Substitution.ApplyRules(cartesianProductLeftEmpty of (y := b))
     thenHave(thesis) by Substitution.ApplyRules(relationBetween.definition)
   }
 
   val relationBetweenRightEmptyIsEmpty = Lemma(
-    relationBetween(r, a, emptySet) |- r === emptySet
+    relationBetween(r, a, ∅) |- r === ∅
   ) {
-    have(subset(r, emptySet) |- r === emptySet) by Weakening(subsetEmptySet of (x := r))
-    thenHave(subset(r, cartesianProduct(a, emptySet)) |- r === emptySet) by Substitution.ApplyRules(cartesianProductRightEmpty of (x := a))
+    have(subset(r, ∅) |- r === ∅) by Weakening(subsetEmptySet of (x := r))
+    thenHave(subset(r, cartesianProduct(a, ∅)) |- r === ∅) by Substitution.ApplyRules(cartesianProductRightEmpty of (x := a))
     thenHave(thesis) by Substitution.ApplyRules(relationBetween.definition)
   }
 
@@ -115,9 +115,9 @@ object Relations extends lisa.Main {
    * Lemma --- the empty relation is a relation on the empty set.
    */
   val emptySetRelationOnItself = Lemma(
-    relationBetween(emptySet, emptySet, emptySet)
+    relationBetween(∅, ∅, ∅)
   ) {
-    have(thesis) by Restate.from(emptySetRelation of (a := emptySet, b := emptySet))
+    have(thesis) by Restate.from(emptySetRelation of (a := ∅, b := ∅))
   }
 
   /**
@@ -129,13 +129,13 @@ object Relations extends lisa.Main {
     (relationBetween(r1, a, b), relationBetween(r2, c, d)) |- relationBetween(setUnion(r1, r2), setUnion(a, c), setUnion(b, d))
   ) {
     have(
-      (subset(r1, cartesianProduct(a, b)), subset(r2, cartesianProduct(c, d)), subset(setUnion(cartesianProduct(a, b), cartesianProduct(c, d)), cartesianProduct(setUnion(a, c), setUnion(b, d)))) |-
+      (r1 ⊆ cartesianProduct(a, b), subset(r2, cartesianProduct(c, d)), subset(setUnion(cartesianProduct(a, b), cartesianProduct(c, d)), cartesianProduct(setUnion(a, c), setUnion(b, d)))) |-
         subset(setUnion(r1, r2), cartesianProduct(setUnion(a, c), setUnion(b, d)))
     ) by Cut(
       unionOfSubsetsOfDifferentSets of (a := r1, b := r2, c := cartesianProduct(a, b), d := cartesianProduct(c, d)),
       subsetTransitivity of (x := setUnion(r1, r2), y := setUnion(cartesianProduct(a, b), cartesianProduct(c, d)), z := cartesianProduct(setUnion(a, c), setUnion(b, d)))
     )
-    have((subset(r1, cartesianProduct(a, b)), subset(r2, cartesianProduct(c, d))) |- subset(setUnion(r1, r2), cartesianProduct(setUnion(a, c), setUnion(b, d)))) by Cut(
+    have((r1 ⊆ cartesianProduct(a, b), subset(r2, cartesianProduct(c, d))) |- subset(setUnion(r1, r2), cartesianProduct(setUnion(a, c), setUnion(b, d)))) by Cut(
       unionOfCartesianProducts,
       lastStep
     )
@@ -154,32 +154,32 @@ object Relations extends lisa.Main {
   }
 
   val relationBetweenSubsetDomains = Lemma(
-    (relationBetween(r, a, b), subset(a, c), subset(b, d)) |- relationBetween(r, c, d)
+    (relationBetween(r, a, b), a ⊆ c, b ⊆ d) |- relationBetween(r, c, d)
   ) {
-    have((subset(r, cartesianProduct(a, b)), subset(a, c), subset(b, d)) |- subset(r, cartesianProduct(c, d))) by Cut(
+    have((r ⊆ cartesianProduct(a, b), a ⊆ c, b ⊆ d) |- subset(r, cartesianProduct(c, d))) by Cut(
       cartesianProductSubset of (w := a, x := b, y := c, z := d),
       subsetTransitivity of (x := r, y := cartesianProduct(a, b), z := cartesianProduct(c, d))
     )
-    thenHave((subset(r, cartesianProduct(a, b)), subset(a, c), subset(b, d)) |- relationBetween(r, c, d)) by Substitution.ApplyRules(relationBetween.definition of (a := c, b := d))
+    thenHave((r ⊆ cartesianProduct(a, b), a ⊆ c, b ⊆ d) |- relationBetween(r, c, d)) by Substitution.ApplyRules(relationBetween.definition of (a := c, b := d))
     thenHave(thesis) by Substitution.ApplyRules(relationBetween.definition)
   }
 
   val relationBetweenSubsetLeftDomain = Lemma(
-    (relationBetween(r, a, b), subset(a, c)) |- relationBetween(r, c, b)
+    (relationBetween(r, a, b), a ⊆ c) |- relationBetween(r, c, b)
   ) {
     have(thesis) by Cut(subsetReflexivity of (x := b), relationBetweenSubsetDomains of (d := b))
   }
 
   val relationBetweenSubsetRightDomain = Lemma(
-    (relationBetween(r, a, b), subset(b, d)) |- relationBetween(r, a, d)
+    (relationBetween(r, a, b), b ⊆ d) |- relationBetween(r, a, d)
   ) {
     have(thesis) by Cut(subsetReflexivity of (x := a), relationBetweenSubsetDomains of (c := a))
   }
 
   val relationDomainUniqueness = Lemma(
-    ∃!(z, ∀(a, in(a, z) <=> (in(a, union(union(r))) /\ ∃(b, in(pair(a, b), r)))))
+    ∃!(z, ∀(a, a ∈ z <=> (a ∈ union(union(r)) /\ ∃(b, pair(a, b) ∈ r))))
   ) {
-    have(thesis) by UniqueComprehension(union(union(r)), lambda(a, ∃(b, in(pair(a, b), r))))
+    have(thesis) by UniqueComprehension(union(union(r)), lambda(a, ∃(b, pair(a, b) ∈ r)))
   }
 
   /**
@@ -198,18 +198,18 @@ object Relations extends lisa.Main {
    *
    * @param r relation (set)
    */
-  val relationDomain = DEF(r) --> The(z, ∀(a, in(a, z) <=> (in(a, union(union(r))) /\ ∃(b, in(pair(a, b), r)))))(relationDomainUniqueness)
+  val relationDomain = DEF(r) --> The(z, ∀(a, a ∈ z <=> (a ∈ union(union(r)) /\ ∃(b, pair(a, b) ∈ r))))(relationDomainUniqueness)
 
   val relationDomainMembership = Lemma(
-    in(a, relationDomain(r)) <=> ∃(b, in(pair(a, b), r))
+    a ∈ relationDomain(r) <=> ∃(b, pair(a, b) ∈ r)
   ) {
-    have(in(pair(a, b), r) |- in(a, union(union(r)))) by Weakening(pairComponentsInUnionUnion of (x := a, y := b))
-    thenHave(exists(b, in(pair(a, b), r)) |- in(a, union(union(r)))) by LeftExists
-    val redundancy = thenHave(exists(b, in(pair(a, b), r)) ==> in(a, union(union(r)))) by RightImplies
+    have(pair(a, b) ∈ r |- a ∈ union(union(r))) by Weakening(pairComponentsInUnionUnion of (x := a, y := b))
+    thenHave(∃(b, pair(a, b) ∈ r) |- a ∈ union(union(r))) by LeftExists
+    val redundancy = thenHave(∃(b, pair(a, b) ∈ r) ==> a ∈ union(union(r))) by RightImplies
 
-    have(∀(a, in(a, relationDomain(r)) <=> (in(a, union(union(r))) /\ ∃(b, in(pair(a, b), r))))) by InstantiateForall(relationDomain(r))(relationDomain.definition)
-    thenHave(in(a, relationDomain(r)) <=> (in(a, union(union(r))) /\ ∃(b, in(pair(a, b), r)))) by InstantiateForall(a)
-    thenHave(exists(b, in(pair(a, b), r)) ==> in(a, union(union(r))) |- in(a, relationDomain(r)) <=> ∃(b, in(pair(a, b), r))) by Tautology
+    have(∀(a, a ∈ relationDomain(r) <=> (a ∈ union(union(r)) /\ ∃(b, pair(a, b) ∈ r)))) by InstantiateForall(relationDomain(r))(relationDomain.definition)
+    thenHave(a ∈ relationDomain(r) <=> (a ∈ union(union(r)) /\ ∃(b, pair(a, b) ∈ r))) by InstantiateForall(a)
+    thenHave(∃(b, pair(a, b) ∈ r) ==> a ∈ union(union(r)) |- a ∈ relationDomain(r) <=> ∃(b, pair(a, b) ∈ r)) by Tautology
     have(thesis) by Cut(redundancy, lastStep)
   }
 
@@ -219,10 +219,10 @@ object Relations extends lisa.Main {
    *   `(a, b) ∈ r ⊢ a ∈ dom(r)`
    */
   val relationDomainIntroPair = Lemma(
-    in(pair(a, b), r) |- in(a, relationDomain(r))
+    pair(a, b) ∈ r |- a ∈ relationDomain(r)
   ) {
-    have(in(pair(a, b), r) |- in(pair(a, b), r)) by Hypothesis
-    thenHave(in(pair(a, b), r) |- exists(b, in(pair(a, b), r))) by RightExists
+    have(pair(a, b) ∈ r |- pair(a, b) ∈ r) by Hypothesis
+    thenHave(pair(a, b) ∈ r |- ∃(b, pair(a, b) ∈ r)) by RightExists
     thenHave(thesis) by Substitution.ApplyRules(relationDomainMembership)
   }
 
@@ -232,7 +232,7 @@ object Relations extends lisa.Main {
    *   `a ∈ dom(r) ⊢ ∃ b. (a, b) ∈ r`
    */
   val relationDomainElim = Lemma(
-    in(a, relationDomain(r)) |- ∃(b, in(pair(a, b), r))
+    a ∈ relationDomain(r) |- ∃(b, pair(a, b) ∈ r)
   ) {
     have(thesis) by Weakening(relationDomainMembership)
   }
@@ -245,106 +245,106 @@ object Relations extends lisa.Main {
   val relationDomainSingleton = Lemma(
     relationDomain(singleton(pair(a, b))) === singleton(a)
   ) {
-    val backward = have(in(x, singleton(a)) ==> in(x, relationDomain(singleton(pair(a, b))))) subproof {
+    val backward = have(x ∈ singleton(a) ==> x ∈ relationDomain(singleton(pair(a, b)))) subproof {
       have(in(a, relationDomain(singleton(pair(a, b))))) by Cut(singletonIntro of (x := pair(a, b)), relationDomainIntroPair of (r := singleton(pair(a, b))))
-      thenHave(in(x, singleton(a)) |- in(x, relationDomain(singleton(pair(a, b))))) by Substitution.ApplyRules(singletonElim of (y := x, x := a))
+      thenHave(x ∈ singleton(a) |- x ∈ relationDomain(singleton(pair(a, b)))) by Substitution.ApplyRules(singletonElim of (y := x, x := a))
     }
 
-    val forward = have(in(x, relationDomain(singleton(pair(a, b)))) ==> in(x, singleton(a))) subproof {
+    val forward = have(x ∈ relationDomain(singleton(pair(a, b))) ==> x ∈ singleton(a)) subproof {
       have(pair(x, c) === pair(a, b) |- x === a) by Weakening(pairExtensionality of (a := x, b := c, c := a, d := b))
       have(in(pair(x, c), singleton(pair(a, b))) |- x === a) by Cut(singletonElim of (y := pair(x, c), x := pair(a, b)), lastStep)
-      thenHave(exists(c, in(pair(x, c), singleton(pair(a, b)))) |- x === a) by LeftExists
-      val xEqA = have(in(x, relationDomain(singleton(pair(a, b)))) |- x === a) by Cut(relationDomainElim of (a := x, r := singleton(pair(a, b))), lastStep)
-      have(x === a |- in(x, singleton(a))) by RightSubstEq.withParametersSimple(List((x, a)), lambda(x, in(x, singleton(a))))(singletonIntro of (x := a))
-      have(in(x, relationDomain(singleton(pair(a, b)))) |- in(x, singleton(a))) by Cut(xEqA, lastStep)
+      thenHave(∃(c, in(pair(x, c), singleton(pair(a, b)))) |- x === a) by LeftExists
+      val xEqA = have(x ∈ relationDomain(singleton(pair(a, b))) |- x === a) by Cut(relationDomainElim of (a := x, r := singleton(pair(a, b))), lastStep)
+      have(x === a |- x ∈ singleton(a)) by RightSubstEq.withParametersSimple(List((x, a)), lambda(x, x ∈ singleton(a)))(singletonIntro of (x := a))
+      have(x ∈ relationDomain(singleton(pair(a, b))) |- x ∈ singleton(a)) by Cut(xEqA, lastStep)
 
     }
 
-    have(in(x, relationDomain(singleton(pair(a, b)))) <=> in(x, singleton(a))) by RightIff(forward, backward)
-    thenHave(forall(x, in(x, relationDomain(singleton(pair(a, b)))) <=> in(x, singleton(a)))) by RightForall
+    have(x ∈ relationDomain(singleton(pair(a, b))) <=> x ∈ singleton(a)) by RightIff(forward, backward)
+    thenHave(∀(x, x ∈ relationDomain(singleton(pair(a, b))) <=> x ∈ singleton(a))) by RightForall
     have(thesis) by Cut(lastStep, equalityIntro of (x := relationDomain(singleton(pair(a, b))), y := singleton(a)))
   }
 
   val relationDomainSetUnion = Lemma(
     relationDomain(setUnion(r1, r2)) === setUnion(relationDomain(r1), relationDomain(r2))
   ) {
-    val forward = have(in(a, relationDomain(setUnion(r1, r2))) ==> in(a, setUnion(relationDomain(r1), relationDomain(r2)))) subproof {
-      have(in(pair(a, b), setUnion(r1, r2)) |- (in(a, relationDomain(r1)), in(pair(a, b), r2))) by Cut(setUnionElim of (z := pair(a, b), x := r1, y := r2), relationDomainIntroPair of (r := r1))
-      have(in(pair(a, b), setUnion(r1, r2)) |- (in(a, relationDomain(r1)), in(a, relationDomain(r2)))) by Cut(lastStep, relationDomainIntroPair of (r := r2))
-      have(in(pair(a, b), setUnion(r1, r2)) |- (in(a, relationDomain(r2)), in(a, setUnion(relationDomain(r1), relationDomain(r2))))) by Cut(
+    val forward = have(a ∈ relationDomain(setUnion(r1, r2)) ==> a ∈ setUnion(relationDomain(r1), relationDomain(r2))) subproof {
+      have(pair(a, b) ∈ setUnion(r1, r2) |- (a ∈ relationDomain(r1), pair(a, b) ∈ r2)) by Cut(setUnionElim of (z := pair(a, b), x := r1, y := r2), relationDomainIntroPair of (r := r1))
+      have(pair(a, b) ∈ setUnion(r1, r2) |- (a ∈ relationDomain(r1), a ∈ relationDomain(r2))) by Cut(lastStep, relationDomainIntroPair of (r := r2))
+      have(pair(a, b) ∈ setUnion(r1, r2) |- (a ∈ relationDomain(r2), a ∈ setUnion(relationDomain(r1), relationDomain(r2)))) by Cut(
         lastStep,
         setUnionLeftIntro of (z := a, x := relationDomain(r1), y := relationDomain(r2))
       )
-      have(in(pair(a, b), setUnion(r1, r2)) |- in(a, setUnion(relationDomain(r1), relationDomain(r2)))) by Cut(
+      have(pair(a, b) ∈ setUnion(r1, r2) |- a ∈ setUnion(relationDomain(r1), relationDomain(r2))) by Cut(
         lastStep,
         setUnionRightIntro of (z := a, x := relationDomain(r1), y := relationDomain(r2))
       )
-      thenHave(exists(b, in(pair(a, b), setUnion(r1, r2))) |- in(a, setUnion(relationDomain(r1), relationDomain(r2)))) by LeftExists
-      have(in(a, relationDomain(setUnion(r1, r2))) |- in(a, setUnion(relationDomain(r1), relationDomain(r2)))) by Cut(relationDomainElim of (r := setUnion(r1, r2)), lastStep)
+      thenHave(∃(b, pair(a, b) ∈ setUnion(r1, r2)) |- a ∈ setUnion(relationDomain(r1), relationDomain(r2))) by LeftExists
+      have(a ∈ relationDomain(setUnion(r1, r2)) |- a ∈ setUnion(relationDomain(r1), relationDomain(r2))) by Cut(relationDomainElim of (r := setUnion(r1, r2)), lastStep)
     }
 
-    val backward = have(in(a, setUnion(relationDomain(r1), relationDomain(r2))) ==> in(a, relationDomain(setUnion(r1, r2)))) subproof {
+    val backward = have(a ∈ setUnion(relationDomain(r1), relationDomain(r2)) ==> a ∈ relationDomain(setUnion(r1, r2))) subproof {
 
-      have(in(pair(a, b), r1) |- exists(b, in(pair(a, b), setUnion(r1, r2)))) by RightExists(setUnionLeftIntro of (z := pair(a, b), x := r1, y := r2))
-      val left = thenHave(exists(b, in(pair(a, b), r1)) |- exists(b, in(pair(a, b), setUnion(r1, r2)))) by LeftExists
+      have(pair(a, b) ∈ r1 |- ∃(b, pair(a, b) ∈ setUnion(r1, r2))) by RightExists(setUnionLeftIntro of (z := pair(a, b), x := r1, y := r2))
+      val left = thenHave(∃(b, pair(a, b) ∈ r1) |- ∃(b, pair(a, b) ∈ setUnion(r1, r2))) by LeftExists
 
-      have(in(pair(a, b), r2) |- exists(b, in(pair(a, b), setUnion(r1, r2)))) by RightExists(setUnionRightIntro of (z := pair(a, b), x := r1, y := r2))
-      val right = thenHave(exists(b, in(pair(a, b), r2)) |- exists(b, in(pair(a, b), setUnion(r1, r2)))) by LeftExists
+      have(pair(a, b) ∈ r2 |- ∃(b, pair(a, b) ∈ setUnion(r1, r2))) by RightExists(setUnionRightIntro of (z := pair(a, b), x := r1, y := r2))
+      val right = thenHave(∃(b, pair(a, b) ∈ r2) |- ∃(b, pair(a, b) ∈ setUnion(r1, r2))) by LeftExists
 
-      have(in(a, setUnion(relationDomain(r1), relationDomain(r2))) |- (exists(b, in(pair(a, b), r1)), in(a, relationDomain(r2)))) by Cut(
+      have(a ∈ setUnion(relationDomain(r1), relationDomain(r2)) |- (∃(b, pair(a, b) ∈ r1), a ∈ relationDomain(r2))) by Cut(
         setUnionElim of (z := a, x := relationDomain(r1), y := relationDomain(r2)),
         relationDomainElim of (r := r1)
       )
-      have(in(a, setUnion(relationDomain(r1), relationDomain(r2))) |- (exists(b, in(pair(a, b), r1)), exists(b, in(pair(a, b), r2)))) by Cut(lastStep, relationDomainElim of (r := r2))
-      have(in(a, setUnion(relationDomain(r1), relationDomain(r2))) |- (exists(b, in(pair(a, b), setUnion(r1, r2))), exists(b, in(pair(a, b), r2)))) by Cut(lastStep, left)
-      have(in(a, setUnion(relationDomain(r1), relationDomain(r2))) |- exists(b, in(pair(a, b), setUnion(r1, r2)))) by Cut(lastStep, right)
-      thenHave(in(a, setUnion(relationDomain(r1), relationDomain(r2))) |- in(a, relationDomain(setUnion(r1, r2)))) by Substitution.ApplyRules(relationDomainMembership of (r := setUnion(r1, r2)))
+      have(a ∈ setUnion(relationDomain(r1), relationDomain(r2)) |- (∃(b, pair(a, b) ∈ r1), ∃(b, pair(a, b) ∈ r2))) by Cut(lastStep, relationDomainElim of (r := r2))
+      have(a ∈ setUnion(relationDomain(r1), relationDomain(r2)) |- (∃(b, pair(a, b) ∈ setUnion(r1, r2)), ∃(b, pair(a, b) ∈ r2))) by Cut(lastStep, left)
+      have(a ∈ setUnion(relationDomain(r1), relationDomain(r2)) |- ∃(b, pair(a, b) ∈ setUnion(r1, r2))) by Cut(lastStep, right)
+      thenHave(a ∈ setUnion(relationDomain(r1), relationDomain(r2)) |- a ∈ relationDomain(setUnion(r1, r2))) by Substitution.ApplyRules(relationDomainMembership of (r := setUnion(r1, r2)))
     }
 
-    have(in(a, setUnion(relationDomain(r1), relationDomain(r2))) <=> in(a, relationDomain(setUnion(r1, r2)))) by RightIff(forward, backward)
-    thenHave(forall(a, in(a, setUnion(relationDomain(r1), relationDomain(r2))) <=> in(a, relationDomain(setUnion(r1, r2))))) by RightForall
+    have(a ∈ setUnion(relationDomain(r1), relationDomain(r2)) <=> a ∈ relationDomain(setUnion(r1, r2))) by RightIff(forward, backward)
+    thenHave(∀(a, a ∈ setUnion(relationDomain(r1), relationDomain(r2)) <=> a ∈ relationDomain(setUnion(r1, r2)))) by RightForall
     have(thesis) by Cut(lastStep, equalityIntro of (x := relationDomain(setUnion(r1, r2)), y := setUnion(relationDomain(r1), relationDomain(r2))))
   }
 
   val relationDomainUnion = Lemma(
-    in(t, relationDomain(union(z))) <=> exists(y, in(y, z) /\ in(t, relationDomain(y)))
+    in(t, relationDomain(union(z))) <=> ∃(y, y ∈ z /\ t ∈ relationDomain(y))
   ) {
-    val forward = have(exists(a, in(pair(t, a), union(z))) ==> exists(y, in(y, z) /\ in(t, relationDomain(y)))) subproof {
-      have(in(y, z) |- in(y, z)) by Hypothesis
-      have((in(pair(t, a), y), in(y, z)) |- in(t, relationDomain(y)) /\ in(y, z)) by RightAnd(relationDomainIntroPair of (a := t, b := a, r := y), lastStep)
-      thenHave((in(pair(t, a), y), in(y, z)) |- exists(y, in(t, relationDomain(y)) /\ in(y, z))) by RightExists
-      thenHave((in(pair(t, a), y) /\ in(y, z)) |- exists(y, in(t, relationDomain(y)) /\ in(y, z))) by LeftAnd
-      thenHave(exists(y, in(pair(t, a), y) /\ in(y, z)) |- exists(y, in(t, relationDomain(y)) /\ in(y, z))) by LeftExists
-      have(in(pair(t, a), union(z)) |- exists(y, in(y, z) /\ in(t, relationDomain(y)))) by Cut(unionElim of (z := pair(t, a), x := z), lastStep)
-      thenHave(exists(a, in(pair(t, a), union(z))) |- exists(y, in(y, z) /\ in(t, relationDomain(y)))) by LeftExists
+    val forward = have(∃(a, pair(t, a) ∈ union(z)) ==> ∃(y, y ∈ z /\ t ∈ relationDomain(y))) subproof {
+      have(y ∈ z |- y ∈ z) by Hypothesis
+      have((pair(t, a) ∈ y, y ∈ z) |- t ∈ relationDomain(y) /\ y ∈ z) by RightAnd(relationDomainIntroPair of (a := t, b := a, r := y), lastStep)
+      thenHave((pair(t, a) ∈ y, y ∈ z) |- ∃(y, t ∈ relationDomain(y) /\ y ∈ z)) by RightExists
+      thenHave((pair(t, a) ∈ y /\ y ∈ z) |- ∃(y, t ∈ relationDomain(y) /\ y ∈ z)) by LeftAnd
+      thenHave(∃(y, pair(t, a) ∈ y /\ y ∈ z) |- ∃(y, t ∈ relationDomain(y) /\ y ∈ z)) by LeftExists
+      have(pair(t, a) ∈ union(z) |- ∃(y, y ∈ z /\ t ∈ relationDomain(y))) by Cut(unionElim of (z := pair(t, a), x := z), lastStep)
+      thenHave(∃(a, pair(t, a) ∈ union(z)) |- ∃(y, y ∈ z /\ t ∈ relationDomain(y))) by LeftExists
     }
-    val backward = have(exists(y, in(y, z) /\ in(t, relationDomain(y))) ==> exists(a, in(pair(t, a), union(z)))) subproof {
-      have((in(pair(t, a), y), in(y, z)) |- exists(a, in(pair(t, a), union(z)))) by RightExists(unionIntro of (z := pair(t, a), x := z))
-      thenHave((exists(a, in(pair(t, a), y)), in(y, z)) |- exists(a, in(pair(t, a), union(z)))) by LeftExists
-      have((in(y, z), in(t, relationDomain(y))) |- exists(a, in(pair(t, a), union(z)))) by Cut(relationDomainElim of (a := t, r := y), lastStep)
-      thenHave((in(y, z) /\ in(t, relationDomain(y))) |- exists(a, in(pair(t, a), union(z)))) by LeftAnd
-      thenHave(exists(y, in(y, z) /\ in(t, relationDomain(y))) |- exists(a, in(pair(t, a), union(z)))) by LeftExists
+    val backward = have(∃(y, y ∈ z /\ t ∈ relationDomain(y)) ==> ∃(a, pair(t, a) ∈ union(z))) subproof {
+      have((pair(t, a) ∈ y, y ∈ z) |- ∃(a, pair(t, a) ∈ union(z))) by RightExists(unionIntro of (z := pair(t, a), x := z))
+      thenHave((∃(a, pair(t, a) ∈ y), y ∈ z) |- ∃(a, pair(t, a) ∈ union(z))) by LeftExists
+      have((y ∈ z, t ∈ relationDomain(y)) |- ∃(a, pair(t, a) ∈ union(z))) by Cut(relationDomainElim of (a := t, r := y), lastStep)
+      thenHave((y ∈ z /\ t ∈ relationDomain(y)) |- ∃(a, pair(t, a) ∈ union(z))) by LeftAnd
+      thenHave(∃(y, y ∈ z /\ t ∈ relationDomain(y)) |- ∃(a, pair(t, a) ∈ union(z))) by LeftExists
     }
 
-    have(exists(a, in(pair(t, a), union(z))) <=> exists(y, in(y, z) /\ in(t, relationDomain(y)))) by RightIff(forward, backward)
+    have(∃(a, pair(t, a) ∈ union(z)) <=> ∃(y, y ∈ z /\ t ∈ relationDomain(y))) by RightIff(forward, backward)
     thenHave(thesis) by Substitution.ApplyRules(relationDomainMembership)
   }
 
   val relationDomainSubset = Lemma(
-    subset(r1, r2) |- subset(relationDomain(r1), relationDomain(r2))
+    r1 ⊆ r2 |- relationDomain(r1) ⊆ relationDomain(r2)
   ) {
-    have((subset(r1, r2), in(pair(a, b), r1)) |- in(a, relationDomain(r2))) by Cut(subsetElim of (z := pair(a, b), x := r1, y := r2), relationDomainIntroPair of (r := r2))
-    thenHave((subset(r1, r2), exists(b, in(pair(a, b), r1))) |- in(a, relationDomain(r2))) by LeftExists
-    have((subset(r1, r2), in(a, relationDomain(r1))) |- in(a, relationDomain(r2))) by Cut(relationDomainElim of (r := r1), lastStep)
-    thenHave(subset(r1, r2) |- in(a, relationDomain(r1)) ==> in(a, relationDomain(r2))) by RightImplies
-    thenHave(subset(r1, r2) |- forall(a, in(a, relationDomain(r1)) ==> in(a, relationDomain(r2)))) by RightForall
+    have((r1 ⊆ r2, pair(a, b) ∈ r1) |- a ∈ relationDomain(r2)) by Cut(subsetElim of (z := pair(a, b), x := r1, y := r2), relationDomainIntroPair of (r := r2))
+    thenHave((r1 ⊆ r2, ∃(b, pair(a, b) ∈ r1)) |- a ∈ relationDomain(r2)) by LeftExists
+    have((r1 ⊆ r2, a ∈ relationDomain(r1)) |- a ∈ relationDomain(r2)) by Cut(relationDomainElim of (r := r1), lastStep)
+    thenHave(r1 ⊆ r2 |- a ∈ relationDomain(r1) ==> a ∈ relationDomain(r2)) by RightImplies
+    thenHave(r1 ⊆ r2 |- ∀(a, a ∈ relationDomain(r1) ==> a ∈ relationDomain(r2))) by RightForall
     have(thesis) by Cut(lastStep, subsetIntro of (x := relationDomain(r1), y := relationDomain(r2)))
   }
 
   val relationRangeUniqueness = Lemma(
-    ∃!(z, ∀(b, in(b, z) <=> (in(b, union(union(r))) /\ ∃(a, in(pair(a, b), r)))))
+    ∃!(z, ∀(b, b ∈ z <=> (b ∈ union(union(r)) /\ ∃(a, pair(a, b) ∈ r))))
   ) {
-    have(thesis) by UniqueComprehension(union(union(r)), lambda(b, ∃(a, in(pair(a, b), r))))
+    have(thesis) by UniqueComprehension(union(union(r)), lambda(b, ∃(a, pair(a, b) ∈ r)))
   }
 
   /**
@@ -363,31 +363,31 @@ object Relations extends lisa.Main {
    *
    * @param r relation (set)
    */
-  val relationRange = DEF(r) --> The(z, ∀(b, in(b, z) <=> (in(b, union(union(r))) /\ ∃(a, in(pair(a, b), r)))))(relationRangeUniqueness)
+  val relationRange = DEF(r) --> The(z, ∀(b, b ∈ z <=> (b ∈ union(union(r)) /\ ∃(a, pair(a, b) ∈ r))))(relationRangeUniqueness)
 
   val relationRangeMembership = Lemma(
-    in(b, relationRange(r)) <=> ∃(a, in(pair(a, b), r))
+    b ∈ relationRange(r) <=> ∃(a, pair(a, b) ∈ r)
   ) {
-    have(in(pair(a, b), r) |- in(b, union(union(r)))) by Weakening(pairComponentsInUnionUnion of (x := a, y := b))
-    thenHave(exists(a, in(pair(a, b), r)) |- in(b, union(union(r)))) by LeftExists
-    val redundancy = thenHave(exists(a, in(pair(a, b), r)) ==> in(b, union(union(r)))) by RightImplies
+    have(pair(a, b) ∈ r |- b ∈ union(union(r))) by Weakening(pairComponentsInUnionUnion of (x := a, y := b))
+    thenHave(∃(a, pair(a, b) ∈ r) |- b ∈ union(union(r))) by LeftExists
+    val redundancy = thenHave(∃(a, pair(a, b) ∈ r) ==> b ∈ union(union(r))) by RightImplies
 
-    have(∀(b, in(b, relationRange(r)) <=> (in(b, union(union(r))) /\ ∃(a, in(pair(a, b), r))))) by InstantiateForall(relationRange(r))(relationRange.definition)
-    thenHave(in(b, relationRange(r)) <=> (in(b, union(union(r))) /\ ∃(a, in(pair(a, b), r)))) by InstantiateForall(b)
-    thenHave(exists(a, in(pair(a, b), r)) ==> in(b, union(union(r))) |- in(b, relationRange(r)) <=> ∃(a, in(pair(a, b), r))) by Tautology
+    have(∀(b, b ∈ relationRange(r) <=> (b ∈ union(union(r)) /\ ∃(a, pair(a, b) ∈ r)))) by InstantiateForall(relationRange(r))(relationRange.definition)
+    thenHave(b ∈ relationRange(r) <=> (b ∈ union(union(r)) /\ ∃(a, pair(a, b) ∈ r))) by InstantiateForall(b)
+    thenHave(∃(a, pair(a, b) ∈ r) ==> b ∈ union(union(r)) |- b ∈ relationRange(r) <=> ∃(a, pair(a, b) ∈ r)) by Tautology
     have(thesis) by Cut(redundancy, lastStep)
   }
 
   val relationRangeIntroPair = Lemma(
-    in(pair(a, b), r) |- in(b, relationRange(r))
+    pair(a, b) ∈ r |- b ∈ relationRange(r)
   ) {
-    have(in(pair(a, b), r) |- in(pair(a, b), r)) by Hypothesis
-    thenHave(in(pair(a, b), r) |- exists(a, in(pair(a, b), r))) by RightExists
+    have(pair(a, b) ∈ r |- pair(a, b) ∈ r) by Hypothesis
+    thenHave(pair(a, b) ∈ r |- ∃(a, pair(a, b) ∈ r)) by RightExists
     thenHave(thesis) by Substitution.ApplyRules(relationRangeMembership)
   }
 
   val relationRangeElim = Lemma(
-    in(b, relationRange(r)) |- ∃(a, in(pair(a, b), r))
+    b ∈ relationRange(r) |- ∃(a, pair(a, b) ∈ r)
   ) {
     have(thesis) by Weakening(relationRangeMembership)
   }
@@ -397,27 +397,27 @@ object Relations extends lisa.Main {
    *
    *     `Ran(∅) = ∅`
    */
-  val rangeEmpty = Lemma(relationRange(emptySet) === emptySet) {
-    have(forall(a, !in(pair(a, b), emptySet))) by RightForall(emptySetAxiom of (x := pair(a, b)))
-    thenHave(exists(a, in(pair(a, b), emptySet)) |- ()) by Restate
-    have(in(b, relationRange(emptySet)) |- ()) by Cut(relationRangeElim of (r := emptySet), lastStep)
-    thenHave(exists(b, in(b, relationRange(emptySet))) |- ()) by LeftExists
-    have(!(relationRange(emptySet) === emptySet) |- ()) by Cut(nonEmptySetHasAnElement of (x := relationRange(emptySet)), lastStep)
+  val rangeEmpty = Lemma(relationRange(∅) === ∅) {
+    have(∀(a, pair(a, b) ∉ ∅)) by RightForall(emptySetAxiom of (x := pair(a, b)))
+    thenHave(∃(a, pair(a, b) ∈ ∅) |- ()) by Restate
+    have(b ∈ relationRange(∅) |- ()) by Cut(relationRangeElim of (r := ∅), lastStep)
+    thenHave(∃(b, b ∈ relationRange(∅)) |- ()) by LeftExists
+    have(!(relationRange(∅) === ∅) |- ()) by Cut(nonEmptySetHasAnElement of (x := relationRange(∅)), lastStep)
   }
 
   val relationRangeSubset = Lemma(
-    subset(r1, r2) |- subset(relationRange(r1), relationRange(r2))
+    r1 ⊆ r2 |- relationRange(r1) ⊆ relationRange(r2)
   ) {
-    have((subset(r1, r2), in(pair(a, b), r1)) |- in(b, relationRange(r2))) by Cut(subsetElim of (z := pair(a, b), x := r1, y := r2), relationRangeIntroPair of (r := r2))
-    thenHave((subset(r1, r2), exists(a, in(pair(a, b), r1))) |- in(b, relationRange(r2))) by LeftExists
-    have((subset(r1, r2), in(b, relationRange(r1))) |- in(b, relationRange(r2))) by Cut(relationRangeElim of (r := r1), lastStep)
-    thenHave(subset(r1, r2) |- in(b, relationRange(r1)) ==> in(b, relationRange(r2))) by RightImplies
-    thenHave(subset(r1, r2) |- forall(b, in(b, relationRange(r1)) ==> in(b, relationRange(r2)))) by RightForall
+    have((r1 ⊆ r2, pair(a, b) ∈ r1) |- b ∈ relationRange(r2)) by Cut(subsetElim of (z := pair(a, b), x := r1, y := r2), relationRangeIntroPair of (r := r2))
+    thenHave((r1 ⊆ r2, ∃(a, pair(a, b) ∈ r1)) |- b ∈ relationRange(r2)) by LeftExists
+    have((r1 ⊆ r2, b ∈ relationRange(r1)) |- b ∈ relationRange(r2)) by Cut(relationRangeElim of (r := r1), lastStep)
+    thenHave(r1 ⊆ r2 |- b ∈ relationRange(r1) ==> b ∈ relationRange(r2)) by RightImplies
+    thenHave(r1 ⊆ r2 |- ∀(b, b ∈ relationRange(r1) ==> b ∈ relationRange(r2))) by RightForall
     have(thesis) by Cut(lastStep, subsetIntro of (x := relationRange(r1), y := relationRange(r2)))
   }
 
   val pairInRelation = Lemma(
-    in(pair(a, b), r) |- in(a, relationDomain(r)) /\ in(b, relationRange(r))
+    pair(a, b) ∈ r |- a ∈ relationDomain(r) /\ b ∈ relationRange(r)
   ) {
     have(thesis) by RightAnd(relationDomainIntroPair, relationRangeIntroPair)
   }
@@ -425,38 +425,38 @@ object Relations extends lisa.Main {
   val relationBetweenDomain = Lemma(
     relationBetween(r, a, b) |- subset(relationDomain(r), a)
   ) {
-    have((relationBetween(r, a, b), in(pair(x, y), r)) |- in(x, a)) by Weakening(relationBetweenElimPair)
-    thenHave((relationBetween(r, a, b), exists(y, in(pair(x, y), r))) |- in(x, a)) by LeftExists
-    have((relationBetween(r, a, b), in(x, relationDomain(r))) |- in(x, a)) by Cut(relationDomainElim of (a := x), lastStep)
-    thenHave(relationBetween(r, a, b) |- in(x, relationDomain(r)) ==> in(x, a)) by RightImplies
-    thenHave(relationBetween(r, a, b) |- forall(x, in(x, relationDomain(r)) ==> in(x, a))) by RightForall
+    have((relationBetween(r, a, b), pair(x, y) ∈ r) |- x ∈ a) by Weakening(relationBetweenElimPair)
+    thenHave((relationBetween(r, a, b), ∃(y, pair(x, y) ∈ r)) |- x ∈ a) by LeftExists
+    have((relationBetween(r, a, b), x ∈ relationDomain(r)) |- x ∈ a) by Cut(relationDomainElim of (a := x), lastStep)
+    thenHave(relationBetween(r, a, b) |- x ∈ relationDomain(r) ==> x ∈ a) by RightImplies
+    thenHave(relationBetween(r, a, b) |- ∀(x, x ∈ relationDomain(r) ==> x ∈ a)) by RightForall
     have(thesis) by Cut(lastStep, subsetIntro of (x := relationDomain(r), y := a))
   }
 
   val relationBetweenRange = Lemma(
     relationBetween(r, a, b) |- subset(relationRange(r), b)
   ) {
-    have((relationBetween(r, a, b), in(pair(x, y), r)) |- in(y, b)) by Weakening(relationBetweenElimPair)
-    thenHave((relationBetween(r, a, b), exists(x, in(pair(x, y), r))) |- in(y, b)) by LeftExists
-    have((relationBetween(r, a, b), in(y, relationRange(r))) |- in(y, b)) by Cut(relationRangeElim of (b := y), lastStep)
-    thenHave(relationBetween(r, a, b) |- in(y, relationRange(r)) ==> in(y, b)) by RightImplies
-    thenHave(relationBetween(r, a, b) |- forall(y, in(y, relationRange(r)) ==> in(y, b))) by RightForall
+    have((relationBetween(r, a, b), pair(x, y) ∈ r) |- y ∈ b) by Weakening(relationBetweenElimPair)
+    thenHave((relationBetween(r, a, b), ∃(x, pair(x, y) ∈ r)) |- y ∈ b) by LeftExists
+    have((relationBetween(r, a, b), y ∈ relationRange(r)) |- y ∈ b) by Cut(relationRangeElim of (b := y), lastStep)
+    thenHave(relationBetween(r, a, b) |- y ∈ relationRange(r) ==> y ∈ b) by RightImplies
+    thenHave(relationBetween(r, a, b) |- ∀(y, y ∈ relationRange(r) ==> y ∈ b)) by RightForall
     have(thesis) by Cut(lastStep, subsetIntro of (x := relationRange(r), y := b))
   }
 
   val relationBetweenBetweenDomainAndRange = Lemma(
     relationBetween(r, a, b) |- relationBetween(r, relationDomain(r), relationRange(r))
   ) {
-    have(in(firstInPair(p), relationDomain(r)) /\ in(secondInPair(p), relationRange(r)) |- in(pair(firstInPair(p), secondInPair(p)), cartesianProduct(relationDomain(r), relationRange(r)))) by LeftAnd(
+    have(firstInPair(p) ∈ relationDomain(r) /\ secondInPair(p) ∈ relationRange(r) |- pair(firstInPair(p), secondInPair(p)) ∈ cartesianProduct(relationDomain(r), relationRange(r))) by LeftAnd(
       cartesianProductIntro of (a := firstInPair(p), b := secondInPair(p), x := relationDomain(r), y := relationRange(r))
     )
-    have(in(pair(firstInPair(p), secondInPair(p)), r) |- in(pair(firstInPair(p), secondInPair(p)), cartesianProduct(relationDomain(r), relationRange(r)))) by Cut(
+    have(pair(firstInPair(p), secondInPair(p)) ∈ r |- pair(firstInPair(p), secondInPair(p)) ∈ cartesianProduct(relationDomain(r), relationRange(r))) by Cut(
       pairInRelation of (a := firstInPair(p), b := secondInPair(p)),
       lastStep
     )
-    thenHave((relationBetween(r, a, b), in(p, r)) |- in(p, cartesianProduct(relationDomain(r), relationRange(r)))) by Substitution.ApplyRules(pairReconstructionInRelationBetween)
-    thenHave(relationBetween(r, a, b) |- in(p, r) ==> in(p, cartesianProduct(relationDomain(r), relationRange(r)))) by RightImplies
-    thenHave(relationBetween(r, a, b) |- forall(p, in(p, r) ==> in(p, cartesianProduct(relationDomain(r), relationRange(r))))) by RightForall
+    thenHave((relationBetween(r, a, b), p ∈ r) |- p ∈ cartesianProduct(relationDomain(r), relationRange(r))) by Substitution.ApplyRules(pairReconstructionInRelationBetween)
+    thenHave(relationBetween(r, a, b) |- p ∈ r ==> p ∈ cartesianProduct(relationDomain(r), relationRange(r))) by RightImplies
+    thenHave(relationBetween(r, a, b) |- ∀(p, p ∈ r ==> p ∈ cartesianProduct(relationDomain(r), relationRange(r)))) by RightForall
     have(relationBetween(r, a, b) |- subset(r, cartesianProduct(relationDomain(r), relationRange(r)))) by Cut(
       lastStep,
       subsetIntro of (x := r, y := cartesianProduct(relationDomain(r), relationRange(r)))
@@ -465,60 +465,60 @@ object Relations extends lisa.Main {
   }
 
   /**
-   * `r` is a relation *from* `a` if there exists a set `b` such that `r` is a
+   * `r` is a relation *from* `a` if there ∃ a set `b` such that `r` is a
    * relation from `a` to `b`.
    */
   val relationFrom = DEF(r, a) --> ∃(b, relationBetween(r, a, b))
 
   val relationBetweenIsRelationFrom = Lemma(relationBetween(r, a, b) |- relationFrom(r, a)) {
     have(relationBetween(r, a, b) |- relationBetween(r, a, b)) by Hypothesis
-    thenHave(relationBetween(r, a, b) |- exists(b, relationBetween(r, a, b))) by RightExists
+    thenHave(relationBetween(r, a, b) |- ∃(b, relationBetween(r, a, b))) by RightExists
     thenHave(thesis) by Substitution.ApplyRules(relationFrom.definition)
   }
 
   val pairReconstructionInRelationFrom = Lemma(
-    (relationFrom(r, a), in(p, r)) |- p === pair(firstInPair(p), secondInPair(p))
+    (relationFrom(r, a), p ∈ r) |- p === pair(firstInPair(p), secondInPair(p))
   ) {
-    have((exists(b, relationBetween(r, a, b)), in(p, r)) |- p === pair(firstInPair(p), secondInPair(p))) by LeftExists(pairReconstructionInRelationBetween)
+    have((∃(b, relationBetween(r, a, b)), p ∈ r) |- p === pair(firstInPair(p), secondInPair(p))) by LeftExists(pairReconstructionInRelationBetween)
     thenHave(thesis) by Substitution.ApplyRules(relationFrom.definition)
   }
 
   /**
    * Lemma --- Pair in Relation
    *
-   * If a pair `(x, y)` exists in a relation `r` from `a` to `b`,
+   * If a pair `(x, y)` ∃ in a relation `r` from `a` to `b`,
    * then `x` and `y` are elements of `a` and `b` respectively.
    */
   val relationFromElimPair = Lemma(
-    (relationFrom(r, a), in(pair(x, y), r)) |- in(x, a)
+    (relationFrom(r, a), pair(x, y) ∈ r) |- x ∈ a
   ) {
-    have((relationBetween(r, a, b), in(pair(x, y), r)) |- in(x, a)) by Weakening(relationBetweenElimPair)
-    thenHave((exists(b, relationBetween(r, a, b)), in(pair(x, y), r)) |- in(x, a)) by LeftExists
+    have((relationBetween(r, a, b), pair(x, y) ∈ r) |- x ∈ a) by Weakening(relationBetweenElimPair)
+    thenHave((∃(b, relationBetween(r, a, b)), pair(x, y) ∈ r) |- x ∈ a) by LeftExists
     thenHave(thesis) by Substitution.ApplyRules(relationFrom.definition)
   }
 
   val relationFromElim = Lemma(
-    (relationFrom(r, a), in(p, r)) |- in(firstInPair(p), a)
+    (relationFrom(r, a), p ∈ r) |- firstInPair(p) ∈ a
   ) {
     have(thesis) by Substitution.ApplyRules(pairReconstructionInRelationFrom)(relationFromElimPair of (x := firstInPair(p), y := secondInPair(p)))
   }
 
   val relationFromSubset = Lemma(
-    (subset(r1, r2), relationFrom(r2, a)) |- relationFrom(r1, a)
+    (r1 ⊆ r2, relationFrom(r2, a)) |- relationFrom(r1, a)
   ) {
-    have((subset(r1, r2), relationBetween(r2, a, b)) |- relationFrom(r1, a)) by Cut(relationBetweenSubset, relationBetweenIsRelationFrom of (r := r1))
-    thenHave((subset(r1, r2), exists(b, relationBetween(r2, a, b))) |- relationFrom(r1, a)) by LeftExists
+    have((r1 ⊆ r2, relationBetween(r2, a, b)) |- relationFrom(r1, a)) by Cut(relationBetweenSubset, relationBetweenIsRelationFrom of (r := r1))
+    thenHave((r1 ⊆ r2, ∃(b, relationBetween(r2, a, b))) |- relationFrom(r1, a)) by LeftExists
     thenHave(thesis) by Substitution.ApplyRules(relationFrom.definition of (r := r2))
   }
 
   val relationFromSetUnion = Lemma(
     (relationFrom(r1, a), relationFrom(r2, b)) |- relationFrom(setUnion(r1, r2), setUnion(a, b))
   ) {
-    have((relationBetween(r1, a, x), relationBetween(r2, b, y)) |- exists(y, relationBetween(setUnion(r1, r2), setUnion(a, b), y))) by RightExists(
+    have((relationBetween(r1, a, x), relationBetween(r2, b, y)) |- ∃(y, relationBetween(setUnion(r1, r2), setUnion(a, b), y))) by RightExists(
       unionOfTwoRelationsWithField of (c := b, b := x, d := y)
     )
-    thenHave((exists(x, relationBetween(r1, a, x)), relationBetween(r2, b, y)) |- exists(y, relationBetween(setUnion(r1, r2), setUnion(a, b), y))) by LeftExists
-    thenHave((exists(x, relationBetween(r1, a, x)), exists(y, relationBetween(r2, b, y))) |- exists(y, relationBetween(setUnion(r1, r2), setUnion(a, b), y))) by LeftExists
+    thenHave((∃(x, relationBetween(r1, a, x)), relationBetween(r2, b, y)) |- ∃(y, relationBetween(setUnion(r1, r2), setUnion(a, b), y))) by LeftExists
+    thenHave((∃(x, relationBetween(r1, a, x)), ∃(y, relationBetween(r2, b, y))) |- ∃(y, relationBetween(setUnion(r1, r2), setUnion(a, b), y))) by LeftExists
     thenHave(thesis) by Substitution.ApplyRules(
       relationFrom.definition of (r := setUnion(r1, r2), a := setUnion(a, b)),
       relationFrom.definition of (r := r1),
@@ -529,14 +529,14 @@ object Relations extends lisa.Main {
   val relationFromBetweenDomainAndRange = Lemma(
     relationFrom(r, a) |- relationBetween(r, relationDomain(r), relationRange(r))
   ) {
-    have(exists(b, relationBetween(r, a, b)) |- relationBetween(r, relationDomain(r), relationRange(r))) by LeftExists(relationBetweenBetweenDomainAndRange)
+    have(∃(b, relationBetween(r, a, b)) |- relationBetween(r, relationDomain(r), relationRange(r))) by LeftExists(relationBetweenBetweenDomainAndRange)
     thenHave(thesis) by Substitution.ApplyRules(relationFrom.definition)
   }
 
     val relationFromDomain = Lemma(
     relationFrom(r, a) |- subset(relationDomain(r), a)
   ) {
-    have(exists(b, relationBetween(r, a, b)) |- subset(relationDomain(r), a)) by LeftExists(relationBetweenDomain)
+    have(∃(b, relationBetween(r, a, b)) |- subset(relationDomain(r), a)) by LeftExists(relationBetweenDomain)
     thenHave(thesis) by Substitution.ApplyRules(relationFrom.definition)
   }
 
@@ -555,21 +555,21 @@ object Relations extends lisa.Main {
   val relation = DEF(r) --> ∃(a, relationFrom(r, a))
 
   val pairReconstructionInRelation = Lemma(
-    (relation(r), in(p, r)) |- p === pair(firstInPair(p), secondInPair(p))
+    (relation(r), p ∈ r) |- p === pair(firstInPair(p), secondInPair(p))
   ) {
-    have((exists(a, relationFrom(r, a)), in(p, r)) |- p === pair(firstInPair(p), secondInPair(p))) by LeftExists(pairReconstructionInRelationFrom)
+    have((∃(a, relationFrom(r, a)), p ∈ r) |- p === pair(firstInPair(p), secondInPair(p))) by LeftExists(pairReconstructionInRelationFrom)
     thenHave(thesis) by Substitution.ApplyRules(relation.definition)
   }
 
   val relationElim = Lemma(
-    (relation(r), in(p, r)) |- in(firstInPair(p), relationDomain(r)) /\ in(secondInPair(p), relationRange(r))
+    (relation(r), p ∈ r) |- firstInPair(p) ∈ relationDomain(r) /\ secondInPair(p) ∈ relationRange(r)
   ) {
     have(thesis) by Substitution.ApplyRules(pairReconstructionInRelation)(pairInRelation of (a := firstInPair(p), b := secondInPair(p)))
   }
 
   val relationFromIsRelation = Lemma(relationFrom(r, a) |- relation(r)) {
     have(relationFrom(r, a) |- relationFrom(r, a)) by Hypothesis
-    thenHave(relationFrom(r, a) |- exists(a, relationFrom(r, a))) by RightExists
+    thenHave(relationFrom(r, a) |- ∃(a, relationFrom(r, a))) by RightExists
     thenHave(thesis) by Substitution.ApplyRules(relation.definition)
   }
 
@@ -578,22 +578,22 @@ object Relations extends lisa.Main {
   }
 
   val relationDomainIntro = Lemma(
-    (relation(r), in(p, r)) |- in(firstInPair(p), relationDomain(r))
+    (relation(r), p ∈ r) |- firstInPair(p) ∈ relationDomain(r)
   ) {
     have(thesis) by Substitution.ApplyRules(pairReconstructionInRelation)(relationDomainIntroPair of (a := firstInPair(p), b := secondInPair(p)))
   }
 
   val relationRangeIntro = Lemma(
-    (relation(r), in(p, r)) |- in(secondInPair(p), relationRange(r))
+    (relation(r), p ∈ r) |- secondInPair(p) ∈ relationRange(r)
   ) {
     have(thesis) by Substitution.ApplyRules(pairReconstructionInRelation)(relationRangeIntroPair of (a := firstInPair(p), b := secondInPair(p)))
   }
 
   val relationSubset = Lemma(
-    (subset(r1, r2), relation(r2)) |- relation(r1)
+    (r1 ⊆ r2, relation(r2)) |- relation(r1)
   ) {
-    have((subset(r1, r2), relationFrom(r2, a)) |- relation(r1)) by Cut(relationFromSubset, relationFromIsRelation of (r := r1))
-    thenHave((subset(r1, r2), exists(a, relationFrom(r2, a))) |- relation(r1)) by LeftExists
+    have((r1 ⊆ r2, relationFrom(r2, a)) |- relation(r1)) by Cut(relationFromSubset, relationFromIsRelation of (r := r1))
+    thenHave((r1 ⊆ r2, ∃(a, relationFrom(r2, a))) |- relation(r1)) by LeftExists
     thenHave(thesis) by Substitution.ApplyRules(relation.definition of (r := r2))
   }
 
@@ -605,82 +605,82 @@ object Relations extends lisa.Main {
   val relationSetUnion = Lemma(
     (relation(r1), relation(r2)) |- relation(setUnion(r1, r2))
   ) {
-    have((relationFrom(r1, a), relationFrom(r2, b)) |- exists(y, relationFrom(setUnion(r1, r2), y))) by RightExists(relationFromSetUnion)
-    thenHave((exists(a, relationFrom(r1, a)), relationFrom(r2, b)) |- exists(y, relationFrom(setUnion(r1, r2), y))) by LeftExists
-    thenHave((exists(a, relationFrom(r1, a)), exists(b, relationFrom(r2, b))) |- exists(y, relationFrom(setUnion(r1, r2), y))) by LeftExists
+    have((relationFrom(r1, a), relationFrom(r2, b)) |- ∃(y, relationFrom(setUnion(r1, r2), y))) by RightExists(relationFromSetUnion)
+    thenHave((∃(a, relationFrom(r1, a)), relationFrom(r2, b)) |- ∃(y, relationFrom(setUnion(r1, r2), y))) by LeftExists
+    thenHave((∃(a, relationFrom(r1, a)), ∃(b, relationFrom(r2, b))) |- ∃(y, relationFrom(setUnion(r1, r2), y))) by LeftExists
     thenHave(thesis) by Substitution.ApplyRules(relation.definition of (r := setUnion(r1, r2)), relation.definition of (r := r1), relation.definition of (r := r2))
   }
 
   /**
    * Lemma --- the union of a set of relations is a relation itself.
    *
-   *    `\forall t \in z. relation(t) |- relation(union(z))`
+   *    `\∀ t \in z. relation(t) |- relation(union(z))`
    *
    * This implication also holds in the other direction, but that is
    * not as useful.
    */
   val unionOfRelationSet = Lemma(
-    forall(r, in(r, z) ==> relation(r)) |- relation(union(z))
+    ∀(r, r ∈ z ==> relation(r)) |- relation(union(z))
   ) {
     val doms = variable
     val rans = variable
-    val domsDef = forall(x, in(x, doms) <=> exists(r, in(r, z) /\ (x === relationDomain(r))))
-    val ransDef = forall(x, in(x, rans) <=> exists(r, in(r, z) /\ (x === relationRange(r))))
+    val domsDef = ∀(x, x ∈ doms <=> ∃(r, r ∈ z /\ (x === relationDomain(r))))
+    val ransDef = ∀(x, x ∈ rans <=> ∃(r, r ∈ z /\ (x === relationRange(r))))
 
-    val inDoms = have((domsDef, in(r, z), in(firstInPair(p), relationDomain(r))) |- in(firstInPair(p), union(doms))) subproof {
-      have(in(r, z) |- in(r, z) /\ (relationDomain(r) === relationDomain(r))) by Restate
-      val exDoms = thenHave(in(r, z) |- exists(r2, in(r2, z) /\ (relationDomain(r) === relationDomain(r2)))) by RightExists
+    val inDoms = have((domsDef, r ∈ z, firstInPair(p) ∈ relationDomain(r)) |- firstInPair(p) ∈ union(doms)) subproof {
+      have(r ∈ z |- r ∈ z /\ (relationDomain(r) === relationDomain(r))) by Restate
+      val exDoms = thenHave(r ∈ z |- ∃(r2, r2 ∈ z /\ (relationDomain(r) === relationDomain(r2)))) by RightExists
       have(domsDef |- domsDef) by Hypothesis
-      thenHave(domsDef |- in(relationDomain(r), doms) <=> exists(r2, in(r2, z) /\ (relationDomain(r) === relationDomain(r2)))) by InstantiateForall(relationDomain(r))
-      thenHave((domsDef, exists(r2, in(r2, z) /\ (relationDomain(r) === relationDomain(r2)))) |- in(relationDomain(r), doms)) by Weakening
-      have((domsDef, in(r, z)) |- in(relationDomain(r), doms)) by Cut(exDoms, lastStep)
-      have((domsDef, in(r, z)) |- subset(relationDomain(r), union(doms))) by Cut(lastStep, subsetUnion of (x := relationDomain(r), y := doms))
+      thenHave(domsDef |- relationDomain(r) ∈ doms <=> ∃(r2, r2 ∈ z /\ (relationDomain(r) === relationDomain(r2)))) by InstantiateForall(relationDomain(r))
+      thenHave((domsDef, ∃(r2, r2 ∈ z /\ (relationDomain(r) === relationDomain(r2)))) |- relationDomain(r) ∈ doms) by Weakening
+      have((domsDef, r ∈ z) |- relationDomain(r) ∈ doms) by Cut(exDoms, lastStep)
+      have((domsDef, r ∈ z) |- subset(relationDomain(r), union(doms))) by Cut(lastStep, subsetUnion of (x := relationDomain(r), y := doms))
       have(thesis) by Cut(lastStep, subsetElim of (z := firstInPair(p), x := relationDomain(r), y := union(doms)))
     }
 
-    val inRans = have((ransDef, in(r, z), in(secondInPair(p), relationRange(r))) |- in(secondInPair(p), union(rans))) subproof {
-      have(in(r, z) |- in(r, z) /\ (relationRange(r) === relationRange(r))) by Restate
-      val exDoms = thenHave(in(r, z) |- exists(r2, in(r2, z) /\ (relationRange(r) === relationRange(r2)))) by RightExists
+    val inRans = have((ransDef, r ∈ z, secondInPair(p) ∈ relationRange(r)) |- secondInPair(p) ∈ union(rans)) subproof {
+      have(r ∈ z |- r ∈ z /\ (relationRange(r) === relationRange(r))) by Restate
+      val exDoms = thenHave(r ∈ z |- ∃(r2, r2 ∈ z /\ (relationRange(r) === relationRange(r2)))) by RightExists
       have(ransDef |- ransDef) by Hypothesis
-      thenHave(ransDef |- in(relationRange(r), rans) <=> exists(r2, in(r2, z) /\ (relationRange(r) === relationRange(r2)))) by InstantiateForall(relationRange(r))
-      thenHave((ransDef, exists(r2, in(r2, z) /\ (relationRange(r) === relationRange(r2)))) |- in(relationRange(r), rans)) by Weakening
-      have((ransDef, in(r, z)) |- in(relationRange(r), rans)) by Cut(exDoms, lastStep)
-      have((ransDef, in(r, z)) |- subset(relationRange(r), union(rans))) by Cut(lastStep, subsetUnion of (x := relationRange(r), y := rans))
+      thenHave(ransDef |- relationRange(r) ∈ rans <=> ∃(r2, r2 ∈ z /\ (relationRange(r) === relationRange(r2)))) by InstantiateForall(relationRange(r))
+      thenHave((ransDef, ∃(r2, r2 ∈ z /\ (relationRange(r) === relationRange(r2)))) |- relationRange(r) ∈ rans) by Weakening
+      have((ransDef, r ∈ z) |- relationRange(r) ∈ rans) by Cut(exDoms, lastStep)
+      have((ransDef, r ∈ z) |- subset(relationRange(r), union(rans))) by Cut(lastStep, subsetUnion of (x := relationRange(r), y := rans))
       have(thesis) by Cut(lastStep, subsetElim of (z := secondInPair(p), x := relationRange(r), y := union(rans)))
     }
 
-    val relSet = forall(r, in(r, z) ==> relation(r))
+    val relSet = ∀(r, r ∈ z ==> relation(r))
     have(relSet |- relSet) by Hypothesis
-    val relSetMembership = thenHave((relSet, in(r, z)) |- relation(r)) by InstantiateForall(r)
+    val relSetMembership = thenHave((relSet, r ∈ z) |- relation(r)) by InstantiateForall(r)
 
-    val inCartProduct = have(in(firstInPair(p), union(doms)) /\ in(secondInPair(p), union(rans)) |- in(pair(firstInPair(p), secondInPair(p)), cartesianProduct(union(doms), union(rans)))) by LeftAnd(
+    val inCartProduct = have(firstInPair(p) ∈ union(doms) /\ secondInPair(p) ∈ union(rans) |- in(pair(firstInPair(p), secondInPair(p)), cartesianProduct(union(doms), union(rans)))) by LeftAnd(
       cartesianProductIntro of (a := firstInPair(p), b := secondInPair(p), x := union(doms), y := union(rans))
     )
 
-    have((domsDef, ransDef, in(r, z), in(firstInPair(p), relationDomain(r)), in(secondInPair(p), relationRange(r))) |- in(firstInPair(p), union(doms)) /\ in(secondInPair(p), union(rans))) by RightAnd(
+    have((domsDef, ransDef, r ∈ z, firstInPair(p) ∈ relationDomain(r), secondInPair(p) ∈ relationRange(r)) |- firstInPair(p) ∈ union(doms) /\ secondInPair(p) ∈ union(rans)) by RightAnd(
       inDoms,
       inRans
     )
     thenHave(
-      (domsDef, ransDef, in(r, z), in(firstInPair(p), relationDomain(r)) /\ in(secondInPair(p), relationRange(r))) |- in(firstInPair(p), union(doms)) /\ in(secondInPair(p), union(rans))
+      (domsDef, ransDef, r ∈ z, firstInPair(p) ∈ relationDomain(r) /\ secondInPair(p) ∈ relationRange(r)) |- firstInPair(p) ∈ union(doms) /\ secondInPair(p) ∈ union(rans)
     ) by LeftAnd
-    have((domsDef, ransDef, in(p, r), relation(r), in(r, z)) |- in(firstInPair(p), union(doms)) /\ in(secondInPair(p), union(rans))) by Cut(relationElim, lastStep)
-    have((domsDef, ransDef, in(p, r), relation(r), in(r, z)) |- in(pair(firstInPair(p), secondInPair(p)), cartesianProduct(union(doms), union(rans)))) by Cut(lastStep, inCartProduct)
-    thenHave((domsDef, ransDef, in(p, r), relation(r), in(r, z)) |- in(p, cartesianProduct(union(doms), union(rans)))) by Substitution.ApplyRules(pairReconstructionInRelation)
-    have((domsDef, ransDef, relSet, in(p, r), in(r, z)) |- in(p, cartesianProduct(union(doms), union(rans)))) by Cut(relSetMembership, lastStep)
-    thenHave((domsDef, ransDef, relSet, in(p, r) /\ in(r, z)) |- in(p, cartesianProduct(union(doms), union(rans)))) by LeftAnd
-    thenHave((domsDef, ransDef, relSet, exists(r, in(p, r) /\ in(r, z))) |- in(p, cartesianProduct(union(doms), union(rans)))) by LeftExists
-    have((domsDef, ransDef, relSet, in(p, union(z))) |- in(p, cartesianProduct(union(doms), union(rans)))) by Cut(unionElim of (x := z, z := p), lastStep)
-    thenHave((domsDef, ransDef, relSet) |- in(p, union(z)) ==> in(p, cartesianProduct(union(doms), union(rans)))) by RightImplies
-    thenHave((domsDef, ransDef, relSet) |- forall(p, in(p, union(z)) ==> in(p, cartesianProduct(union(doms), union(rans))))) by RightForall
+    have((domsDef, ransDef, p ∈ r, relation(r), r ∈ z) |- firstInPair(p) ∈ union(doms) /\ secondInPair(p) ∈ union(rans)) by Cut(relationElim, lastStep)
+    have((domsDef, ransDef, p ∈ r, relation(r), r ∈ z) |- in(pair(firstInPair(p), secondInPair(p)), cartesianProduct(union(doms), union(rans)))) by Cut(lastStep, inCartProduct)
+    thenHave((domsDef, ransDef, p ∈ r, relation(r), r ∈ z) |- p ∈ cartesianProduct(union(doms), union(rans))) by Substitution.ApplyRules(pairReconstructionInRelation)
+    have((domsDef, ransDef, relSet, p ∈ r, r ∈ z) |- p ∈ cartesianProduct(union(doms), union(rans))) by Cut(relSetMembership, lastStep)
+    thenHave((domsDef, ransDef, relSet, p ∈ r /\ r ∈ z) |- p ∈ cartesianProduct(union(doms), union(rans))) by LeftAnd
+    thenHave((domsDef, ransDef, relSet, ∃(r, p ∈ r /\ r ∈ z)) |- p ∈ cartesianProduct(union(doms), union(rans))) by LeftExists
+    have((domsDef, ransDef, relSet, p ∈ union(z)) |- p ∈ cartesianProduct(union(doms), union(rans))) by Cut(unionElim of (x := z, z := p), lastStep)
+    thenHave((domsDef, ransDef, relSet) |- p ∈ union(z) ==> p ∈ cartesianProduct(union(doms), union(rans))) by RightImplies
+    thenHave((domsDef, ransDef, relSet) |- ∀(p, p ∈ union(z) ==> p ∈ cartesianProduct(union(doms), union(rans)))) by RightForall
     have((domsDef, ransDef, relSet) |- subset(union(z), cartesianProduct(union(doms), union(rans)))) by Cut(lastStep, subsetIntro of (x := union(z), y := cartesianProduct(union(doms), union(rans))))
     have((domsDef, ransDef, relSet) |- relationBetween(union(z), union(doms), union(rans))) by Cut(lastStep, relationBetweenIntro of (r := union(z), a := union(doms), b := union(rans)))
     have((domsDef, ransDef, relSet) |- relation(union(z))) by Cut(lastStep, relationBetweenIsRelation of (r := union(z), a := union(doms), b := union(rans)))
-    thenHave((exists(doms, domsDef), ransDef, relSet) |- relation(union(z))) by LeftExists
-    thenHave((exists(doms, domsDef), exists(rans, ransDef), relSet) |- relation(union(z))) by LeftExists
-    have((existsOne(doms, domsDef), exists(rans, ransDef), relSet) |- relation(union(z))) by Cut(existsOneImpliesExists of (P := lambda(doms, domsDef)), lastStep)
-    have((existsOne(doms, domsDef), existsOne(rans, ransDef), relSet) |- relation(union(z))) by Cut(existsOneImpliesExists of (P := lambda(rans, ransDef)), lastStep)
-    have((existsOne(rans, ransDef), relSet) |- relation(union(z))) by Cut(replacementClassFunction of (A := z, F := lambda(r, relationDomain(r))), lastStep)
+    thenHave((∃(doms, domsDef), ransDef, relSet) |- relation(union(z))) by LeftExists
+    thenHave((∃(doms, domsDef), ∃(rans, ransDef), relSet) |- relation(union(z))) by LeftExists
+    have((∃!(doms, domsDef), ∃(rans, ransDef), relSet) |- relation(union(z))) by Cut(existsOneImpliesExists of (P := lambda(doms, domsDef)), lastStep)
+    have((∃!(doms, domsDef), ∃!(rans, ransDef), relSet) |- relation(union(z))) by Cut(existsOneImpliesExists of (P := lambda(rans, ransDef)), lastStep)
+    have((∃!(rans, ransDef), relSet) |- relation(union(z))) by Cut(replacementClassFunction of (A := z, F := lambda(r, relationDomain(r))), lastStep)
     have(thesis) by Cut(replacementClassFunction of (A := z, F := lambda(r, relationRange(r))), lastStep)
 
   }
@@ -688,7 +688,7 @@ object Relations extends lisa.Main {
   val relationIsRelationBetween = Lemma(
     relation(r) |- relationBetween(r, relationDomain(r), relationRange(r))
   ) {
-    have(exists(a, relationFrom(r, a)) |- relationBetween(r, relationDomain(r), relationRange(r))) by LeftExists(relationFromBetweenDomainAndRange)
+    have(∃(a, relationFrom(r, a)) |- relationBetween(r, relationDomain(r), relationRange(r))) by LeftExists(relationFromBetweenDomainAndRange)
     thenHave(thesis) by Substitution.ApplyRules(relation.definition)
   }
 
@@ -704,10 +704,10 @@ object Relations extends lisa.Main {
    *     `relation(r), Dom(r) = ∅ |- r = ∅`
    */
   val relationDomainEmpty = Lemma(
-    (relation(r), relationDomain(r) === emptySet) |- r === emptySet
+    (relation(r), relationDomain(r) === ∅) |- r === ∅
   ) {
-    have((relation(r), relationDomain(r) === emptySet) |- relationBetween(r, emptySet, relationRange(r))) by
-      RightSubstEq.withParametersSimple(List((relationDomain(r), emptySet)), lambda(x, relationBetween(r, x, relationRange(r))))(relationIsRelationBetween)
+    have((relation(r), relationDomain(r) === ∅) |- relationBetween(r, ∅, relationRange(r))) by
+      RightSubstEq.withParametersSimple(List((relationDomain(r), ∅)), lambda(x, relationBetween(r, x, relationRange(r))))(relationIsRelationBetween)
     have(thesis) by Cut(lastStep, relationBetweenLeftEmptyIsEmpty of (b := relationRange(r)))
   }
 
@@ -717,53 +717,53 @@ object Relations extends lisa.Main {
    *     `relation(r), Ran(r) = ∅ |- r = ∅`
    */
   val relationRangeEmpty = Lemma(
-    (relation(r), relationRange(r) === emptySet) |- r === emptySet
+    (relation(r), relationRange(r) === ∅) |- r === ∅
   ) {
-    have((relation(r), relationRange(r) === emptySet) |- relationBetween(r, relationDomain(r), emptySet)) by
-      RightSubstEq.withParametersSimple(List((relationRange(r), emptySet)), lambda(x, relationBetween(r, relationDomain(r), x)))(relationIsRelationBetween)
+    have((relation(r), relationRange(r) === ∅) |- relationBetween(r, relationDomain(r), ∅)) by
+      RightSubstEq.withParametersSimple(List((relationRange(r), ∅)), lambda(x, relationBetween(r, relationDomain(r), x)))(relationIsRelationBetween)
     have(thesis) by Cut(lastStep, relationBetweenRightEmptyIsEmpty of (a := relationDomain(r)))
   }
 
   val inverseRelationUniqueness = Lemma(
-    ∃!(z, ∀(t, in(t, z) <=> exists(p, in(p, r) /\ (t === swap(p)))))
+    ∃!(z, ∀(t, t ∈ z <=> ∃(p, p ∈ r /\ (t === swap(p)))))
   ) {
     have(thesis) by Restate.from(replacementClassFunction of (A := r, F := lambda(p, swap(p))))
   }
 
-  val inverseRelation = DEF(r) --> The(z, ∀(t, in(t, z) <=> exists(p, in(p, r) /\ (t === swap(p)))))(inverseRelationUniqueness)
+  val inverseRelation = DEF(r) --> The(z, ∀(t, t ∈ z <=> ∃(p, p ∈ r /\ (t === swap(p)))))(inverseRelationUniqueness)
 
   val inverseRelationMembership = Lemma(
-    in(p, r) <=> in(swap(p), inverseRelation(r))
+    p ∈ r <=> swap(p) ∈ inverseRelation(r)
   ) {
-    have(forall(t, in(t, inverseRelation(r)) <=> exists(p, in(p, r) /\ (t === swap(p))))) by InstantiateForall(inverseRelation(r))(inverseRelation.definition)
-    val definition = thenHave(in(swap(p), inverseRelation(r)) <=> exists(b, in(b, r) /\ (swap(p) === swap(b)))) by InstantiateForall(swap(p))
+    have(∀(t, t ∈ inverseRelation(r) <=> ∃(p, p ∈ r /\ (t === swap(p))))) by InstantiateForall(inverseRelation(r))(inverseRelation.definition)
+    val definition = thenHave(swap(p) ∈ inverseRelation(r) <=> ∃(b, b ∈ r /\ (swap(p) === swap(b)))) by InstantiateForall(swap(p))
 
-    val forward = have(in(p, r) ==> in(swap(p), inverseRelation(r))) subproof {
-      have(in(p, r) |- in(p, r) /\ (swap(p) === swap(p))) by Restate
-      thenHave(in(p, r) |- exists(b, in(b, r) /\ (swap(p) === swap(b)))) by RightExists
-      thenHave(in(p, r) |- in(swap(p), inverseRelation(r))) by Substitution.ApplyRules(definition)
+    val forward = have(p ∈ r ==> swap(p) ∈ inverseRelation(r)) subproof {
+      have(p ∈ r |- p ∈ r /\ (swap(p) === swap(p))) by Restate
+      thenHave(p ∈ r |- ∃(b, b ∈ r /\ (swap(p) === swap(b)))) by RightExists
+      thenHave(p ∈ r |- swap(p) ∈ inverseRelation(r)) by Substitution.ApplyRules(definition)
     }
 
-    val backward = have(in(swap(p), inverseRelation(r)) ==> in(p, r)) subproof {
-      have(in(b, r) |- in(b, r)) by Hypothesis
-      thenHave((in(b, r), b === p) |- in(p, r)) by RightSubstEq.withParametersSimple(List((b, p)), lambda(x, in(x, r)))
-      have((in(b, r), swap(b) === swap(p)) |- in(p, r)) by Cut(swapInjectivity of (x := b, y := p), lastStep)
-      thenHave(in(b, r) /\ (swap(b) === swap(p)) |- in(p, r)) by LeftAnd
-      thenHave(exists(b, in(b, r) /\ (swap(b) === swap(p))) |- in(p, r)) by LeftExists
-      thenHave(in(swap(p), inverseRelation(r)) |- in(p, r)) by Substitution.ApplyRules(definition)
+    val backward = have(swap(p) ∈ inverseRelation(r) ==> p ∈ r) subproof {
+      have(b ∈ r |- b ∈ r) by Hypothesis
+      thenHave((b ∈ r, b === p) |- p ∈ r) by RightSubstEq.withParametersSimple(List((b, p)), lambda(x, x ∈ r))
+      have((b ∈ r, swap(b) === swap(p)) |- p ∈ r) by Cut(swapInjectivity of (x := b, y := p), lastStep)
+      thenHave(b ∈ r /\ (swap(b) === swap(p)) |- p ∈ r) by LeftAnd
+      thenHave(∃(b, b ∈ r /\ (swap(b) === swap(p))) |- p ∈ r) by LeftExists
+      thenHave(swap(p) ∈ inverseRelation(r) |- p ∈ r) by Substitution.ApplyRules(definition)
     }
     
     have(thesis) by RightIff(forward, backward)
   }
 
   val inverseRelationReverseMembership = Lemma(
-    in(swap(p), r) <=> in(p, inverseRelation(r))
+    swap(p) ∈ r <=> p ∈ inverseRelation(r)
   ) {
     have(thesis) by Substitution.ApplyRules(swapInvolutive)(inverseRelationMembership of (p := swap(p)))
   }
 
   val inverseRelationMembershipPair = Lemma(
-    in(pair(x, y), r) <=> in(pair(y, x), inverseRelation(r))
+    pair(x, y) ∈ r <=> in(pair(y, x), inverseRelation(r))
   ) {
     have(thesis) by Substitution.ApplyRules(swapPair)(inverseRelationMembership of (p := pair(x, y)))
   }
@@ -771,26 +771,26 @@ object Relations extends lisa.Main {
   val inverseInverseRelation = Lemma(
     inverseRelation(inverseRelation(r)) === r
   ) {
-    have(in(p, r) <=> in(p, inverseRelation(inverseRelation(r)))) by Substitution.ApplyRules(swapInvolutive, inverseRelationMembership)(inverseRelationMembership of (p := swap(p), r := inverseRelation(r)))
-    thenHave(forall(p, in(p, r) <=> in(p, inverseRelation(inverseRelation(r))))) by RightForall
+    have(p ∈ r <=> in(p, inverseRelation(inverseRelation(r)))) by Substitution.ApplyRules(swapInvolutive, inverseRelationMembership)(inverseRelationMembership of (p := swap(p), r := inverseRelation(r)))
+    thenHave(∀(p, p ∈ r <=> in(p, inverseRelation(inverseRelation(r))))) by RightForall
     have(thesis) by Cut(lastStep, equalityIntro of (x := r, y := inverseRelation(inverseRelation(r))))
   }
 
   val inverseRelationDomain = Lemma(
     relationDomain(inverseRelation(r)) === relationRange(r)
   ) {
-    val forward = have(in(b, relationDomain(inverseRelation(r))) ==> in(b, relationRange(r))) subproof {
-      have(in(pair(b, a), inverseRelation(r)) |- in(b, relationRange(r))) by Substitution.ApplyRules(inverseRelationMembershipPair)(relationRangeIntroPair)
-      thenHave(exists(a, in(pair(b, a), inverseRelation(r))) |- in(b, relationRange(r))) by LeftExists
-      have(in(b, relationDomain(inverseRelation(r))) |- in(b, relationRange(r))) by Cut(relationDomainElim of (a := b, r := inverseRelation(r)), lastStep)
+    val forward = have(b ∈ relationDomain(inverseRelation(r)) ==> b ∈ relationRange(r)) subproof {
+      have(pair(b, a) ∈ inverseRelation(r) |- b ∈ relationRange(r)) by Substitution.ApplyRules(inverseRelationMembershipPair)(relationRangeIntroPair)
+      thenHave(∃(a, pair(b, a) ∈ inverseRelation(r)) |- b ∈ relationRange(r)) by LeftExists
+      have(b ∈ relationDomain(inverseRelation(r)) |- b ∈ relationRange(r)) by Cut(relationDomainElim of (a := b, r := inverseRelation(r)), lastStep)
     }
-    val backward = have(in(b, relationRange(r)) ==> in(b, relationDomain(inverseRelation(r)))) subproof {
-      have(in(pair(a, b), r) |- in(b, relationDomain(inverseRelation(r)))) by Substitution.ApplyRules(inverseRelationMembershipPair)(relationDomainIntroPair of (r := inverseRelation(r), a := b, b := a))
-      thenHave(exists(a, in(pair(a, b), r)) |- in(b, relationDomain(inverseRelation(r)))) by LeftExists
-      have(in(b, relationRange(r)) |- in(b, relationDomain(inverseRelation(r))) ) by Cut(relationRangeElim, lastStep)
+    val backward = have(b ∈ relationRange(r) ==> b ∈ relationDomain(inverseRelation(r))) subproof {
+      have(pair(a, b) ∈ r |- b ∈ relationDomain(inverseRelation(r))) by Substitution.ApplyRules(inverseRelationMembershipPair)(relationDomainIntroPair of (r := inverseRelation(r), a := b, b := a))
+      thenHave(∃(a, pair(a, b) ∈ r) |- b ∈ relationDomain(inverseRelation(r))) by LeftExists
+      have(b ∈ relationRange(r) |- b ∈ relationDomain(inverseRelation(r)) ) by Cut(relationRangeElim, lastStep)
     }
-    have(in(b, relationDomain(inverseRelation(r))) <=> in(b, relationRange(r))) by RightIff(forward, backward)
-    thenHave(forall(b, in(b, relationDomain(inverseRelation(r))) <=> in(b, relationRange(r))) ) by RightForall
+    have(b ∈ relationDomain(inverseRelation(r)) <=> b ∈ relationRange(r)) by RightIff(forward, backward)
+    thenHave(∀(b, b ∈ relationDomain(inverseRelation(r)) <=> b ∈ relationRange(r)) ) by RightForall
     have(thesis) by Cut(lastStep, equalityIntro of (x := relationDomain(inverseRelation(r)), y := relationRange(r)))
   }
 
@@ -804,11 +804,11 @@ object Relations extends lisa.Main {
     relationBetween(r, a, b) <=> relationBetween(inverseRelation(r), b, a)
   ) {
     val forward = have(relationBetween(r, a, b) ==> relationBetween(inverseRelation(r), b, a)) subproof {
-      have(in(p, inverseRelation(r)) |- in(swap(p), r)) by Weakening(inverseRelationReverseMembership)
-      have((in(p, inverseRelation(r)), subset(r, cartesianProduct(a, b))) |- in(swap(p), cartesianProduct(a, b))) by Cut(lastStep, subsetElim of (z := swap(p), x := r, y := cartesianProduct(a, b)))
-      thenHave((in(p, inverseRelation(r)), relationBetween(r, a, b)) |- in(p, cartesianProduct(b, a))) by Substitution.ApplyRules(relationBetween.definition, swapCartesianProduct)
-      thenHave(relationBetween(r, a, b) |- in(p, inverseRelation(r)) ==> in(p, cartesianProduct(b, a))) by RightImplies
-      thenHave(relationBetween(r, a, b) |- forall(p, in(p, inverseRelation(r)) ==> in(p, cartesianProduct(b, a))) ) by RightForall
+      have(p ∈ inverseRelation(r) |- swap(p) ∈ r) by Weakening(inverseRelationReverseMembership)
+      have((p ∈ inverseRelation(r), r ⊆ cartesianProduct(a, b)) |- in(swap(p), cartesianProduct(a, b))) by Cut(lastStep, subsetElim of (z := swap(p), x := r, y := cartesianProduct(a, b)))
+      thenHave((p ∈ inverseRelation(r), relationBetween(r, a, b)) |- in(p, cartesianProduct(b, a))) by Substitution.ApplyRules(relationBetween.definition, swapCartesianProduct)
+      thenHave(relationBetween(r, a, b) |- p ∈ inverseRelation(r) ==> in(p, cartesianProduct(b, a))) by RightImplies
+      thenHave(relationBetween(r, a, b) |- ∀(p, p ∈ inverseRelation(r) ==> in(p, cartesianProduct(b, a))) ) by RightForall
       have(relationBetween(r, a, b) |- subset(inverseRelation(r), cartesianProduct(b, a))) by Cut(lastStep, subsetIntro of (x := inverseRelation(r), y := cartesianProduct(b, a)))
       have(relationBetween(r, a, b) |- relationBetween(inverseRelation(r), b, a)) by Cut(lastStep, relationBetweenIntro of (r := inverseRelation(r), a := b, b := a))
     }
@@ -838,56 +838,56 @@ object Relations extends lisa.Main {
    * Relation Restriction
    */
 
-  val relationRestrictionUniqueness = Lemma(existsOne(z, forall(p, in(p, z) <=> (in(p, r) /\ in(p, cartesianProduct(x, y)))))) {
-    have(thesis) by UniqueComprehension(r, lambda(p, in(p, r) /\ in(p, cartesianProduct(x, y))))
+  val relationRestrictionUniqueness = Lemma(∃!(z, ∀(p, p ∈ z <=> (p ∈ r /\ p ∈ cartesianProduct(x, y))))) {
+    have(thesis) by UniqueComprehension(r, lambda(p, p ∈ r /\ p ∈ cartesianProduct(x, y)))
   }
 
-  val relationRestriction = DEF(r, x, y) --> The(z, forall(p, in(p, z) <=> (in(p, r) /\ in(p, cartesianProduct(x, y)))))(relationRestrictionUniqueness)
+  val relationRestriction = DEF(r, x, y) --> The(z, ∀(p, p ∈ z <=> (p ∈ r /\ p ∈ cartesianProduct(x, y))))(relationRestrictionUniqueness)
 
   val relationRestrictionElem = Lemma(
-    in(p, relationRestriction(r, x, y)) <=> (in(p, r) /\ in(p, cartesianProduct(x, y)))
+    p ∈ relationRestriction(r, x, y) <=> (p ∈ r /\ p ∈ cartesianProduct(x, y))
   ) {
-    have(forall(p, in(p, relationRestriction(r, x, y)) <=> (in(p, r) /\ in(p, cartesianProduct(x, y))))) by InstantiateForall(relationRestriction(r, x, y))(relationRestriction.definition)
+    have(∀(p, p ∈ relationRestriction(r, x, y) <=> (p ∈ r /\ p ∈ cartesianProduct(x, y)))) by InstantiateForall(relationRestriction(r, x, y))(relationRestriction.definition)
     thenHave(thesis) by InstantiateForall(p)
   }
 
   val relationRestrictionElemPair = Lemma(
-    in(pair(a, b), relationRestriction(r, x, y)) <=> (in(pair(a, b), r) /\ in(a, x) /\ in(b, y))
+    pair(a, b) ∈ relationRestriction(r, x, y) <=> (pair(a, b) ∈ r /\ a ∈ x /\ b ∈ y)
   ) {
-    have(in(pair(a, b), cartesianProduct(x, y)) <=> in(a, x) /\ in(b, y) |- in(pair(a, b), relationRestriction(r, x, y)) <=> (in(pair(a, b), r) /\ in(a, x) /\ in(b, y))) by RightSubstIff
-      .withParametersSimple(List((in(pair(a, b), cartesianProduct(x, y)), in(a, x) /\ in(b, y))), lambda(h, in(pair(a, b), relationRestriction(r, x, y)) <=> (in(pair(a, b), r) /\ h)))(
+    have(pair(a, b) ∈ cartesianProduct(x, y) <=> a ∈ x /\ b ∈ y |- pair(a, b) ∈ relationRestriction(r, x, y) <=> (pair(a, b) ∈ r /\ a ∈ x /\ b ∈ y)) by RightSubstIff
+      .withParametersSimple(List((pair(a, b) ∈ cartesianProduct(x, y), a ∈ x /\ b ∈ y)), lambda(h, pair(a, b) ∈ relationRestriction(r, x, y) <=> (pair(a, b) ∈ r /\ h)))(
         relationRestrictionElem of (p := pair(a, b))
       )
     have(thesis) by Cut(cartesianProductMembershipPair, lastStep)
   }
 
   val relationRestrictionIntroPair = Lemma(
-    (in(pair(a, b), r), in(a, x), in(b, y)) |- in(pair(a, b), relationRestriction(r, x, y))
+    (pair(a, b) ∈ r, a ∈ x, b ∈ y) |- pair(a, b) ∈ relationRestriction(r, x, y)
   ) {
     have(thesis) by Weakening(relationRestrictionElemPair)
   }
 
   val relationRestrictionIntro = Lemma(
-    (relation(r), in(p, r), in(firstInPair(p), x), in(secondInPair(p), y)) |- in(p, relationRestriction(r, x, y))
+    (relation(r), p ∈ r, firstInPair(p) ∈ x, secondInPair(p) ∈ y) |- p ∈ relationRestriction(r, x, y)
   ) {
     have(thesis) by Substitution.ApplyRules(pairReconstructionInRelation)(relationRestrictionIntroPair of (a := firstInPair(p), b := secondInPair(p)))
   }
 
   val relationRestrictionPairInRestrictedDomains = Lemma(
-    in(pair(a, b), relationRestriction(r, x, y)) |- in(a, x) /\ in(b, y)
+    pair(a, b) ∈ relationRestriction(r, x, y) |- a ∈ x /\ b ∈ y
   ) {
     have(thesis) by Weakening(relationRestrictionElemPair)
   }
 
   val relationRestrictionInRestrictedDomains = Lemma(
-    in(p, relationRestriction(r, x, y)) |- in(firstInPair(p), x) /\ in(secondInPair(p), y)
+    p ∈ relationRestriction(r, x, y) |- firstInPair(p) ∈ x /\ secondInPair(p) ∈ y
   ) {
-    have(in(p, relationRestriction(r, x, y)) |- in(p, cartesianProduct(x, y))) by Weakening(relationRestrictionElem)
+    have(p ∈ relationRestriction(r, x, y) |- p ∈ cartesianProduct(x, y)) by Weakening(relationRestrictionElem)
     have(thesis) by Cut(lastStep, cartesianProductElim)
   }
 
   val relationRestrictionPairInRelation = Lemma(
-    (in(pair(a, b), relationRestriction(r, x, y))) |- in(pair(a, b), r)
+    (pair(a, b) ∈ relationRestriction(r, x, y)) |- pair(a, b) ∈ r
   ) {
     have(thesis) by Weakening(relationRestrictionElemPair)
   }
@@ -895,15 +895,15 @@ object Relations extends lisa.Main {
   val relationRestrictionSubset = Lemma(
     subset(relationRestriction(r, x, y), r)
   ) {
-    have(forall(p, in(p, relationRestriction(r, x, y)) <=> (in(p, r) /\ in(p, cartesianProduct(x, y))))) by InstantiateForall(relationRestriction(r, x, y))(relationRestriction.definition)
-    thenHave(in(p, relationRestriction(r, x, y)) <=> (in(p, r) /\ in(p, cartesianProduct(x, y)))) by InstantiateForall(p)
-    thenHave(in(p, relationRestriction(r, x, y)) ==> in(p, r)) by Weakening
-    thenHave(forall(p, in(p, relationRestriction(r, x, y)) ==> in(p, r))) by RightForall
+    have(∀(p, p ∈ relationRestriction(r, x, y) <=> (p ∈ r /\ p ∈ cartesianProduct(x, y)))) by InstantiateForall(relationRestriction(r, x, y))(relationRestriction.definition)
+    thenHave(p ∈ relationRestriction(r, x, y) <=> (p ∈ r /\ p ∈ cartesianProduct(x, y))) by InstantiateForall(p)
+    thenHave(p ∈ relationRestriction(r, x, y) ==> p ∈ r) by Weakening
+    thenHave(∀(p, p ∈ relationRestriction(r, x, y) ==> p ∈ r)) by RightForall
     have(thesis) by Cut(lastStep, subsetIntro of (x := relationRestriction(r, x, y), y := r))
   }
 
   val relationRestrictionInRelation = Lemma(
-    in(p, relationRestriction(r, x, y)) |- in(p, r)
+    p ∈ relationRestriction(r, x, y) |- p ∈ r
   ) {
     have(thesis) by Cut(relationRestrictionSubset, subsetElim of (z := p, x := relationRestriction(r, x, y), y := r))
   }
@@ -911,34 +911,34 @@ object Relations extends lisa.Main {
   val relationRestrictionDomain = Lemma(
     subset(relationDomain(relationRestriction(r, x, y)), setIntersection(relationDomain(r), x))
   ) {
-    have(in(pair(a, b), relationRestriction(r, x, y)) |- in(a, x)) by Weakening(relationRestrictionPairInRestrictedDomains)
-    have((in(pair(a, b), relationRestriction(r, x, y)), in(a, relationDomain(r))) |- in(a, setIntersection(relationDomain(r), x))) by Cut(
+    have(pair(a, b) ∈ relationRestriction(r, x, y) |- a ∈ x) by Weakening(relationRestrictionPairInRestrictedDomains)
+    have((pair(a, b) ∈ relationRestriction(r, x, y), a ∈ relationDomain(r)) |- a ∈ setIntersection(relationDomain(r), x)) by Cut(
       lastStep,
       setIntersectionIntro of (z := a, x := relationDomain(r), y := x)
     )
-    have((in(pair(a, b), relationRestriction(r, x, y)), in(pair(a, b), r)) |- in(a, setIntersection(relationDomain(r), x))) by Cut(relationDomainIntroPair, lastStep)
-    have(in(pair(a, b), relationRestriction(r, x, y)) |- in(a, setIntersection(relationDomain(r), x))) by Cut(relationRestrictionPairInRelation, lastStep)
-    thenHave(exists(b, in(pair(a, b), relationRestriction(r, x, y))) |- in(a, setIntersection(relationDomain(r), x))) by LeftExists
-    have(in(a, relationDomain(relationRestriction(r, x, y))) |- in(a, setIntersection(relationDomain(r), x))) by Cut(relationDomainElim of (r := relationRestriction(r, x, y)), lastStep)
-    thenHave(in(a, relationDomain(relationRestriction(r, x, y))) ==> in(a, setIntersection(relationDomain(r), x))) by RightImplies
-    thenHave(forall(a, in(a, relationDomain(relationRestriction(r, x, y))) ==> in(a, setIntersection(relationDomain(r), x)))) by RightForall
+    have((pair(a, b) ∈ relationRestriction(r, x, y), pair(a, b) ∈ r) |- a ∈ setIntersection(relationDomain(r), x)) by Cut(relationDomainIntroPair, lastStep)
+    have(pair(a, b) ∈ relationRestriction(r, x, y) |- a ∈ setIntersection(relationDomain(r), x)) by Cut(relationRestrictionPairInRelation, lastStep)
+    thenHave(∃(b, pair(a, b) ∈ relationRestriction(r, x, y)) |- a ∈ setIntersection(relationDomain(r), x)) by LeftExists
+    have(a ∈ relationDomain(relationRestriction(r, x, y)) |- a ∈ setIntersection(relationDomain(r), x)) by Cut(relationDomainElim of (r := relationRestriction(r, x, y)), lastStep)
+    thenHave(a ∈ relationDomain(relationRestriction(r, x, y)) ==> a ∈ setIntersection(relationDomain(r), x)) by RightImplies
+    thenHave(∀(a, a ∈ relationDomain(relationRestriction(r, x, y)) ==> a ∈ setIntersection(relationDomain(r), x))) by RightForall
     have(thesis) by Cut(lastStep, subsetIntro of (x := relationDomain(relationRestriction(r, x, y)), y := setIntersection(relationDomain(r), x)))
   }
 
   val relationRestrictionRange = Lemma(
     subset(relationRange(relationRestriction(r, x, y)), setIntersection(relationRange(r), y))
   ) {
-    have(in(pair(a, b), relationRestriction(r, x, y)) |- in(b, y)) by Weakening(relationRestrictionPairInRestrictedDomains)
-    have((in(pair(a, b), relationRestriction(r, x, y)), in(b, relationRange(r))) |- in(b, setIntersection(relationRange(r), y))) by Cut(
+    have(pair(a, b) ∈ relationRestriction(r, x, y) |- b ∈ y) by Weakening(relationRestrictionPairInRestrictedDomains)
+    have((pair(a, b) ∈ relationRestriction(r, x, y), b ∈ relationRange(r)) |- b ∈ setIntersection(relationRange(r), y)) by Cut(
       lastStep,
       setIntersectionIntro of (z := b, x := relationRange(r))
     )
-    have((in(pair(a, b), relationRestriction(r, x, y)), in(pair(a, b), r)) |- in(b, setIntersection(relationRange(r), y))) by Cut(relationRangeIntroPair, lastStep)
-    have(in(pair(a, b), relationRestriction(r, x, y)) |- in(b, setIntersection(relationRange(r), y))) by Cut(relationRestrictionPairInRelation, lastStep)
-    thenHave(exists(a, in(pair(a, b), relationRestriction(r, x, y))) |- in(b, setIntersection(relationRange(r), y))) by LeftExists
-    have(in(b, relationRange(relationRestriction(r, x, y))) |- in(b, setIntersection(relationRange(r), y))) by Cut(relationRangeElim of (r := relationRestriction(r, x, y)), lastStep)
-    thenHave(in(b, relationRange(relationRestriction(r, x, y))) ==> in(b, setIntersection(relationRange(r), y))) by RightImplies
-    thenHave(forall(b, in(b, relationRange(relationRestriction(r, x, y))) ==> in(b, setIntersection(relationRange(r), y)))) by RightForall
+    have((pair(a, b) ∈ relationRestriction(r, x, y), pair(a, b) ∈ r) |- b ∈ setIntersection(relationRange(r), y)) by Cut(relationRangeIntroPair, lastStep)
+    have(pair(a, b) ∈ relationRestriction(r, x, y) |- b ∈ setIntersection(relationRange(r), y)) by Cut(relationRestrictionPairInRelation, lastStep)
+    thenHave(∃(a, pair(a, b) ∈ relationRestriction(r, x, y)) |- b ∈ setIntersection(relationRange(r), y)) by LeftExists
+    have(b ∈ relationRange(relationRestriction(r, x, y)) |- b ∈ setIntersection(relationRange(r), y)) by Cut(relationRangeElim of (r := relationRestriction(r, x, y)), lastStep)
+    thenHave(b ∈ relationRange(relationRestriction(r, x, y)) ==> b ∈ setIntersection(relationRange(r), y)) by RightImplies
+    thenHave(∀(b, b ∈ relationRange(relationRestriction(r, x, y)) ==> b ∈ setIntersection(relationRange(r), y))) by RightForall
     have(thesis) by Cut(lastStep, subsetIntro of (x := relationRange(relationRestriction(r, x, y)), y := setIntersection(relationRange(r), y)))
   }
 
@@ -946,13 +946,13 @@ object Relations extends lisa.Main {
     relation(r) |- relationRestriction(r, relationDomain(r), relationRange(r)) === r
   ) {
     have(
-      (relation(r), in(p, r), in(secondInPair(p), relationRange(r))) |-
-        in(p, relationRestriction(r, relationDomain(r), relationRange(r)))
+      (relation(r), p ∈ r, secondInPair(p) ∈ relationRange(r)) |-
+        p ∈ relationRestriction(r, relationDomain(r), relationRange(r))
     ) by Cut(relationDomainIntro, relationRestrictionIntro of (x := relationDomain(r), y := relationRange(r)))
-    have((relation(r), in(p, r)) |- in(p, relationRestriction(r, relationDomain(r), relationRange(r)))) by
+    have((relation(r), p ∈ r) |- p ∈ relationRestriction(r, relationDomain(r), relationRange(r))) by
       Cut(relationRangeIntro, lastStep)
-    thenHave(relation(r) |- in(p, r) ==> in(p, relationRestriction(r, relationDomain(r), relationRange(r)))) by RightImplies
-    thenHave(relation(r) |- forall(p, in(p, r) ==> in(p, relationRestriction(r, relationDomain(r), relationRange(r))))) by RightForall
+    thenHave(relation(r) |- p ∈ r ==> p ∈ relationRestriction(r, relationDomain(r), relationRange(r))) by RightImplies
+    thenHave(relation(r) |- ∀(p, p ∈ r ==> p ∈ relationRestriction(r, relationDomain(r), relationRange(r)))) by RightForall
     have(relation(r) |- subset(r, relationRestriction(r, relationDomain(r), relationRange(r)))) by
       Cut(lastStep, subsetIntro of (x := r, y := relationRestriction(r, relationDomain(r), relationRange(r))))
     have((relation(r), subset(relationRestriction(r, relationDomain(r), relationRange(r)), r)) |- relationRestriction(r, relationDomain(r), relationRange(r)) === r) by
@@ -964,9 +964,9 @@ object Relations extends lisa.Main {
   val relationRestrictionIsRelationBetweenRestrictedDomains = Lemma(
     relationBetween(relationRestriction(r, x, y), x, y)
   ) {
-    have(in(p, relationRestriction(r, x, y)) |- in(p, cartesianProduct(x, y))) by Weakening(relationRestrictionElem)
-    thenHave(in(p, relationRestriction(r, x, y)) ==> in(p, cartesianProduct(x, y))) by RightImplies
-    thenHave(forall(p, in(p, relationRestriction(r, x, y)) ==> in(p, cartesianProduct(x, y)))) by RightForall
+    have(p ∈ relationRestriction(r, x, y) |- p ∈ cartesianProduct(x, y)) by Weakening(relationRestrictionElem)
+    thenHave(p ∈ relationRestriction(r, x, y) ==> p ∈ cartesianProduct(x, y)) by RightImplies
+    thenHave(∀(p, p ∈ relationRestriction(r, x, y) ==> p ∈ cartesianProduct(x, y))) by RightForall
     have(subset(relationRestriction(r, x, y), cartesianProduct(x, y))) by Cut(lastStep, subsetIntro of (x := relationRestriction(r, x, y), y := cartesianProduct(x, y)))
     thenHave(thesis) by Substitution.ApplyRules(relationBetween.definition of (r := relationRestriction(r, x, y)))
   }
@@ -986,88 +986,88 @@ object Relations extends lisa.Main {
   val relationRestrictionSupersetRange = Lemma(
     (relation(r), subset(relationRange(r), y)) |- relationRestriction(r, x, y) === relationRestriction(r, x, relationRange(r))
   ) {
-    val forward = have(relation(r) |- in(p, relationRestriction(r, x, y)) ==> in(p, relationRestriction(r, x, relationRange(r)))) subproof {
-      have((relation(r), in(p, r), in(firstInPair(p), x)) |- in(p, relationRestriction(r, x, relationRange(r)))) by Cut(relationRangeIntro, relationRestrictionIntro of (y := relationRange(r)))
-      have((relation(r), in(p, relationRestriction(r, x, y)), in(firstInPair(p), x)) |- in(p, relationRestriction(r, x, relationRange(r)))) by Cut(relationRestrictionInRelation, lastStep)
-      thenHave((relation(r), in(p, relationRestriction(r, x, y)), in(firstInPair(p), x) /\ in(secondInPair(p), y)) |- in(p, relationRestriction(r, x, relationRange(r)))) by LeftAnd
-      have((relation(r), in(p, relationRestriction(r, x, y))) |- in(p, relationRestriction(r, x, relationRange(r)))) by Cut(relationRestrictionInRestrictedDomains, lastStep)
+    val forward = have(relation(r) |- p ∈ relationRestriction(r, x, y) ==> p ∈ relationRestriction(r, x, relationRange(r))) subproof {
+      have((relation(r), p ∈ r, firstInPair(p) ∈ x) |- p ∈ relationRestriction(r, x, relationRange(r))) by Cut(relationRangeIntro, relationRestrictionIntro of (y := relationRange(r)))
+      have((relation(r), p ∈ relationRestriction(r, x, y), firstInPair(p) ∈ x) |- p ∈ relationRestriction(r, x, relationRange(r))) by Cut(relationRestrictionInRelation, lastStep)
+      thenHave((relation(r), p ∈ relationRestriction(r, x, y), firstInPair(p) ∈ x /\ secondInPair(p) ∈ y) |- p ∈ relationRestriction(r, x, relationRange(r))) by LeftAnd
+      have((relation(r), p ∈ relationRestriction(r, x, y)) |- p ∈ relationRestriction(r, x, relationRange(r))) by Cut(relationRestrictionInRestrictedDomains, lastStep)
     }
-    val backward = have((relation(r), subset(relationRange(r), y)) |- in(p, relationRestriction(r, x, relationRange(r))) ==> in(p, relationRestriction(r, x, y))) subproof {
-      have((relation(r), subset(relationRange(r), y), in(p, r), in(firstInPair(p), x), in(secondInPair(p), relationRange(r))) |- in(p, relationRestriction(r, x, y))) by Cut(subsetElim of (z := secondInPair(p), x := relationRange(r)), relationRestrictionIntro)
-      have((relation(r), subset(relationRange(r), y), in(p, relationRestriction(r, x, relationRange(r))), in(firstInPair(p), x), in(secondInPair(p), relationRange(r))) |- in(p, relationRestriction(r, x, y))) by Cut(relationRestrictionInRelation of (y := relationRange(r)), lastStep)
-      thenHave((relation(r), subset(relationRange(r), y), in(p, relationRestriction(r, x, relationRange(r))), in(firstInPair(p), x) /\ in(secondInPair(p), relationRange(r))) |- in(p, relationRestriction(r, x, y))) by LeftAnd
-      have((relation(r), subset(relationRange(r), y), in(p, relationRestriction(r, x, relationRange(r)))) |- in(p, relationRestriction(r, x, y))) by Cut(relationRestrictionInRestrictedDomains of (y := relationRange(r)), lastStep)
+    val backward = have((relation(r), subset(relationRange(r), y)) |- p ∈ relationRestriction(r, x, relationRange(r)) ==> p ∈ relationRestriction(r, x, y)) subproof {
+      have((relation(r), subset(relationRange(r), y), p ∈ r, firstInPair(p) ∈ x, secondInPair(p) ∈ relationRange(r)) |- p ∈ relationRestriction(r, x, y)) by Cut(subsetElim of (z := secondInPair(p), x := relationRange(r)), relationRestrictionIntro)
+      have((relation(r), subset(relationRange(r), y), p ∈ relationRestriction(r, x, relationRange(r)), firstInPair(p) ∈ x, secondInPair(p) ∈ relationRange(r)) |- p ∈ relationRestriction(r, x, y)) by Cut(relationRestrictionInRelation of (y := relationRange(r)), lastStep)
+      thenHave((relation(r), subset(relationRange(r), y), p ∈ relationRestriction(r, x, relationRange(r)), firstInPair(p) ∈ x /\ secondInPair(p) ∈ relationRange(r)) |- p ∈ relationRestriction(r, x, y)) by LeftAnd
+      have((relation(r), subset(relationRange(r), y), p ∈ relationRestriction(r, x, relationRange(r))) |- p ∈ relationRestriction(r, x, y)) by Cut(relationRestrictionInRestrictedDomains of (y := relationRange(r)), lastStep)
     }
-    have((relation(r), subset(relationRange(r), y)) |- in(p, relationRestriction(r, x, y)) <=> in(p, relationRestriction(r, x, relationRange(r)))) by
+    have((relation(r), subset(relationRange(r), y)) |- p ∈ relationRestriction(r, x, y) <=> p ∈ relationRestriction(r, x, relationRange(r))) by
       RightIff(forward, backward)
-    thenHave((relation(r), subset(relationRange(r), y)) |- forall(p, in(p, relationRestriction(r, x, y)) <=> in(p, relationRestriction(r, x, relationRange(r))))) by RightForall
+    thenHave((relation(r), subset(relationRange(r), y)) |- ∀(p, p ∈ relationRestriction(r, x, y) <=> p ∈ relationRestriction(r, x, relationRange(r)))) by RightForall
     have(thesis) by Cut(lastStep, equalityIntro of (x := relationRestriction(r, x, y), y := relationRestriction(r, x, relationRange(r))))
   }
 
   val relationRestrictionSupersetDomain = Lemma(
     (relation(r), subset(relationDomain(r), x)) |- relationRestriction(r, x, y) === relationRestriction(r, relationDomain(r), y)
   ) {
-    val forward = have(relation(r) |- in(p, relationRestriction(r, x, y)) ==> in(p, relationRestriction(r, relationDomain(r), y))) subproof {
-      have((relation(r), in(p, r), in(secondInPair(p), y)) |- in(p, relationRestriction(r, relationDomain(r), y))) by Cut(relationDomainIntro, relationRestrictionIntro of (x := relationDomain(r)))
-      have((relation(r), in(p, relationRestriction(r, x, y)), in(secondInPair(p), y)) |- in(p, relationRestriction(r, relationDomain(r), y))) by Cut(relationRestrictionInRelation, lastStep)
-      thenHave((relation(r), in(p, relationRestriction(r, x, y)), in(firstInPair(p), x) /\ in(secondInPair(p), y)) |- in(p, relationRestriction(r, relationDomain(r), y))) by LeftAnd
-      have((relation(r), in(p, relationRestriction(r, x, y))) |- in(p, relationRestriction(r, relationDomain(r), y))) by Cut(relationRestrictionInRestrictedDomains, lastStep)
+    val forward = have(relation(r) |- p ∈ relationRestriction(r, x, y) ==> p ∈ relationRestriction(r, relationDomain(r), y)) subproof {
+      have((relation(r), p ∈ r, secondInPair(p) ∈ y) |- p ∈ relationRestriction(r, relationDomain(r), y)) by Cut(relationDomainIntro, relationRestrictionIntro of (x := relationDomain(r)))
+      have((relation(r), p ∈ relationRestriction(r, x, y), secondInPair(p) ∈ y) |- p ∈ relationRestriction(r, relationDomain(r), y)) by Cut(relationRestrictionInRelation, lastStep)
+      thenHave((relation(r), p ∈ relationRestriction(r, x, y), firstInPair(p) ∈ x /\ secondInPair(p) ∈ y) |- p ∈ relationRestriction(r, relationDomain(r), y)) by LeftAnd
+      have((relation(r), p ∈ relationRestriction(r, x, y)) |- p ∈ relationRestriction(r, relationDomain(r), y)) by Cut(relationRestrictionInRestrictedDomains, lastStep)
     }
-    val backward = have((relation(r), subset(relationDomain(r), x)) |- in(p, relationRestriction(r, relationDomain(r), y)) ==> in(p, relationRestriction(r, x, y))) subproof {
-      have((relation(r), subset(relationDomain(r), x), in(p, r), in(firstInPair(p), relationDomain(r)), in(secondInPair(p), y)) |- in(p, relationRestriction(r, x, y))) by Cut(subsetElim of (z := firstInPair(p), x := relationDomain(r), y := x), relationRestrictionIntro)
-      have((relation(r), subset(relationDomain(r), x), in(p, relationRestriction(r, relationDomain(r), y)), in(firstInPair(p), relationDomain(r)), in(secondInPair(p), y)) |- in(p, relationRestriction(r, x, y))) by Cut(relationRestrictionInRelation of (x := relationDomain(r)), lastStep)
-      thenHave((relation(r), subset(relationDomain(r), x), in(p, relationRestriction(r, relationDomain(r), y)), in(firstInPair(p), relationDomain(r)) /\ in(secondInPair(p), y)) |- in(p, relationRestriction(r, x, y))) by LeftAnd
-      have((relation(r), subset(relationDomain(r), x), in(p, relationRestriction(r, relationDomain(r), y))) |- in(p, relationRestriction(r, x, y))) by Cut(relationRestrictionInRestrictedDomains of (x := relationDomain(r)), lastStep)
+    val backward = have((relation(r), subset(relationDomain(r), x)) |- p ∈ relationRestriction(r, relationDomain(r), y) ==> p ∈ relationRestriction(r, x, y)) subproof {
+      have((relation(r), subset(relationDomain(r), x), p ∈ r, firstInPair(p) ∈ relationDomain(r), secondInPair(p) ∈ y) |- p ∈ relationRestriction(r, x, y)) by Cut(subsetElim of (z := firstInPair(p), x := relationDomain(r), y := x), relationRestrictionIntro)
+      have((relation(r), subset(relationDomain(r), x), p ∈ relationRestriction(r, relationDomain(r), y), firstInPair(p) ∈ relationDomain(r), secondInPair(p) ∈ y) |- p ∈ relationRestriction(r, x, y)) by Cut(relationRestrictionInRelation of (x := relationDomain(r)), lastStep)
+      thenHave((relation(r), subset(relationDomain(r), x), p ∈ relationRestriction(r, relationDomain(r), y), firstInPair(p) ∈ relationDomain(r) /\ secondInPair(p) ∈ y) |- p ∈ relationRestriction(r, x, y)) by LeftAnd
+      have((relation(r), subset(relationDomain(r), x), p ∈ relationRestriction(r, relationDomain(r), y)) |- p ∈ relationRestriction(r, x, y)) by Cut(relationRestrictionInRestrictedDomains of (x := relationDomain(r)), lastStep)
     }
-    have((relation(r), subset(relationDomain(r), x)) |- in(p, relationRestriction(r, x, y)) <=> in(p, relationRestriction(r, relationDomain(r), y))) by
+    have((relation(r), subset(relationDomain(r), x)) |- p ∈ relationRestriction(r, x, y) <=> p ∈ relationRestriction(r, relationDomain(r), y)) by
       RightIff(forward, backward)
-    thenHave((relation(r), subset(relationDomain(r), x)) |- forall(p, in(p, relationRestriction(r, x, y)) <=> in(p, relationRestriction(r, relationDomain(r), y)))) by RightForall
+    thenHave((relation(r), subset(relationDomain(r), x)) |- ∀(p, p ∈ relationRestriction(r, x, y) <=> p ∈ relationRestriction(r, relationDomain(r), y))) by RightForall
     have(thesis) by Cut(lastStep, equalityIntro of (x := relationRestriction(r, x, y), y := relationRestriction(r, relationDomain(r), y)))
   }
 
   val relationRestrictionSetUnion = Lemma(
     relationRestriction(setUnion(r1, r2), x, y) === setUnion(relationRestriction(r1, x, y), relationRestriction(r2, x, y))
   ) {
-    have(in(p, relationRestriction(setUnion(r1, r2), x, y)) <=> ((in(p, r1) \/ in(p, r2)) /\ in(p, cartesianProduct(x, y)))) by
+    have(p ∈ relationRestriction(setUnion(r1, r2), x, y) <=> ((p ∈ r1 \/ (p ∈ r2)) /\ p ∈ cartesianProduct(x, y))) by
       Substitution.ApplyRules(setUnionMembership of (z := p, x := r1, y := r2))(relationRestrictionElem of (r := setUnion(r1, r2)))
-    thenHave(in(p, relationRestriction(setUnion(r1, r2), x, y)) <=> ((in(p, r1) /\ in(p, cartesianProduct(x, y))) \/ (in(p, r2) /\ in(p, cartesianProduct(x, y))))) by Tautology
-    thenHave(in(p, relationRestriction(setUnion(r1, r2), x, y)) <=> (in(p, relationRestriction(r1, x, y)) \/ in(p, relationRestriction(r2, x, y)))) by
+    thenHave(p ∈ relationRestriction(setUnion(r1, r2), x, y) <=> ((p ∈ r1 /\ p ∈ cartesianProduct(x, y)) \/ (p ∈ r2 /\ p ∈ cartesianProduct(x, y)))) by Tautology
+    thenHave(p ∈ relationRestriction(setUnion(r1, r2), x, y) <=> (p ∈ relationRestriction(r1, x, y) \/ (p ∈ relationRestriction(r2, x, y)))) by
       Substitution.ApplyRules(relationRestrictionElem of (r := r1), relationRestrictionElem of (r := r2))
-    thenHave(in(p, relationRestriction(setUnion(r1, r2), x, y)) <=> in(p, setUnion(relationRestriction(r1, x, y), relationRestriction(r2, x, y)))) by
+    thenHave(p ∈ relationRestriction(setUnion(r1, r2), x, y) <=> p ∈ setUnion(relationRestriction(r1, x, y), relationRestriction(r2, x, y))) by
       Substitution.ApplyRules(setUnionMembership of (z := p, x := relationRestriction(r1, x, y), y := relationRestriction(r2, x, y)))
-    thenHave(forall(p, in(p, relationRestriction(setUnion(r1, r2), x, y)) <=> in(p, setUnion(relationRestriction(r1, x, y), relationRestriction(r2, x, y))))) by RightForall
+    thenHave(∀(p, p ∈ relationRestriction(setUnion(r1, r2), x, y) <=> p ∈ setUnion(relationRestriction(r1, x, y), relationRestriction(r2, x, y)))) by RightForall
     have(thesis) by Cut(lastStep, equalityIntro of (x := relationRestriction(setUnion(r1, r2), x, y), y := setUnion(relationRestriction(r1, x, y), relationRestriction(r2, x, y))))
   }
 
   val relationRestrictionSetUnionDomain = Lemma(
     relationRestriction(r, setUnion(x, y), z) === setUnion(relationRestriction(r, x, z), relationRestriction(r, y, z))
   ) {
-    have(in(p, relationRestriction(r, setUnion(x, y), z)) <=> (in(p, r) /\ in(p, setUnion(cartesianProduct(x, z), cartesianProduct(y, z))))) by
+    have(p ∈ relationRestriction(r, setUnion(x, y), z) <=> (p ∈ r /\ in(p, setUnion(cartesianProduct(x, z), cartesianProduct(y, z))))) by
       Substitution.ApplyRules(cartesianProductLeftUnion)(relationRestrictionElem of (x := setUnion(x, y), y := z))
-    thenHave(in(p, relationRestriction(r, setUnion(x, y), z)) <=> (in(p, r) /\ (in(p, cartesianProduct(x, z)) \/ in(p, cartesianProduct(y, z))))) by
+    thenHave(p ∈ relationRestriction(r, setUnion(x, y), z) <=> (p ∈ r /\ (in(p, cartesianProduct(x, z)) \/ (p ∈ cartesianProduct(y, z))))) by
       Substitution.ApplyRules(setUnionMembership of (z := p, x := cartesianProduct(x, z), y := cartesianProduct(y, z)))
-    thenHave(in(p, relationRestriction(r, setUnion(x, y), z)) <=> (in(p, r) /\ in(p, cartesianProduct(x, z))) \/ (in(p, r) /\ in(p, cartesianProduct(y, z)))) by Tautology
-    thenHave(in(p, relationRestriction(r, setUnion(x, y), z)) <=> (in(p, relationRestriction(r, x, z)) \/ in(p, relationRestriction(r, y, z)))) by
+    thenHave(p ∈ relationRestriction(r, setUnion(x, y), z) <=> (p ∈ r /\ in(p, cartesianProduct(x, z))) \/ (p ∈ r /\ p ∈ cartesianProduct(y, z))) by Tautology
+    thenHave(p ∈ relationRestriction(r, setUnion(x, y), z) <=> (p ∈ relationRestriction(r, x, z)) \/ (p ∈ relationRestriction(r, y, z))) by
       Substitution.ApplyRules(relationRestrictionElem of (y := z), relationRestrictionElem of (x := y, y := z))
-    thenHave(in(p, relationRestriction(r, setUnion(x, y), z)) <=> in(p, setUnion(relationRestriction(r, x, z), relationRestriction(r, y, z)))) by
+    thenHave(p ∈ relationRestriction(r, setUnion(x, y), z) <=> p ∈ setUnion(relationRestriction(r, x, z), relationRestriction(r, y, z))) by
       Substitution.ApplyRules(setUnionMembership of (z := p, x := relationRestriction(r, x, z), y := relationRestriction(r, y, z)))
-    thenHave(forall(p, in(p, relationRestriction(r, setUnion(x, y), z)) <=> in(p, setUnion(relationRestriction(r, x, z), relationRestriction(r, y, z))))) by RightForall
+    thenHave(∀(p, p ∈ relationRestriction(r, setUnion(x, y), z) <=> p ∈ setUnion(relationRestriction(r, x, z), relationRestriction(r, y, z)))) by RightForall
     have(thesis) by Cut(lastStep, equalityIntro of (x := relationRestriction(r, setUnion(x, y), z), y := setUnion(relationRestriction(r, x, z), relationRestriction(r, y, z))))
   }
 
   val domainRestriction = DEF(f, x) --> relationRestriction(f, x, relationRange(f))
 
   val domainRestrictionIntro = Lemma(
-    (in(pair(a, b), f), in(a, x)) |- in(pair(a, b), domainRestriction(f, x))
+    (pair(a, b) ∈ f, a ∈ x) |- pair(a, b) ∈ domainRestriction(f, x)
   ) {
-    have((in(pair(a, b), f), in(a, x), in(b, relationRange(f))) |- in(pair(a, b), domainRestriction(f, x))) by Substitution.ApplyRules(domainRestriction.shortDefinition)(
+    have((pair(a, b) ∈ f, a ∈ x, b ∈ relationRange(f)) |- pair(a, b) ∈ domainRestriction(f, x)) by Substitution.ApplyRules(domainRestriction.shortDefinition)(
       relationRestrictionIntroPair of (r := f, y := relationRange(f))
     )
     have(thesis) by Cut(relationRangeIntroPair of (r := f), lastStep)
   }
 
   val domainRestrictionPairInRelation = Lemma(
-    (in(pair(a, b), domainRestriction(f, x))) |- in(pair(a, b), f)
+    (pair(a, b) ∈ domainRestriction(f, x)) |- pair(a, b) ∈ f
   ) {
     have(thesis) by Substitution.ApplyRules(domainRestriction.shortDefinition)(relationRestrictionPairInRelation of (r := f, y := relationRange(f)))
   }
@@ -1096,13 +1096,13 @@ object Relations extends lisa.Main {
       relationRestrictionDomain of (r := f, y := relationRange(f))
     )
     val backward = have(subset(setIntersection(relationDomain(f), x), relationDomain(domainRestriction(f, x)))) subproof {
-      have((in(pair(a, b), f), in(a, x)) |- in(a, relationDomain(domainRestriction(f, x)))) by Cut(domainRestrictionIntro, relationDomainIntroPair of (r := domainRestriction(f, x)))
-      thenHave((exists(b, in(pair(a, b), f)), in(a, x)) |- in(a, relationDomain(domainRestriction(f, x)))) by LeftExists
-      have((in(a, relationDomain(f)), in(a, x)) |- in(a, relationDomain(domainRestriction(f, x)))) by Cut(relationDomainElim of (r := f), lastStep)
-      thenHave(in(a, relationDomain(f)) /\ in(a, x) |- in(a, relationDomain(domainRestriction(f, x)))) by LeftAnd
-      have(in(a, setIntersection(relationDomain(f), x)) |- in(a, relationDomain(domainRestriction(f, x)))) by Cut(setIntersectionElim of (z := a, x := relationDomain(f), y := x), lastStep)
-      thenHave(in(a, setIntersection(relationDomain(f), x)) ==> in(a, relationDomain(domainRestriction(f, x)))) by RightImplies
-      thenHave(forall(a, in(a, setIntersection(relationDomain(f), x)) ==> in(a, relationDomain(domainRestriction(f, x))))) by RightForall
+      have((pair(a, b) ∈ f, a ∈ x) |- a ∈ relationDomain(domainRestriction(f, x))) by Cut(domainRestrictionIntro, relationDomainIntroPair of (r := domainRestriction(f, x)))
+      thenHave((∃(b, pair(a, b) ∈ f), a ∈ x) |- a ∈ relationDomain(domainRestriction(f, x))) by LeftExists
+      have((a ∈ relationDomain(f), a ∈ x) |- a ∈ relationDomain(domainRestriction(f, x))) by Cut(relationDomainElim of (r := f), lastStep)
+      thenHave(a ∈ relationDomain(f) /\ a ∈ x |- a ∈ relationDomain(domainRestriction(f, x))) by LeftAnd
+      have(a ∈ setIntersection(relationDomain(f), x) |- a ∈ relationDomain(domainRestriction(f, x))) by Cut(setIntersectionElim of (z := a, x := relationDomain(f), y := x), lastStep)
+      thenHave(a ∈ setIntersection(relationDomain(f), x) ==> a ∈ relationDomain(domainRestriction(f, x))) by RightImplies
+      thenHave(∀(a, a ∈ setIntersection(relationDomain(f), x) ==> a ∈ relationDomain(domainRestriction(f, x)))) by RightForall
       have(thesis) by Cut(lastStep, subsetIntro of (x := setIntersection(relationDomain(f), x), y := relationDomain(domainRestriction(f, x))))
     }
     have(subset(setIntersection(relationDomain(f), x), relationDomain(domainRestriction(f, x))) |- relationDomain(domainRestriction(f, x)) === setIntersection(relationDomain(f), x)) by 
@@ -1117,11 +1117,11 @@ object Relations extends lisa.Main {
   }
 
   val domainRestrictionDisjoint = Lemma(
-    disjoint(relationDomain(f), x) |- domainRestriction(f, x) === emptySet
+    disjoint(relationDomain(f), x) |- domainRestriction(f, x) === ∅
   ) {
-    have(disjoint(relationDomain(f), x) |- relationDomain(domainRestriction(f, x)) === emptySet) by 
+    have(disjoint(relationDomain(f), x) |- relationDomain(domainRestriction(f, x)) === ∅) by 
       Substitution.ApplyRules(disjointUnfold of (x := relationDomain(f), y := x))(domainRestrictionDomain)
-    have((relation(domainRestriction(f, x)), disjoint(relationDomain(f), x)) |- domainRestriction(f, x) === emptySet) by Cut(lastStep, relationDomainEmpty of (r := domainRestriction(f, x)))
+    have((relation(domainRestriction(f, x)), disjoint(relationDomain(f), x)) |- domainRestriction(f, x) === ∅) by Cut(lastStep, relationDomainEmpty of (r := domainRestriction(f, x)))
     have(thesis) by Cut(domainRestrictionIsRelation of (r := f), lastStep)
   }
 
@@ -1145,12 +1145,12 @@ object Relations extends lisa.Main {
     have(relation(f) |- domainRestriction(setUnion(f, g), x) === setUnion(relationRestriction(f, x, relationRange(f)), relationRestriction(g, x, relationRange(setUnion(f, g))))) by
       Cut(setUnionLeftSubset of (a := f, b := g), lastStep)
     thenHave(
-      (relation(f), relation(g), subset(relationRange(g), relationRange(setUnion(f, g)))) |-
+      (relation(f), relation(g), relationRange(g) ⊆ relationRange(setUnion(f, g))) |-
         domainRestriction(setUnion(f, g), x) === setUnion(relationRestriction(f, x, relationRange(f)), relationRestriction(g, x, relationRange(g)))
     ) by
       Substitution.ApplyRules(relationRestrictionSupersetRange of (r := g, y := relationRange(setUnion(f, g))))
     have(
-      (relation(f), relation(g), subset(g, setUnion(f, g))) |- domainRestriction(setUnion(f, g), x) === setUnion(
+      (relation(f), relation(g), g ⊆ setUnion(f, g)) |- domainRestriction(setUnion(f, g), x) === setUnion(
         relationRestriction(f, x, relationRange(f)),
         relationRestriction(g, x, relationRange(g))
       )
@@ -1170,24 +1170,49 @@ object Relations extends lisa.Main {
   }
 
   /**
+   * Composition
+   */
+
+  val compositionUniqueness = Lemma(
+    ∃!(z, ∀(p, p ∈ z <=> (in(p, cartesianProduct(relationDomain(r1), relationRange(r2))) /\ ∃(y, in(pair(firstInPair(p), y), r1) /\ in(pair(y, secondInPair(p)), r2)))))
+  ) {
+    have(thesis) by UniqueComprehension(cartesianProduct(relationDomain(r1), relationRange(r2)), lambda(p, ∃(y, in(pair(firstInPair(p), y), r1) /\ in(pair(y, secondInPair(p)), r2))))
+  }
+
+  val composition = DEF(r1, r2) --> The(z, ∀(p, p ∈ z <=> (in(p, cartesianProduct(relationDomain(r1), relationRange(r2))) /\ ∃(y, in(pair(firstInPair(p), y), r1) /\ in(pair(y, secondInPair(p)), r2)))))(compositionUniqueness)
+
+  val compositionMembership = Lemma(
+    p ∈ composition(r1, r2) <=> (in(p, cartesianProduct(relationDomain(r1), relationRange(r2))) /\ ∃(y, in(pair(firstInPair(p), y), r1) /\ in(pair(y, secondInPair(p)), r2)))
+  ) {
+    have(∀(p, p ∈ composition(r1, r2) <=> (in(p, cartesianProduct(relationDomain(r1), relationRange(r2))) /\ ∃(y, in(pair(firstInPair(p), y), r1) /\ in(pair(y, secondInPair(p)), r2))))) by InstantiateForall(composition(r1, r2))(composition.definition)
+    thenHave(thesis) by InstantiateForall(p)
+  }
+
+  // val compositionMembershipPair = Lemma(
+  //   in(pair(x, z), composition(r1, r2)) <=> ∃(y, in(pair(x, y), r1) /\ in(pair(y, z), r2))
+  // ) {
+  //   have() by Cut(cartesianProductIntro)
+  //   have((in(pair(x, y), r1), in(pair(y, z), r2)) |- in())
+  // }
+  /**
    * Properties of relations
    */
 
   /**
    * Reflexive Relation --- `∀ x. x R x`
    */
-  val reflexive = DEF(r, x) --> relationBetween(r, x, x) /\ ∀(y, in(y, x) ==> in(pair(y, y), r))
+  val reflexive = DEF(r, x) --> relationBetween(r, x, x) /\ ∀(y, y ∈ x ==> pair(y, y) ∈ r)
 
   val reflexiveIntro = Lemma(
-    (relationBetween(r, x, x), ∀(y, in(y, x) ==> in(pair(y, y), r))) |- reflexive(r, x)
+    (relationBetween(r, x, x), ∀(y, y ∈ x ==> pair(y, y) ∈ r)) |- reflexive(r, x)
   ) {
     have(thesis) by Weakening(reflexive.definition)
   }
 
   val reflexiveElim = Lemma(
-    (reflexive(r, x), in(y, x)) |- in(pair(y, y), r)
+    (reflexive(r, x), y ∈ x) |- pair(y, y) ∈ r
   ) {
-    have(reflexive(r, x) |- ∀(y, in(y, x) ==> in(pair(y, y), r))) by Weakening(reflexive.definition)
+    have(reflexive(r, x) |- ∀(y, y ∈ x ==> pair(y, y) ∈ r)) by Weakening(reflexive.definition)
     thenHave(thesis) by InstantiateForall(y)
   }
 
@@ -1201,11 +1226,11 @@ object Relations extends lisa.Main {
    * Lemma --- empty relation on the empty set is reflexive.
    */
   val emptyRelationReflexiveOnItself = Lemma(
-    reflexive(emptySet, emptySet)
+    reflexive(∅, ∅)
   ) {
-    have(in(y, emptySet) ==> in(pair(y, y), emptySet)) by Weakening(emptySetAxiom of (x := y))
-    thenHave(forall(y, in(y, emptySet) ==> in(pair(y, y), emptySet))) by RightForall
-    have(relationBetween(emptySet, emptySet, emptySet) |- reflexive(emptySet, emptySet)) by Cut(lastStep, reflexiveIntro of (r := emptySet, x := emptySet))
+    have(y ∈ ∅ ==> pair(y, y) ∈ ∅) by Weakening(emptySetAxiom of (x := y))
+    thenHave(∀(y, y ∈ ∅ ==> pair(y, y) ∈ ∅)) by RightForall
+    have(relationBetween(∅, ∅, ∅) |- reflexive(∅, ∅)) by Cut(lastStep, reflexiveIntro of (r := ∅, x := ∅))
     have(thesis) by Cut(emptySetRelationOnItself, lastStep)
   }
 
@@ -1213,20 +1238,20 @@ object Relations extends lisa.Main {
   /**
    * Symmetric Relation --- `∀ x y. x R y ⇔ y R x`
    */
-  val symmetric = DEF(r, x) --> relationBetween(r, x, x) /\ ∀(y, ∀(z, in(pair(y, z), r) <=> in(pair(z, y), r)))
+  val symmetric = DEF(r, x) --> relationBetween(r, x, x) /\ ∀(y, ∀(z, pair(y, z) ∈ r <=> pair(z, y) ∈ r))
 
   val symmetricIntro = Lemma(
-    (relationBetween(r, x, x), ∀(y, ∀(z, in(pair(y, z), r) <=> in(pair(z, y), r)))) |- symmetric(r, x)
+    (relationBetween(r, x, x), ∀(y, ∀(z, pair(y, z) ∈ r <=> pair(z, y) ∈ r))) |- symmetric(r, x)
   ) {
     have(thesis) by Weakening(symmetric.definition)
   }
 
   val symmetricElim = Lemma(
-    (symmetric(r, x), in(pair(y, z), r)) |- in(pair(z, y), r)
+    (symmetric(r, x), pair(y, z) ∈ r) |- pair(z, y) ∈ r
   ) {
-    have(symmetric(r, x) |- ∀(y, ∀(z, in(pair(y, z), r) <=> in(pair(z, y), r)))) by Weakening(symmetric.definition)
-    thenHave(symmetric(r, x) |- ∀(z, in(pair(y, z), r) <=> in(pair(z, y), r))) by InstantiateForall(y)
-    thenHave(symmetric(r, x) |- in(pair(y, z), r) <=> in(pair(z, y), r)) by InstantiateForall(z)
+    have(symmetric(r, x) |- ∀(y, ∀(z, pair(y, z) ∈ r <=> pair(z, y) ∈ r))) by Weakening(symmetric.definition)
+    thenHave(symmetric(r, x) |- ∀(z, pair(y, z) ∈ r <=> pair(z, y) ∈ r)) by InstantiateForall(y)
+    thenHave(symmetric(r, x) |- pair(y, z) ∈ r <=> pair(z, y) ∈ r) by InstantiateForall(z)
     thenHave(thesis) by Weakening
   }
 
@@ -1241,21 +1266,21 @@ object Relations extends lisa.Main {
    * Lemma --- the empty relation is symmetric.
    */
   val emptyRelationSymmetric = Lemma(
-    symmetric(emptySet, x)
+    symmetric(∅, x)
   ) {
-    val forward = have(in(pair(y, z), emptySet) ==> in(pair(z, y), emptySet)) by Weakening(emptySetAxiom of (x := pair(y, z)))
-    val backward = have(in(pair(z, y), emptySet) ==> in(pair(y, z), emptySet)) by Weakening(emptySetAxiom of (x := pair(z, y)))
-    have(in(pair(y, z), emptySet) <=> in(pair(z, y), emptySet)) by RightIff(forward, backward)
-    thenHave(forall(z, in(pair(y, z), emptySet) <=> in(pair(z, y), emptySet))) by RightForall
-    thenHave(forall(y, forall(z, in(pair(y, z), emptySet) <=> in(pair(z, y), emptySet)))) by RightForall
-    have(relationBetween(emptySet, x, x) |- symmetric(emptySet, x)) by Cut(lastStep, symmetricIntro of (r := emptySet))
+    val forward = have(pair(y, z) ∈ ∅ ==> pair(z, y) ∈ ∅) by Weakening(emptySetAxiom of (x := pair(y, z)))
+    val backward = have(pair(z, y) ∈ ∅ ==> pair(y, z) ∈ ∅) by Weakening(emptySetAxiom of (x := pair(z, y)))
+    have(pair(y, z) ∈ ∅ <=> pair(z, y) ∈ ∅) by RightIff(forward, backward)
+    thenHave(∀(z, pair(y, z) ∈ ∅ <=> pair(z, y) ∈ ∅)) by RightForall
+    thenHave(∀(y, ∀(z, pair(y, z) ∈ ∅ <=> pair(z, y) ∈ ∅))) by RightForall
+    have(relationBetween(∅, x, x) |- symmetric(∅, x)) by Cut(lastStep, symmetricIntro of (r := ∅))
     have(thesis) by Cut(emptySetRelation of (a := x, b := x), lastStep)
   }
 
   /**
    * Transitive Relation --- `∀ x y z. x R y ∧ y R z ⇒ x R z`
    */
-  val transitive = DEF(r, x) --> relationBetween(r, x, x) /\ ∀(w, ∀(y, ∀(z, (in(pair(w, y), r) /\ in(pair(y, z), r)) ==> in(pair(w, z), r))))
+  val transitive = DEF(r, x) --> relationBetween(r, x, x) /\ ∀(w, ∀(y, ∀(z, (pair(w, y) ∈ r /\ pair(y, z) ∈ r) ==> pair(w, z) ∈ r)))
 
   /**
    * Lemma --- Transitive relation introduction rule
@@ -1263,7 +1288,7 @@ object Relations extends lisa.Main {
    *   `relationBetween(r, x, x), ∀ w. ∀ y. ∀ z. (w, y) ∈ r ∧ (y, z) ∈ r ⇒ (w, z) ∈ r |- transitive(r, x)`
    */
   val transitiveIntro = Lemma(
-    (relationBetween(r, x, x), ∀(w, ∀(y, ∀(z, (in(pair(w, y), r) /\ in(pair(y, z), r)) ==> in(pair(w, z), r))))) |- transitive(r, x)
+    (relationBetween(r, x, x), ∀(w, ∀(y, ∀(z, (pair(w, y) ∈ r /\ pair(y, z) ∈ r) ==> pair(w, z) ∈ r)))) |- transitive(r, x)
   ) {
     have(thesis) by Weakening(transitive.definition)
   }
@@ -1274,11 +1299,11 @@ object Relations extends lisa.Main {
    *   `transitive(r, x), (w, y) ∈ r, (y, z) ∈ r |- (w, z) ∈ r`
    */
   val transitiveElim = Lemma(
-    (transitive(r, x), in(pair(w, y), r), in(pair(y, z), r)) |- in(pair(w, z), r)
+    (transitive(r, x), pair(w, y) ∈ r, pair(y, z) ∈ r) |- pair(w, z) ∈ r
   ) {
-    have(transitive(r, x) |- ∀(w, ∀(y, ∀(z, (in(pair(w, y), r) /\ in(pair(y, z), r)) ==> in(pair(w, z), r))))) by Weakening(transitive.definition)
-    thenHave(transitive(r, x) |- ∀(y, ∀(z, (in(pair(w, y), r) /\ in(pair(y, z), r)) ==> in(pair(w, z), r)))) by InstantiateForall(w)
-    thenHave(transitive(r, x) |- ∀(z, (in(pair(w, y), r) /\ in(pair(y, z), r)) ==> in(pair(w, z), r))) by InstantiateForall(y)
+    have(transitive(r, x) |- ∀(w, ∀(y, ∀(z, (pair(w, y) ∈ r /\ pair(y, z) ∈ r) ==> pair(w, z) ∈ r)))) by Weakening(transitive.definition)
+    thenHave(transitive(r, x) |- ∀(y, ∀(z, (pair(w, y) ∈ r /\ pair(y, z) ∈ r) ==> pair(w, z) ∈ r))) by InstantiateForall(w)
+    thenHave(transitive(r, x) |- ∀(z, (pair(w, y) ∈ r /\ pair(y, z) ∈ r) ==> pair(w, z) ∈ r)) by InstantiateForall(y)
     thenHave(thesis) by InstantiateForall(z)
   }
 
@@ -1301,31 +1326,28 @@ object Relations extends lisa.Main {
   val relationRestrictionTransitive = Lemma(
     transitive(r, x) |- transitive(relationRestriction(r, y, y), y)
   ) {
-    have((transitive(r, x), in(pair(a, b), r), in(pair(b, c), r), in(a, y), in(c, y)) |- in(pair(a, c), relationRestriction(r, y, y))) by
+    have((transitive(r, x), pair(a, b) ∈ r, pair(b, c) ∈ r, a ∈ y, c ∈ y) |- pair(a, c) ∈ relationRestriction(r, y, y)) by
       Cut(transitiveElim of (w := a, y := b, z := c), relationRestrictionIntroPair of (b := c, x := y))
-    have((transitive(r, x), in(pair(a, b), relationRestriction(r, y, y)), in(pair(b, c), r), in(a, y), in(c, y)) |- in(pair(a, c), relationRestriction(r, y, y))) by
+    have((transitive(r, x), pair(a, b) ∈ relationRestriction(r, y, y), pair(b, c) ∈ r, a ∈ y, c ∈ y) |- pair(a, c) ∈ relationRestriction(r, y, y)) by
       Cut(relationRestrictionPairInRelation of (x := y), lastStep)
-    have((transitive(r, x), in(pair(a, b), relationRestriction(r, y, y)), in(pair(b, c), relationRestriction(r, y, y)), in(a, y), in(c, y)) |- in(pair(a, c), relationRestriction(r, y, y))) by
+    have((transitive(r, x), pair(a, b) ∈ relationRestriction(r, y, y), pair(b, c) ∈ relationRestriction(r, y, y), a ∈ y, c ∈ y) |- pair(a, c) ∈ relationRestriction(r, y, y)) by
       Cut(relationRestrictionPairInRelation of (x := y, a := b, b := c), lastStep)
     thenHave(
-      (transitive(r, x), in(pair(a, b), relationRestriction(r, y, y)), in(pair(b, c), relationRestriction(r, y, y)), in(a, y) /\ in(b, y), in(b, y) /\ in(c, y)) |- in(
-        pair(a, c),
-        relationRestriction(r, y, y)
-      )
+      (transitive(r, x), pair(a, b) ∈ relationRestriction(r, y, y), pair(b, c) ∈ relationRestriction(r, y, y), a ∈ y /\ b ∈ y, b ∈ y /\ c ∈ y) |- pair(a, c) ∈ relationRestriction(r, y, y)
     ) by Weakening
-    have((transitive(r, x), in(pair(a, b), relationRestriction(r, y, y)), in(pair(b, c), relationRestriction(r, y, y)), in(b, y) /\ in(c, y)) |- in(pair(a, c), relationRestriction(r, y, y))) by
+    have((transitive(r, x), pair(a, b) ∈ relationRestriction(r, y, y), pair(b, c) ∈ relationRestriction(r, y, y), b ∈ y /\ c ∈ y) |- pair(a, c) ∈ relationRestriction(r, y, y)) by
       Cut(relationRestrictionPairInRestrictedDomains of (x := y), lastStep)
-    have((transitive(r, x), in(pair(a, b), relationRestriction(r, y, y)), in(pair(b, c), relationRestriction(r, y, y))) |- in(pair(a, c), relationRestriction(r, y, y))) by
+    have((transitive(r, x), pair(a, b) ∈ relationRestriction(r, y, y), pair(b, c) ∈ relationRestriction(r, y, y)) |- pair(a, c) ∈ relationRestriction(r, y, y)) by
       Cut(relationRestrictionPairInRestrictedDomains of (x := y, a := b, b := c), lastStep)
-    thenHave(transitive(r, x) |- (in(pair(a, b), relationRestriction(r, y, y)) /\ in(pair(b, c), relationRestriction(r, y, y))) ==> in(pair(a, c), relationRestriction(r, y, y))) by Restate
+    thenHave(transitive(r, x) |- (pair(a, b) ∈ relationRestriction(r, y, y) /\ pair(b, c) ∈ relationRestriction(r, y, y)) ==> pair(a, c) ∈ relationRestriction(r, y, y)) by Restate
     thenHave(
-      transitive(r, x) |- forall(c, in(pair(a, b), relationRestriction(r, y, y)) /\ in(pair(b, c), relationRestriction(r, y, y)) ==> in(pair(a, c), relationRestriction(r, y, y)))
+      transitive(r, x) |- ∀(c, pair(a, b) ∈ relationRestriction(r, y, y) /\ pair(b, c) ∈ relationRestriction(r, y, y) ==> pair(a, c) ∈ relationRestriction(r, y, y))
     ) by RightForall
     thenHave(
-      transitive(r, x) |- forall(b, forall(c, in(pair(a, b), relationRestriction(r, y, y)) /\ in(pair(b, c), relationRestriction(r, y, y)) ==> in(pair(a, c), relationRestriction(r, y, y))))
+      transitive(r, x) |- ∀(b, ∀(c, pair(a, b) ∈ relationRestriction(r, y, y) /\ pair(b, c) ∈ relationRestriction(r, y, y) ==> pair(a, c) ∈ relationRestriction(r, y, y)))
     ) by RightForall
     thenHave(
-      transitive(r, x) |- forall(a, forall(b, forall(c, in(pair(a, b), relationRestriction(r, y, y)) /\ in(pair(b, c), relationRestriction(r, y, y)) ==> in(pair(a, c), relationRestriction(r, y, y)))))
+      transitive(r, x) |- ∀(a, ∀(b, ∀(c, pair(a, b) ∈ relationRestriction(r, y, y) /\ pair(b, c) ∈ relationRestriction(r, y, y) ==> pair(a, c) ∈ relationRestriction(r, y, y))))
     ) by RightForall
     have((transitive(r, x), relationBetween(relationRestriction(r, y, y), y, y)) |- transitive(relationRestriction(r, y, y), y)) by Cut(
       lastStep,
@@ -1338,13 +1360,13 @@ object Relations extends lisa.Main {
    * Lemma --- the empty relation is transitive.
    */
   val emptyRelationTransitive = Lemma(
-    transitive(emptySet, x)
+    transitive(∅, x)
   ) {
-    have((in(pair(w, y), emptySet) /\ in(pair(y, z), emptySet)) ==> in(pair(w, z), emptySet)) by Weakening(emptySetAxiom of (x := pair(w, y)))
-    thenHave(forall(z, (in(pair(w, y), emptySet) /\ in(pair(y, z), emptySet)) ==> in(pair(w, z), emptySet))) by RightForall
-    thenHave(forall(y, forall(z, (in(pair(w, y), emptySet) /\ in(pair(y, z), emptySet)) ==> in(pair(w, z), emptySet)))) by RightForall
-    thenHave(forall(w, forall(y, forall(z, (in(pair(w, y), emptySet) /\ in(pair(y, z), emptySet)) ==> in(pair(w, z), emptySet))))) by RightForall
-    have(relationBetween(emptySet, x, x) |- transitive(emptySet, x)) by Cut(lastStep, transitiveIntro of (r := emptySet))
+    have((pair(w, y) ∈ ∅ /\ pair(y, z) ∈ ∅) ==> pair(w, z) ∈ ∅) by Weakening(emptySetAxiom of (x := pair(w, y)))
+    thenHave(∀(z, (pair(w, y) ∈ ∅ /\ pair(y, z) ∈ ∅) ==> pair(w, z) ∈ ∅)) by RightForall
+    thenHave(∀(y, ∀(z, (pair(w, y) ∈ ∅ /\ pair(y, z) ∈ ∅) ==> pair(w, z) ∈ ∅))) by RightForall
+    thenHave(∀(w, ∀(y, ∀(z, (pair(w, y) ∈ ∅ /\ pair(y, z) ∈ ∅) ==> pair(w, z) ∈ ∅)))) by RightForall
+    have(relationBetween(∅, x, x) |- transitive(∅, x)) by Cut(lastStep, transitiveIntro of (r := ∅))
     have(thesis) by Cut(emptySetRelation of (a := x, b := x), lastStep)
   }
 
@@ -1383,17 +1405,17 @@ object Relations extends lisa.Main {
    * Lemma --- the empty relation is an equivalence relation on the empty set.
    */
   val emptyRelationEquivalence = Lemma(
-    equivalence(emptySet, emptySet)
+    equivalence(∅, ∅)
   ) {
-    have((symmetric(emptySet, emptySet), transitive(emptySet, emptySet)) |- equivalence(emptySet, emptySet)) by Cut(emptyRelationReflexiveOnItself, equivalenceIntro of (r := emptySet, x := emptySet))
-    have(transitive(emptySet, emptySet) |- equivalence(emptySet, emptySet)) by Cut(emptyRelationSymmetric of (x := emptySet), lastStep)
-    have(thesis) by Cut(emptyRelationTransitive of (x := emptySet), lastStep)
+    have((symmetric(∅, ∅), transitive(∅, ∅)) |- equivalence(∅, ∅)) by Cut(emptyRelationReflexiveOnItself, equivalenceIntro of (r := ∅, x := ∅))
+    have(transitive(∅, ∅) |- equivalence(∅, ∅)) by Cut(emptyRelationSymmetric of (x := ∅), lastStep)
+    have(thesis) by Cut(emptyRelationTransitive of (x := ∅), lastStep)
   }
 
   /**
    * Anti-reflexive Relation --- `∀ x. ! x R x`
    */
-  val antiReflexive = DEF(r, x) --> relationBetween(r, x, x) /\ ∀(y, !in(pair(y, y), r))
+  val antiReflexive = DEF(r, x) --> relationBetween(r, x, x) /\ ∀(y, pair(y, y)∉ r)
 
   /**
    * Irreflexive Relation --- Alias for [[antiReflexive]].
@@ -1403,10 +1425,10 @@ object Relations extends lisa.Main {
   /**
    * Lemma --- Anti-reflexive relation introduction rule
    *
-   *   `relationBetween(r, x, x), ∀ y. in(y, x) ==> !in(pair(y, y), r) |- antiReflexive(r, x)`
+   *   `relationBetween(r, x, x), ∀ y. y ∈ x ==> pair(y, y) ∉ r |- antiReflexive(r, x)`
    */
   val antiReflexiveIntro = Lemma(
-    (relationBetween(r, x, x), ∀(y, !in(pair(y, y), r))) |- antiReflexive(r, x)
+    (relationBetween(r, x, x), ∀(y, pair(y, y) ∉ r)) |- antiReflexive(r, x)
   ) {
     have(thesis) by Weakening(antiReflexive.definition)
   }
@@ -1417,9 +1439,9 @@ object Relations extends lisa.Main {
    *   `antiReflexive(r, x), y ∈ x |- (y, y) ∉ r`
    */
   val antiReflexiveElim = Lemma(
-    antiReflexive(r, x) |- !in(pair(y, y), r)
+    antiReflexive(r, x) |- pair(y, y) ∉ r
   ) {
-    have(antiReflexive(r, x) |- ∀(y, !in(pair(y, y), r))) by Weakening(antiReflexive.definition)
+    have(antiReflexive(r, x) |- ∀(y, pair(y, y) ∉ r)) by Weakening(antiReflexive.definition)
     thenHave(thesis) by InstantiateForall(y)
   }
 
@@ -1435,17 +1457,17 @@ object Relations extends lisa.Main {
   }
 
   val pairInAntiReflexiveRelation = Lemma(
-    (antiReflexive(r, x), in(pair(a, b), r)) |- !(a === b)
+    (antiReflexive(r, x), pair(a, b) ∈ r) |- !(a === b)
   ) {
-    have(in(pair(a, b), r) |- in(pair(a, b), r)) by Hypothesis
-    thenHave((a === b, in(pair(a, b), r)) |- in(pair(a, a), r)) by RightSubstEq.withParametersSimple(
+    have(pair(a, b) ∈ r |- pair(a, b) ∈ r) by Hypothesis
+    thenHave((a === b, pair(a, b) ∈ r) |- pair(a, a) ∈ r) by RightSubstEq.withParametersSimple(
       List((a, b)),
-      lambda(b, in(pair(a, b), r))
+      lambda(b, pair(a, b) ∈ r)
     )
-    have((antiReflexive(r, x), in(pair(a, b), r), a === b) |- ()) by RightAnd(lastStep, antiReflexiveElim of (y := a))
-    thenHave((antiReflexive(r, x), in(a, x) /\ in(b, x), in(pair(a, b), r), a === b) |- ()) by Weakening
-    have((antiReflexive(r, x), relationBetween(r, x, x), in(pair(a, b), r), a === b) |- ()) by Cut(relationBetweenElimPair of (a := x, b := x, x := a, y := b), lastStep)
-    have((antiReflexive(r, x), in(pair(a, b), r), a === b) |- ()) by Cut(antiReflexiveRelationIsRelation, lastStep)
+    have((antiReflexive(r, x), pair(a, b) ∈ r, a === b) |- ()) by RightAnd(lastStep, antiReflexiveElim of (y := a))
+    thenHave((antiReflexive(r, x), a ∈ x /\ b ∈ x, pair(a, b) ∈ r, a === b) |- ()) by Weakening
+    have((antiReflexive(r, x), relationBetween(r, x, x), pair(a, b) ∈ r, a === b) |- ()) by Cut(relationBetweenElimPair of (a := x, b := x, x := a, y := b), lastStep)
+    have((antiReflexive(r, x), pair(a, b) ∈ r, a === b) |- ()) by Cut(antiReflexiveRelationIsRelation, lastStep)
   }
 
   /**
@@ -1454,11 +1476,11 @@ object Relations extends lisa.Main {
    *   `irreflexive(r, x), t ⊆ r, relationBetween(t, y, y) |- irreflexive(t, y)`
    */
   val relationSubsetIrreflexive = Lemma(
-    (irreflexive(r, x), subset(t, r), relationBetween(t, y, y)) |- irreflexive(t, y)
+    (irreflexive(r, x), t ⊆ r, relationBetween(t, y, y)) |- irreflexive(t, y)
   ) {
-    have((!in(pair(a, a), r), subset(t, r)) |- !in(pair(a, a), t)) by Restate.from(subsetElim of (z := pair(a, a), x := t, y := r))
-    have((irreflexive(r, x), subset(t, r)) |- !in(pair(a, a), t)) by Cut(antiReflexiveElim of (y := a), lastStep)
-    thenHave((irreflexive(r, x), subset(t, r)) |- forall(a, !in(pair(a, a), t))) by RightForall
+    have((pair(a, a) ∉ r, t ⊆ r) |- pair(a, a) ∉ t) by Restate.from(subsetElim of (z := pair(a, a), x := t, y := r))
+    have((irreflexive(r, x), t ⊆ r) |- pair(a, a) ∉ t) by Cut(antiReflexiveElim of (y := a), lastStep)
+    thenHave((irreflexive(r, x), t ⊆ r) |- ∀(a, pair(a, a) ∉ t)) by RightForall
     have(thesis) by Cut(lastStep, antiReflexiveIntro of (x := y, r := t))
   }
 
@@ -1481,29 +1503,29 @@ object Relations extends lisa.Main {
    * Lemma --- the empty relation is irreflexive.
    */
   val emptyRelationIrreflexive = Lemma(
-    irreflexive(emptySet, x)
+    irreflexive(∅, x)
   ) {
-    have(forall(y, !in(pair(y, y), emptySet))) by RightForall(emptySetAxiom of (x := pair(y, y)))
-    have(relationBetween(emptySet, x, x) |- irreflexive(emptySet, x)) by Cut(lastStep, antiReflexiveIntro of (r := emptySet))
+    have(∀(y, pair(y, y) ∉ ∅)) by RightForall(emptySetAxiom of (x := pair(y, y)))
+    have(relationBetween(∅, x, x) |- irreflexive(∅, x)) by Cut(lastStep, antiReflexiveIntro of (r := ∅))
     have(thesis) by Cut(emptySetRelation of (a := x, b := x), lastStep)
   }
 
   /**
    * Anti-symmetric Relation --- `∀ x y. x R y ∧ y R x ⇒ y = x`
    */
-  val antiSymmetric = DEF(r, x) --> relationBetween(r, x, x) /\ ∀(y, ∀(z, (in(pair(y, z), r) /\ in(pair(z, y), r)) ==> (y === z)))
+  val antiSymmetric = DEF(r, x) --> relationBetween(r, x, x) /\ ∀(y, ∀(z, (pair(y, z) ∈ r /\ pair(z, y) ∈ r) ==> (y === z)))
 
   val antiSymmetricIntro = Lemma(
-    (relationBetween(r, x, x), ∀(y, ∀(z, (in(pair(y, z), r) /\ in(pair(z, y), r)) ==> (y === z)))) |- antiSymmetric(r, x)
+    (relationBetween(r, x, x), ∀(y, ∀(z, (pair(y, z) ∈ r /\ pair(z, y) ∈ r) ==> (y === z)))) |- antiSymmetric(r, x)
   ) {
     have(thesis) by Weakening(antiSymmetric.definition)
   }
 
   val antiSymmetricElim = Lemma(
-    (antiSymmetric(r, x), in(pair(y, z), r), in(pair(z, y), r)) |- y === z
+    (antiSymmetric(r, x), pair(y, z) ∈ r, pair(z, y) ∈ r) |- y === z
   ) {
-    have(antiSymmetric(r, x) |- ∀(y, ∀(z, (in(pair(y, z), r) /\ in(pair(z, y), r)) ==> (y === z)))) by Weakening(antiSymmetric.definition)
-    thenHave(antiSymmetric(r, x) |- ∀(z, (in(pair(y, z), r) /\ in(pair(z, y), r)) ==> (y === z))) by InstantiateForall(y)
+    have(antiSymmetric(r, x) |- ∀(y, ∀(z, (pair(y, z) ∈ r /\ pair(z, y) ∈ r) ==> (y === z)))) by Weakening(antiSymmetric.definition)
+    thenHave(antiSymmetric(r, x) |- ∀(z, (pair(y, z) ∈ r /\ pair(z, y) ∈ r) ==> (y === z))) by InstantiateForall(y)
     thenHave(thesis) by InstantiateForall(z)
   }
 
@@ -1517,31 +1539,31 @@ object Relations extends lisa.Main {
    * Lemma --- the empty relation is anti-symmetric.
    */
   val emptyRelationAntiSymmetric = Lemma(
-    antiSymmetric(emptySet, x)
+    antiSymmetric(∅, x)
   ) {
-    have((in(pair(y, z), emptySet) /\ in(pair(z, y), emptySet)) ==> (y === z)) by Weakening(emptySetAxiom of (x := pair(y, z)))
-    thenHave(forall(z, (in(pair(y, z), emptySet) /\ in(pair(z, y), emptySet)) ==> (y === z))) by RightForall
-    thenHave(forall(y, forall(z, (in(pair(y, z), emptySet) /\ in(pair(z, y), emptySet)) ==> (y === z)))) by RightForall
-    have(relationBetween(emptySet, x, x) |- antiSymmetric(emptySet, x)) by Cut(lastStep, antiSymmetricIntro of (r := emptySet))
+    have((pair(y, z) ∈ ∅ /\ pair(z, y) ∈ ∅) ==> (y === z)) by Weakening(emptySetAxiom of (x := pair(y, z)))
+    thenHave(∀(z, (pair(y, z) ∈ ∅ /\ pair(z, y) ∈ ∅) ==> (y === z))) by RightForall
+    thenHave(∀(y, ∀(z, (pair(y, z) ∈ ∅ /\ pair(z, y) ∈ ∅) ==> (y === z)))) by RightForall
+    have(relationBetween(∅, x, x) |- antiSymmetric(∅, x)) by Cut(lastStep, antiSymmetricIntro of (r := ∅))
     have(thesis) by Cut(emptySetRelation of (a := x, b := x), lastStep)
   }
 
   /**
    * Asymmetric Relation --- `∀ x y. x R y ⇔ ! y R x`
    */
-  val asymmetric = DEF(r, x) --> relationBetween(r, x, x) /\ ∀(y, ∀(z, in(pair(y, z), r) ==> !in(pair(z, y), r)))
+  val asymmetric = DEF(r, x) --> relationBetween(r, x, x) /\ ∀(y, ∀(z, pair(y, z) ∈ r ==> pair(z, y) ∉ r))
 
   val asymmetricIntro = Lemma(
-    (relationBetween(r, x, x), ∀(y, ∀(z, in(pair(y, z), r) ==> !in(pair(z, y), r)))) |- asymmetric(r, x)
+    (relationBetween(r, x, x), ∀(y, ∀(z, pair(y, z) ∈ r ==> pair(z, y) ∉ r))) |- asymmetric(r, x)
   ) {
     have(thesis) by Weakening(asymmetric.definition)
   }
 
   val asymmetricElim = Lemma(
-    (asymmetric(r, x), in(pair(y, z), r)) |- !in(pair(z, y), r)
+    (asymmetric(r, x), pair(y, z) ∈ r) |- pair(z, y) ∉ r
   ) {
-    have(asymmetric(r, x) |- ∀(y, ∀(z, in(pair(y, z), r) ==> !in(pair(z, y), r)))) by Weakening(asymmetric.definition)
-    thenHave(asymmetric(r, x) |- ∀(z, in(pair(y, z), r) ==> !in(pair(z, y), r))) by InstantiateForall(y)
+    have(asymmetric(r, x) |- ∀(y, ∀(z, pair(y, z) ∈ r ==> pair(z, y) ∉ r))) by Weakening(asymmetric.definition)
+    thenHave(asymmetric(r, x) |- ∀(z, pair(y, z) ∈ r ==> pair(z, y) ∉ r)) by InstantiateForall(y)
     thenHave(thesis) by InstantiateForall(z)
   }
 
@@ -1554,10 +1576,10 @@ object Relations extends lisa.Main {
   val antiReflexiveTransitiveIsAsymmetric = Lemma(
     (antiReflexive(r, x), transitive(r, x)) |- asymmetric(r, x)
   ) {
-    have((antiReflexive(r, x), transitive(r, x), in(pair(z, y), r), in(pair(y, z), r)) |- ()) by RightAnd(transitiveElim of (w := z), antiReflexiveElim of (y := z))
-    thenHave((antiReflexive(r, x), transitive(r, x)) |- in(pair(y, z), r) ==> !in(pair(z, y), r)) by Restate
-    thenHave((antiReflexive(r, x), transitive(r, x)) |- forall(z, in(pair(y, z), r) ==> !in(pair(z, y), r))) by RightForall
-    thenHave((antiReflexive(r, x), transitive(r, x)) |- forall(y, forall(z, in(pair(y, z), r) ==> !in(pair(z, y), r)))) by RightForall
+    have((antiReflexive(r, x), transitive(r, x), pair(z, y) ∈ r, pair(y, z) ∈ r) |- ()) by RightAnd(transitiveElim of (w := z), antiReflexiveElim of (y := z))
+    thenHave((antiReflexive(r, x), transitive(r, x)) |- pair(y, z) ∈ r ==> pair(z, y) ∉ r) by Restate
+    thenHave((antiReflexive(r, x), transitive(r, x)) |- ∀(z, pair(y, z) ∈ r ==> pair(z, y) ∉ r)) by RightForall
+    thenHave((antiReflexive(r, x), transitive(r, x)) |- ∀(y, ∀(z, pair(y, z) ∈ r ==> pair(z, y) ∉ r))) by RightForall
     have((antiReflexive(r, x), transitive(r, x), relationBetween(r, x, x)) |- asymmetric(r, x)) by Cut(lastStep, asymmetricIntro)
     have(thesis) by Cut(antiReflexiveRelationIsRelation, lastStep)
   }
@@ -1566,19 +1588,19 @@ object Relations extends lisa.Main {
    * Lemma --- the empty relation is asymmetric.
    */
   val emptyRelationAsymmetric = Lemma(
-    asymmetric(emptySet, x)
+    asymmetric(∅, x)
   ) {
-    have(in(pair(y, z), emptySet) ==> !in(pair(z, y), emptySet)) by Weakening(emptySetAxiom of (x := pair(y, z)))
-    thenHave(forall(z, in(pair(y, z), emptySet) ==> !in(pair(z, y), emptySet))) by RightForall
-    thenHave(forall(y, forall(z, in(pair(y, z), emptySet) ==> !in(pair(z, y), emptySet)))) by RightForall
-    have(relationBetween(emptySet, x, x) |- asymmetric(emptySet, x)) by Cut(lastStep, asymmetricIntro of (r := emptySet))
+    have(pair(y, z) ∈ ∅ ==> pair(z, y) ∉ ∅) by Weakening(emptySetAxiom of (x := pair(y, z)))
+    thenHave(∀(z, pair(y, z) ∈ ∅ ==> pair(z, y) ∉ ∅)) by RightForall
+    thenHave(∀(y, ∀(z, pair(y, z) ∈ ∅ ==> pair(z, y) ∉ ∅))) by RightForall
+    have(relationBetween(∅, x, x) |- asymmetric(∅, x)) by Cut(lastStep, asymmetricIntro of (r := ∅))
     have(thesis) by Cut(emptySetRelation of (a := x, b := x), lastStep)
   }
 
   /**
    * Connected Relation --- `∀ x y. (x R y) ∨ (y R x) ∨ (y = x)`
    */
-  val connected = DEF(r, x) --> relationBetween(r, x, x) /\ ∀(y, ∀(z, (in(y, x) /\ in(z, x)) ==> (in(pair(y, z), r) \/ in(pair(z, y), r) \/ (y === z))))
+  val connected = DEF(r, x) --> relationBetween(r, x, x) /\ ∀(y, ∀(z, (y ∈ x /\ z ∈ x) ==> (pair(y, z) ∈ r \/ (pair(z, y) ∈ r) \/ (y === z))))
 
   /**
    * Total Relation --- Alias for [[connected]].
@@ -1588,9 +1610,9 @@ object Relations extends lisa.Main {
   /**
    * Lemma --- Connected relation introduction rule
    *
-   *   `relationBetween(r, x, x), ∀ y. ∀ z. in(y, x) /\ in(z, x) ==> (in(pair(y, z), r) ∨ in(pair(z, y), r) ∨ (y = z)) |- connected(r, x)`
+   *   `relationBetween(r, x, x), ∀ y. ∀ z. y ∈ x /\ z ∈ x ==> (pair(y, z) ∈ r ∨ pair(z, y) ∈ r ∨ (y = z)) |- connected(r, x)`
    */
-  val connectedIntro = Lemma((relationBetween(r, x, x), ∀(y, ∀(z, (in(y, x) /\ in(z, x)) ==> (in(pair(y, z), r) \/ in(pair(z, y), r) \/ (y === z))))) |- connected(r, x)) {
+  val connectedIntro = Lemma((relationBetween(r, x, x), ∀(y, ∀(z, (y ∈ x /\ z ∈ x) ==> (pair(y, z) ∈ r \/ (pair(z, y) ∈ r) \/ (y === z))))) |- connected(r, x)) {
     have(thesis) by Weakening(connected.definition)
   }
 
@@ -1599,9 +1621,9 @@ object Relations extends lisa.Main {
    *
    *   `connected(r, x), y ∈ x, z ∈ x |- (y, z) ∈ r ∨ (z, y) ∈ r ∨ y = z`
    */
-  val connectedElim = Lemma((connected(r, x), in(y, x), in(z, x)) |- in(pair(y, z), r) \/ in(pair(z, y), r) \/ (y === z)) {
-    have(connected(r, x) |- ∀(y, ∀(z, (in(y, x) /\ in(z, x)) ==> (in(pair(y, z), r) \/ in(pair(z, y), r) \/ (y === z))))) by Weakening(connected.definition)
-    thenHave(connected(r, x) |- ∀(z, (in(y, x) /\ in(z, x)) ==> (in(pair(y, z), r) \/ in(pair(z, y), r) \/ (y === z)))) by InstantiateForall(y)
+  val connectedElim = Lemma((connected(r, x), y ∈ x, z ∈ x) |- pair(y, z) ∈ r \/ (pair(z, y) ∈ r) \/ (y === z)) {
+    have(connected(r, x) |- ∀(y, ∀(z, (y ∈ x /\ z ∈ x) ==> (pair(y, z) ∈ r \/ (pair(z, y) ∈ r) \/ (y === z))))) by Weakening(connected.definition)
+    thenHave(connected(r, x) |- ∀(z, (y ∈ x /\ z ∈ x) ==> (pair(y, z) ∈ r \/ (pair(z, y) ∈ r) \/ (y === z)))) by InstantiateForall(y)
     thenHave(thesis) by InstantiateForall(z)
   }
 
@@ -1618,12 +1640,12 @@ object Relations extends lisa.Main {
    * Lemma --- the empty relation is total on the empty set.
    */
   val emptyRelationTotalOnItself = Lemma(
-    connected(emptySet, emptySet)
+    connected(∅, ∅)
   ) {
-    have((in(y, emptySet) /\ in(z, emptySet)) ==> (in(pair(y, z), emptySet) \/ in(pair(z, y), emptySet) \/ (y === z))) by Weakening(emptySetAxiom of (x := y))
-    thenHave(forall(z, (in(y, emptySet) /\ in(z, emptySet)) ==> (in(pair(y, z), emptySet) \/ in(pair(z, y), emptySet) \/ (y === z)))) by RightForall
-    thenHave(forall(y, forall(z, (in(y, emptySet) /\ in(z, emptySet)) ==> (in(pair(y, z), emptySet) \/ in(pair(z, y), emptySet) \/ (y === z))))) by RightForall
-    have(relationBetween(emptySet, emptySet, emptySet) |- connected(emptySet, emptySet)) by Cut(lastStep, connectedIntro of (r := emptySet, x := emptySet))
+    have((y ∈ ∅ /\ z ∈ ∅) ==> (pair(y, z) ∈ ∅ \/(pair(z, y) ∈ ∅) \/ (y === z))) by Weakening(emptySetAxiom of (x := y))
+    thenHave(∀(z, (y ∈ ∅ /\ z ∈ ∅) ==> (pair(y, z) ∈ ∅ \/ (pair(z, y) ∈ ∅) \/ (y === z)))) by RightForall
+    thenHave(∀(y, ∀(z, (y ∈ ∅ /\ z ∈ ∅) ==> (pair(y, z) ∈ ∅ \/ (pair(z, y) ∈ ∅) \/ (y === z))))) by RightForall
+    have(relationBetween(∅, ∅, ∅) |- connected(∅, ∅)) by Cut(lastStep, connectedIntro of (r := ∅, x := ∅))
     have(thesis) by Cut(emptySetRelationOnItself, lastStep)
   }
 
@@ -1633,39 +1655,39 @@ object Relations extends lisa.Main {
    *   `connected(r, x), y ⊆ x |- connected(relationRestriction(r, y, y), y)`
    */
   val relationRestrictionConnected = Lemma(
-    (connected(r, x), subset(y, x)) |- connected(relationRestriction(r, y, y), y)
+    (connected(r, x), y ⊆ x) |- connected(relationRestriction(r, y, y), y)
   ) {
-    val left = have((in(pair(a, b), r), in(a, y), in(b, y)) |- in(pair(a, b), relationRestriction(r, y, y)) \/ in(pair(b, a), relationRestriction(r, y, y)) \/ (a === b)) by Weakening(
+    val left = have((pair(a, b) ∈ r, a ∈ y, b ∈ y) |- pair(a, b) ∈ relationRestriction(r, y, y) \/ (pair(b, a) ∈ relationRestriction(r, y, y)) \/ (a === b)) by Weakening(
       relationRestrictionIntroPair of (x := y)
     )
-    val right = have((in(pair(b, a), r), in(a, y), in(b, y)) |- in(pair(a, b), relationRestriction(r, y, y)) \/ in(pair(b, a), relationRestriction(r, y, y)) \/ (a === b)) by Weakening(
+    val right = have((pair(b, a) ∈ r, a ∈ y, b ∈ y) |- pair(a, b) ∈ relationRestriction(r, y, y) \/ (pair(b, a) ∈ relationRestriction(r, y, y)) \/ (a === b)) by Weakening(
       relationRestrictionIntroPair of (x := y, a := b, b := a)
     )
-    have(a === b |- in(pair(a, b), relationRestriction(r, y, y)) \/ in(pair(b, a), relationRestriction(r, y, y)) \/ (a === b)) by Restate
-    have((in(pair(b, a), r) \/ (a === b), in(a, y), in(b, y)) |- in(pair(a, b), relationRestriction(r, y, y)) \/ in(pair(b, a), relationRestriction(r, y, y)) \/ (a === b)) by LeftOr(lastStep, right)
+    have(a === b |- pair(a, b) ∈ relationRestriction(r, y, y) \/ (pair(b, a) ∈ relationRestriction(r, y, y)) \/ (a === b)) by Restate
+    have((pair(b, a) ∈ r \/ (a === b), a ∈ y, b ∈ y) |- pair(a, b) ∈ relationRestriction(r, y, y) \/ (pair(b, a) ∈ relationRestriction(r, y, y)) \/ (a === b)) by LeftOr(lastStep, right)
     have(
-      (in(pair(a, b), r) \/ in(pair(b, a), r) \/ (a === b), in(a, y), in(b, y)) |- in(pair(a, b), relationRestriction(r, y, y)) \/ in(pair(b, a), relationRestriction(r, y, y)) \/ (a === b)
+      (pair(a, b) ∈ r \/ (pair(b, a) ∈ r) \/ (a === b), a ∈ y, b ∈ y) |- pair(a, b) ∈ relationRestriction(r, y, y) \/ (pair(b, a) ∈ relationRestriction(r, y, y)) \/ (a === b)
     ) by LeftOr(lastStep, left)
-    have((connected(r, x), in(a, x), in(b, x), in(a, y), in(b, y)) |- in(pair(a, b), relationRestriction(r, y, y)) \/ in(pair(b, a), relationRestriction(r, y, y)) \/ (a === b)) by Cut(
+    have((connected(r, x), a ∈ x, b ∈ x, a ∈ y, b ∈ y) |- pair(a, b) ∈ relationRestriction(r, y, y) \/ (pair(b, a) ∈ relationRestriction(r, y, y)) \/ (a === b)) by Cut(
       connectedElim of (y := a, z := b),
       lastStep
     )
-    have((connected(r, x), subset(y, x), in(b, x), in(a, y), in(b, y)) |- in(pair(a, b), relationRestriction(r, y, y)) \/ in(pair(b, a), relationRestriction(r, y, y)) \/ (a === b)) by Cut(
+    have((connected(r, x), y ⊆ x, b ∈ x, a ∈ y, b ∈ y) |- pair(a, b) ∈ relationRestriction(r, y, y) \/ (pair(b, a) ∈ relationRestriction(r, y, y)) \/ (a === b)) by Cut(
       subsetElim of (z := a, y := x, x := y),
       lastStep
     )
-    have((connected(r, x), subset(y, x), in(a, y), in(b, y)) |- in(pair(a, b), relationRestriction(r, y, y)) \/ in(pair(b, a), relationRestriction(r, y, y)) \/ (a === b)) by Cut(
+    have((connected(r, x), y ⊆ x, a ∈ y, b ∈ y) |- pair(a, b) ∈ relationRestriction(r, y, y) \/ (pair(b, a) ∈ relationRestriction(r, y, y)) \/ (a === b)) by Cut(
       subsetElim of (z := b, y := x, x := y),
       lastStep
     )
-    thenHave((connected(r, x), subset(y, x)) |- (in(a, y) /\ in(b, y)) ==> (in(pair(a, b), relationRestriction(r, y, y)) \/ in(pair(b, a), relationRestriction(r, y, y)) \/ (a === b))) by Restate
+    thenHave((connected(r, x), y ⊆ x) |- (a ∈ y /\ b ∈ y) ==> (pair(a, b) ∈ relationRestriction(r, y, y) \/ (pair(b, a) ∈ relationRestriction(r, y, y)) \/ (a === b))) by Restate
     thenHave(
-      (connected(r, x), subset(y, x)) |- forall(b, (in(a, y) /\ in(b, y)) ==> (in(pair(a, b), relationRestriction(r, y, y)) \/ in(pair(b, a), relationRestriction(r, y, y)) \/ (a === b)))
+      (connected(r, x), y ⊆ x) |- ∀(b, (a ∈ y /\ b ∈ y) ==> (pair(a, b) ∈ relationRestriction(r, y, y) \/ (pair(b, a) ∈ relationRestriction(r, y, y)) \/ (a === b)))
     ) by RightForall
     thenHave(
-      (connected(r, x), subset(y, x)) |- forall(a, forall(b, (in(a, y) /\ in(b, y)) ==> (in(pair(a, b), relationRestriction(r, y, y)) \/ in(pair(b, a), relationRestriction(r, y, y)) \/ (a === b))))
+      (connected(r, x), y ⊆ x) |- ∀(a, ∀(b, (a ∈ y /\ b ∈ y) ==> (pair(a, b) ∈ relationRestriction(r, y, y) \/ (pair(b, a) ∈ relationRestriction(r, y, y)) \/ (a === b))))
     ) by RightForall
-    have((connected(r, x), relationBetween(relationRestriction(r, y, y), y, y), subset(y, x)) |- connected(relationRestriction(r, y, y), y)) by Cut(
+    have((connected(r, x), relationBetween(relationRestriction(r, y, y), y, y), y ⊆ x) |- connected(relationRestriction(r, y, y), y)) by Cut(
       lastStep,
       connectedIntro of (x := y, r := relationRestriction(r, y, y))
     )
@@ -1676,7 +1698,7 @@ object Relations extends lisa.Main {
    * Strongly Connected Relation ---
    *     `∀ x y z. y R x ∧ z R x ⇒ y R z ∨ z R y`
    */
-  val stronglyConnected = DEF(r, x) --> relationBetween(r, x, x) /\ ∀(y, ∀(z, (in(y, x) /\ in(z, x)) ==> (in(pair(y, z), r) \/ in(pair(z, y), r))))
+  val stronglyConnected = DEF(r, x) --> relationBetween(r, x, x) /\ ∀(y, ∀(z, (y ∈ x /\ z ∈ x) ==> (pair(y, z) ∈ r \/ (pair(z, y) ∈ r))))
 
 
 

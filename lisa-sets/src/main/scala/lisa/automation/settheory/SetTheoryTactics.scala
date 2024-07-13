@@ -35,7 +35,7 @@ object SetTheoryTactics {
    * @example
    * Generates a subproof for the unique existence of the set `{t ∈ x | t ∈ y}`:
    * {{{
-   *    have(() |- existsOne(z, forall(t, in(t, z) <=> (in(t, x) /\ in(t, y))))) by uniqueComprehension(x, lambda(Seq(t, x), in(t, y)))
+   *    have(() |- existsOne(z, forall(t, in(t, z) <=> (in(t, x) /\ t ∈ y)))) by uniqueComprehension(x, lambda(Seq(t, x), t ∈ y))
    * }}}
    * See [[setIntersection]] or [[relationDomain]] for more usage.
    */

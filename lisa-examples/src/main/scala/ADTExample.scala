@@ -129,7 +129,7 @@ object ADTExample extends lisa.Main {
     */
   val succInj = Theorem(n :: nat |- !(n === succ * n)) {
     
-    val boolean = unorderedPair(emptySet, singleton(emptySet))
+    val boolean = unorderedPair(∅, singleton(∅))
     val f = variable
     have((b :: boolean, f :: (boolean |=> boolean)) |- f * b :: boolean) by TypeChecker.prove
     have(thesis) by Induction() {

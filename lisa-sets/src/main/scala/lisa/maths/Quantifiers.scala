@@ -66,16 +66,16 @@ object Quantifiers extends lisa.Main {
   val existsOneImpliesUniqueness = Theorem(
     (∃!(x, P(x)), P(x), P(y)) |- x === y
   ) {
-    val hyp = have(forall(x, (x === z) <=> P(x)) |- forall(x, (x === z) <=> P(x))) by Hypothesis
-    thenHave((forall(x, (x === z) <=> P(x))) |- (x === z) <=> P(x)) by InstantiateForall(x)
-    thenHave((forall(x, (x === z) <=> P(x)), P(x)) |- x === z) by Weakening
-    val right = have((forall(x, (x === z) <=> P(x)), P(x), y === z) |- x === y) by Cut(lastStep, equalityTransitivity of (y := z, z := y))
+    val hyp = have(∀(x, (x === z) <=> P(x)) |- ∀(x, (x === z) <=> P(x))) by Hypothesis
+    thenHave((∀(x, (x === z) <=> P(x))) |- (x === z) <=> P(x)) by InstantiateForall(x)
+    thenHave((∀(x, (x === z) <=> P(x)), P(x)) |- x === z) by Weakening
+    val right = have((∀(x, (x === z) <=> P(x)), P(x), y === z) |- x === y) by Cut(lastStep, equalityTransitivity of (y := z, z := y))
     
-    have((forall(x, (x === z) <=> P(x))) |- (y === z) <=> P(y)) by InstantiateForall(y)(hyp)
-    val left = thenHave((forall(x, (x === z) <=> P(x)), P(y)) |- y === z) by Weakening
+    have((∀(x, (x === z) <=> P(x))) |- (y === z) <=> P(y)) by InstantiateForall(y)(hyp)
+    val left = thenHave((∀(x, (x === z) <=> P(x)), P(y)) |- y === z) by Weakening
 
-    have((forall(x, (x === z) <=> P(x)), P(x), P(y)) |- x === y) by Cut(left, right)
-    thenHave((exists(z, forall(x, (x === z) <=> P(x))), P(x), P(y)) |- x === y) by LeftExists
+    have((∀(x, (x === z) <=> P(x)), P(x), P(y)) |- x === y) by Cut(left, right)
+    thenHave((∃(z, ∀(x, (x === z) <=> P(x))), P(x), P(y)) |- x === y) by LeftExists
     thenHave(thesis) by LeftExistsOne
   }
 
@@ -91,7 +91,7 @@ object Quantifiers extends lisa.Main {
    * Theorem --- Conjunction and universal quantification commute.
    */
   val universalConjunctionCommutation = Theorem(
-    () |- forall(x, P(x) /\ Q(x)) <=> forall(x, P(x)) /\ forall(x, Q(x))
+    () |- ∀(x, P(x) /\ Q(x)) <=> ∀(x, P(x)) /\ ∀(x, Q(x))
   ) {
     have(thesis) by Tableau
   }
@@ -100,7 +100,7 @@ object Quantifiers extends lisa.Main {
    * Theorem -- Existential quantification distributes conjunction.
    */
   val existentialConjunctionDistribution = Theorem(
-    exists(x, P(x) /\ Q(x)) |- exists(x, P(x)) /\ exists(x, Q(x))
+    ∃(x, P(x) /\ Q(x)) |- ∃(x, P(x)) /\ ∃(x, Q(x))
   ) {
     have(thesis) by Tableau
   }
@@ -109,7 +109,7 @@ object Quantifiers extends lisa.Main {
    * Theorem -- Existential quantification fully distributes when the conjunction involves one closed formula.
    */
   val existentialConjunctionWithClosedFormula = Theorem(
-    exists(x, P(x) /\ p) <=> (exists(x, P(x)) /\ p)
+    ∃(x, P(x) /\ p) <=> (∃(x, P(x)) /\ p)
   ) {
     have(thesis) by Tableau
   }
@@ -119,22 +119,22 @@ object Quantifiers extends lisa.Main {
    * the existential quantifier to the satisfaction of the remaining body.
    */
   val equalityInExistentialQuantifier = Theorem(
-    exists(x, P(x) /\ (y === x)) <=> P(y)
+    ∃(x, P(x) /\ (y === x)) <=> P(y)
   ) {
-    have(exists(x, P(x) /\ (y === x)) |- P(y)) subproof {
+    have(∃(x, P(x) /\ (y === x)) |- P(y)) subproof {
       have(P(x) |- P(x)) by Hypothesis
       thenHave((P(x), y === x) |- P(y)) by RightSubstEq.withParametersSimple(List((y, x)), lambda(y, P(y)))
       thenHave(P(x) /\ (y === x) |- P(y)) by Restate
       thenHave(thesis) by LeftExists
     }
-    val forward = thenHave(exists(x, P(x) /\ (y === x)) ==> P(y)) by Restate
+    val forward = thenHave(∃(x, P(x) /\ (y === x)) ==> P(y)) by Restate
 
-    have(P(y) |- exists(x, P(x) /\ (y === x))) subproof {
+    have(P(y) |- ∃(x, P(x) /\ (y === x))) subproof {
       have(P(x) /\ (y === x) |- P(x) /\ (y === x)) by Hypothesis
-      thenHave(P(x) /\ (y === x) |- exists(x, P(x) /\ (y === x))) by RightExists
-      thenHave(P(y) /\ (y === y) |- exists(x, P(x) /\ (y === x))) by InstFunSchema(Map(x -> y))
+      thenHave(P(x) /\ (y === x) |- ∃(x, P(x) /\ (y === x))) by RightExists
+      thenHave(P(y) /\ (y === y) |- ∃(x, P(x) /\ (y === x))) by InstFunSchema(Map(x -> y))
     }
-    val backward = thenHave(P(y) ==> exists(x, P(x) /\ (y === x))) by Restate
+    val backward = thenHave(P(y) ==> ∃(x, P(x) /\ (y === x))) by Restate
 
     have(thesis) by RightIff(forward, backward)
   }
@@ -143,7 +143,7 @@ object Quantifiers extends lisa.Main {
    * Theorem --- Disjunction and existential quantification commute.
    */
   val existentialDisjunctionCommutation = Theorem(
-    () |- exists(x, P(x) \/ Q(x)) <=> exists(x, P(x)) \/ exists(x, Q(x))
+    () |- ∃(x, P(x) \/ Q(x)) <=> ∃(x, P(x)) \/ ∃(x, Q(x))
   ) {
     have(thesis) by Tableau
   }
@@ -152,7 +152,7 @@ object Quantifiers extends lisa.Main {
    * Theorem --- Universal quantification distributes over equivalence
    */
   val universalEquivalenceDistribution = Theorem(
-    forall(z, P(z) <=> Q(z)) |- (forall(z, P(z)) <=> forall(z, Q(z)))
+    ∀(z, P(z) <=> Q(z)) |- (∀(z, P(z)) <=> ∀(z, Q(z)))
   ) {
     have(thesis) by Tableau
   }
@@ -162,7 +162,7 @@ object Quantifiers extends lisa.Main {
    * of existential quantification.
    */
   val existentialEquivalenceDistribution = Theorem(
-    forall(z, P(z) <=> Q(z)) |- (exists(z, P(z)) <=> exists(z, Q(z)))
+    ∀(z, P(z) <=> Q(z)) |- (∃(z, P(z)) <=> ∃(z, Q(z)))
   ) {
     have(thesis) by Tableau
 
@@ -172,7 +172,7 @@ object Quantifiers extends lisa.Main {
    * Theorem --- Universal quantification distributes over implication
    */
   val universalImplicationDistribution = Theorem(
-    forall(z, P(z) ==> Q(z)) |- (forall(z, P(z)) ==> forall(z, Q(z)))
+    ∀(z, P(z) ==> Q(z)) |- (∀(z, P(z)) ==> ∀(z, Q(z)))
   ) {
     have(thesis) by Tableau
   }
@@ -182,7 +182,7 @@ object Quantifiers extends lisa.Main {
    * of existential quantification.
    */
   val existentialImplicationDistribution = Theorem(
-    forall(z, P(z) ==> Q(z)) |- (exists(z, P(z)) ==> exists(z, Q(z)))
+    ∀(z, P(z) ==> Q(z)) |- (∃(z, P(z)) ==> ∃(z, Q(z)))
   ) {
     have(thesis) by Tableau
   }
@@ -192,17 +192,17 @@ object Quantifiers extends lisa.Main {
    * of unique existential quantification.
    */
   val uniqueExistentialEquivalenceDistribution = Theorem(
-    forall(z, P(z) <=> Q(z)) |- (existsOne(z, P(z)) <=> existsOne(z, Q(z)))
+    ∀(z, P(z) <=> Q(z)) |- (∃!(z, P(z)) <=> ∃!(z, Q(z)))
   ) {
-    val yz = have(forall(z, P(z) <=> Q(z)) |- ((y === z) <=> P(y)) <=> ((y === z) <=> Q(y))) subproof {
-      have(forall(z, P(z) <=> Q(z)) |- forall(z, P(z) <=> Q(z))) by Hypothesis
-      val quant = thenHave(forall(z, P(z) <=> Q(z)) |- P(y) <=> Q(y)) by InstantiateForall(y)
+    val yz = have(∀(z, P(z) <=> Q(z)) |- ((y === z) <=> P(y)) <=> ((y === z) <=> Q(y))) subproof {
+      have(∀(z, P(z) <=> Q(z)) |- ∀(z, P(z) <=> Q(z))) by Hypothesis
+      val quant = thenHave(∀(z, P(z) <=> Q(z)) |- P(y) <=> Q(y)) by InstantiateForall(y)
 
-      val lhs = have((forall(z, P(z) <=> Q(z)), ((y === z) <=> P(y))) |- ((y === z) <=> Q(y))) subproof {
+      val lhs = have((∀(z, P(z) <=> Q(z)), ((y === z) <=> P(y))) |- ((y === z) <=> Q(y))) subproof {
         have((P(y) <=> Q(y), ((y === z) <=> P(y))) |- ((y === z) <=> Q(y))) by Tautology
         have(thesis) by Tautology.from(lastStep, quant)
       }
-      val rhs = have((forall(z, P(z) <=> Q(z)), ((y === z) <=> Q(y))) |- ((y === z) <=> P(y))) subproof {
+      val rhs = have((∀(z, P(z) <=> Q(z)), ((y === z) <=> Q(y))) |- ((y === z) <=> P(y))) subproof {
         have((P(y) <=> Q(y), ((y === z) <=> Q(y))) |- ((y === z) <=> P(y))) by Tautology
         have(thesis) by Tautology.from(lastStep, quant)
       }
@@ -210,19 +210,19 @@ object Quantifiers extends lisa.Main {
       have(thesis) by Tautology.from(lhs, rhs)
     }
 
-    val fy = thenHave(forall(z, P(z) <=> Q(z)) |- forall(y, ((y === z) <=> P(y)) <=> ((y === z) <=> Q(y)))) by RightForall
+    val fy = thenHave(∀(z, P(z) <=> Q(z)) |- ∀(y, ((y === z) <=> P(y)) <=> ((y === z) <=> Q(y)))) by RightForall
 
-    have(forall(y, P(y) <=> Q(y)) |- (forall(y, P(y)) <=> forall(y, Q(y)))) by Restate.from(universalEquivalenceDistribution)
-    val univy = thenHave(forall(y, ((y === z) <=> P(y)) <=> ((y === z) <=> Q(y))) |- (forall(y, ((y === z) <=> P(y))) <=> forall(y, ((y === z) <=> Q(y))))) by InstPredSchema(
+    have(∀(y, P(y) <=> Q(y)) |- (∀(y, P(y)) <=> ∀(y, Q(y)))) by Restate.from(universalEquivalenceDistribution)
+    val univy = thenHave(∀(y, ((y === z) <=> P(y)) <=> ((y === z) <=> Q(y))) |- (∀(y, ((y === z) <=> P(y))) <=> ∀(y, ((y === z) <=> Q(y))))) by InstPredSchema(
       Map((P -> lambda(y, (y === z) <=> P(y))), (Q -> lambda(y, (y === z) <=> Q(y))))
     )
 
-    have(forall(z, P(z) <=> Q(z)) |- (forall(y, ((y === z) <=> P(y))) <=> forall(y, ((y === z) <=> Q(y))))) by Cut(fy, univy)
+    have(∀(z, P(z) <=> Q(z)) |- (∀(y, ((y === z) <=> P(y))) <=> ∀(y, ((y === z) <=> Q(y))))) by Cut(fy, univy)
 
-    thenHave(forall(z, P(z) <=> Q(z)) |- forall(z, forall(y, ((y === z) <=> P(y))) <=> forall(y, ((y === z) <=> Q(y))))) by RightForall
-    have(forall(z, P(z) <=> Q(z)) |- exists(z, forall(y, ((y === z) <=> P(y)))) <=> exists(z, forall(y, ((y === z) <=> Q(y))))) by Cut(
+    thenHave(∀(z, P(z) <=> Q(z)) |- ∀(z, ∀(y, ((y === z) <=> P(y))) <=> ∀(y, ((y === z) <=> Q(y))))) by RightForall
+    have(∀(z, P(z) <=> Q(z)) |- ∃(z, ∀(y, ((y === z) <=> P(y)))) <=> ∃(z, ∀(y, ((y === z) <=> Q(y))))) by Cut(
       lastStep,
-      existentialEquivalenceDistribution of (P -> lambda(z, forall(y, (y === z) <=> P(y))), Q -> lambda(z, forall(y, (y === z) <=> Q(y))))
+      existentialEquivalenceDistribution of (P -> lambda(z, ∀(y, (y === z) <=> P(y))), Q -> lambda(z, ∀(y, (y === z) <=> Q(y))))
     )
     
   }
@@ -232,42 +232,42 @@ object Quantifiers extends lisa.Main {
    * existence
    */
   val atleastTwoExist = Theorem(
-    (exists(x, P(x)) /\ !existsOne(x, P(x))) <=> exists(x, exists(y, P(x) /\ P(y) /\ !(x === y)))
+    (∃(x, P(x)) /\ !(∃!(x, P(x))) <=> ∃(x, ∃(y, P(x) /\ P(y) /\ !(x === y))))
   ) {
-    val forward = have((exists(x, P(x)) /\ !existsOne(x, P(x))) ==> exists(x, exists(y, P(x) /\ P(y) /\ !(x === y)))) subproof {
+    val forward = have((∃(x, P(x)) /\ !(∃!(x, P(x))) ==> ∃(x, ∃(y, P(x) /\ P(y) /\ !(x === y))))) subproof {
       have((P(x), ((x === y) /\ !P(y))) |- P(x) /\ !P(y)) by Restate
       thenHave((P(x), ((x === y) /\ !P(y))) |- P(y) /\ !P(y)) by Substitution.ApplyRules(x === y) // contradiction
-      val xy = thenHave((P(x), ((x === y) /\ !P(y))) |- exists(x, exists(y, P(x) /\ P(y) /\ !(x === y)))) by Weakening
+      val xy = thenHave((P(x), ((x === y) /\ !P(y))) |- ∃(x, ∃(y, P(x) /\ P(y) /\ !(x === y)))) by Weakening
 
       have((P(x), (!(x === y) /\ P(y))) |- (!(x === y) /\ P(y) /\ P(x))) by Restate
-      thenHave((P(x), (!(x === y) /\ P(y))) |- exists(y, !(x === y) /\ P(y) /\ P(x))) by RightExists
-      val nxy = thenHave((P(x), (!(x === y) /\ P(y))) |- exists(x, exists(y, !(x === y) /\ P(y) /\ P(x)))) by RightExists
+      thenHave((P(x), (!(x === y) /\ P(y))) |- ∃(y, !(x === y) /\ P(y) /\ P(x))) by RightExists
+      val nxy = thenHave((P(x), (!(x === y) /\ P(y))) |- ∃(x, ∃(y, !(x === y) /\ P(y) /\ P(x)))) by RightExists
 
-      have((P(x), (!(x === y) /\ P(y)) \/ ((x === y) /\ !P(y))) |- exists(x, exists(y, P(x) /\ P(y) /\ !(x === y)))) by Tautology.from(xy, nxy)
-      thenHave((P(x), exists(y, (!(x === y) /\ P(y)) \/ ((x === y) /\ !P(y)))) |- exists(x, exists(y, P(x) /\ P(y) /\ !(x === y)))) by LeftExists
-      thenHave((P(x), forall(x, exists(y, (!(x === y) /\ P(y)) \/ ((x === y) /\ !P(y))))) |- exists(x, exists(y, P(x) /\ P(y) /\ !(x === y)))) by LeftForall
-      thenHave((exists(x, P(x)), forall(x, exists(y, (!(x === y) /\ P(y)) \/ ((x === y) /\ !P(y))))) |- exists(x, exists(y, P(x) /\ P(y) /\ !(x === y)))) by LeftExists
+      have((P(x), (!(x === y) /\ P(y)) \/ ((x === y) /\ !P(y))) |- ∃(x, ∃(y, P(x) /\ P(y) /\ !(x === y)))) by Tautology.from(xy, nxy)
+      thenHave((P(x), ∃(y, (!(x === y) /\ P(y)) \/ ((x === y) /\ !P(y)))) |- ∃(x, ∃(y, P(x) /\ P(y) /\ !(x === y)))) by LeftExists
+      thenHave((P(x), ∀(x, ∃(y, (!(x === y) /\ P(y)) \/ ((x === y) /\ !P(y))))) |- ∃(x, ∃(y, P(x) /\ P(y) /\ !(x === y)))) by LeftForall
+      thenHave((∃(x, P(x)), ∀(x, ∃(y, (!(x === y) /\ P(y)) \/ ((x === y) /\ !P(y))))) |- ∃(x, ∃(y, P(x) /\ P(y) /\ !(x === y)))) by LeftExists
     }
 
-    val backward = have(exists(x, exists(y, P(x) /\ P(y) /\ !(x === y))) ==> (exists(x, P(x)) /\ !existsOne(x, P(x)))) subproof {
+    val backward = have(∃(x, ∃(y, P(x) /\ P(y) /\ !(x === y))) ==> (∃(x, P(x)) /\ !(∃!(x, P(x))))) subproof {
       have((P(x), P(y), !(x === y)) |- P(x)) by Restate
-      val ex = thenHave((P(x), P(y), !(x === y)) |- exists(x, P(x))) by RightExists
+      val ex = thenHave((P(x), P(y), !(x === y)) |- ∃(x, P(x))) by RightExists
 
       have((P(x), P(y), !(x === y)) |- P(y) /\ !(y === x)) by Restate
       thenHave((P(x), P(y), !(x === y), (x === z)) |- P(y) /\ !(y === z)) by Substitution.ApplyRules(x === z)
       thenHave((P(x), P(y), !(x === y), (x === z)) |- (P(y) /\ !(y === z)) \/ (!P(y) /\ (y === z))) by Weakening
-      val xz = thenHave((P(x), P(y), !(x === y), (x === z)) |- exists(y, (P(y) /\ !(y === z)) \/ (!P(y) /\ (y === z)))) by RightExists
+      val xz = thenHave((P(x), P(y), !(x === y), (x === z)) |- ∃(y, (P(y) /\ !(y === z)) \/ (!P(y) /\ (y === z)))) by RightExists
 
       have((P(x), P(y), !(x === y), !(x === z)) |- (P(x) /\ !(x === z)) \/ (!P(x) /\ (x === z))) by Restate
-      val nxz = thenHave((P(x), P(y), !(x === y), !(x === z)) |- exists(x, (P(x) /\ !(x === z)) \/ (!P(x) /\ (x === z)))) by RightExists
+      val nxz = thenHave((P(x), P(y), !(x === y), !(x === z)) |- ∃(x, (P(x) /\ !(x === z)) \/ (!P(x) /\ (x === z)))) by RightExists
 
-      have((P(x), P(y), !(x === y)) |- exists(x, (P(x) /\ !(x === z)) \/ (!P(x) /\ (x === z)))) by Tautology.from(xz, nxz)
-      thenHave((P(x), P(y), !(x === y)) |- forall(z, exists(x, (P(x) /\ !(x === z)) \/ (!P(x) /\ (x === z))))) by RightForall
-      val uex = thenHave(P(x) /\ P(y) /\ !(x === y) |- !existsOne(z, P(z))) by Restate
+      have((P(x), P(y), !(x === y)) |- ∃(x, (P(x) /\ !(x === z)) \/ (!P(x) /\ (x === z)))) by Tautology.from(xz, nxz)
+      thenHave((P(x), P(y), !(x === y)) |- ∀(z, ∃(x, (P(x) /\ !(x === z)) \/ (!P(x) /\ (x === z))))) by RightForall
+      val uex = thenHave(P(x) /\ P(y) /\ !(x === y) |- !(∃!(z, P(z)))) by Restate
 
-      have(P(x) /\ P(y) /\ !(x === y) |- exists(x, P(x)) /\ !existsOne(z, P(z))) by Tautology.from(ex, uex)
-      thenHave(exists(y, P(x) /\ P(y) /\ !(x === y)) |- exists(x, P(x)) /\ !existsOne(z, P(z))) by LeftExists
-      thenHave(exists(x, exists(y, P(x) /\ P(y) /\ !(x === y))) |- exists(x, P(x)) /\ !existsOne(z, P(z))) by LeftExists
+      have(P(x) /\ P(y) /\ !(x === y) |- ∃(x, P(x)) /\ !(∃!(z, P(z)))) by Tautology.from(ex, uex)
+      thenHave(∃(y, P(x) /\ P(y) /\ !(x === y)) |- ∃(x, P(x)) /\ !(∃!(z, P(z)))) by LeftExists
+      thenHave(∃(x, ∃(y, P(x) /\ P(y) /\ !(x === y))) |- ∃(x, P(x)) /\ !(∃!(z, P(z)))) by LeftExists
     }
 
     have(thesis) by Tautology.from(forward, backward)
@@ -299,10 +299,10 @@ object Quantifiers extends lisa.Main {
     thenHave((x === y, P(y)) |- P(x)) by RightSubstEq.withParametersSimple(List((y, x)), lambda(y, P(y)))
     val backward = thenHave(P(y) |- (x === y) ==> P(x)) by RightImplies
     have((P(y), P(x) /\ P(y) ==> (x === y)) |- (x === y) <=> P(x)) by RightIff(forward, backward)
-    thenHave((P(y), forall(y, P(x) /\ P(y) ==> (x === y))) |- (x === y) <=> P(x)) by LeftForall 
-    thenHave((P(y), forall(x, forall(y, P(x) /\ P(y) ==> (x === y)))) |- (x === y) <=> P(x)) by LeftForall
-    thenHave((P(y), forall(x, forall(y, P(x) /\ P(y) ==> (x === y)))) |- forall(x, (x === y) <=> P(x))) by RightForall
-    thenHave((P(y), forall(x, forall(y, P(x) /\ P(y) ==> (x === y)))) |- exists(y, forall(x, (x === y) <=> P(x)))) by RightExists
+    thenHave((P(y), ∀(y, P(x) /\ P(y) ==> (x === y))) |- (x === y) <=> P(x)) by LeftForall 
+    thenHave((P(y), ∀(x, ∀(y, P(x) /\ P(y) ==> (x === y)))) |- (x === y) <=> P(x)) by LeftForall
+    thenHave((P(y), ∀(x, ∀(y, P(x) /\ P(y) ==> (x === y)))) |- ∀(x, (x === y) <=> P(x))) by RightForall
+    thenHave((P(y), ∀(x, ∀(y, P(x) /\ P(y) ==> (x === y)))) |- ∃(y, ∀(x, (x === y) <=> P(x)))) by RightExists
     thenHave(thesis) by LeftExists
   }
 
@@ -310,11 +310,11 @@ object Quantifiers extends lisa.Main {
     ∃!(x, x === y)
   ) {
     have(y === y) by RightRefl
-    val existence = thenHave(exists(x, x === y)) by RightExists
+    val existence = thenHave(∃(x, x === y)) by RightExists
 
     have(((x === y) /\ (z === y)) ==> (x === z)) by Restate.from(equalityTransitivity)
-    thenHave(forall(z, (x === y) /\ (z === y) ==> (x === z))) by RightForall
-    thenHave(forall(x, forall(z, (x === y) /\ (z === y) ==> (x === z)))) by RightForall
+    thenHave(∀(z, (x === y) /\ (z === y) ==> (x === z))) by RightForall
+    thenHave(∀(x, ∀(z, (x === y) /\ (z === y) ==> (x === z)))) by RightForall
     have(∃(x, x === y) |- ∃!(x, x === y)) by Cut(lastStep, existenceAndUniqueness of (P := lambda(x, x === y)))
     have(thesis) by Cut(existence, lastStep)
   }
@@ -337,8 +337,8 @@ object Quantifiers extends lisa.Main {
     val uniquenessRight = uniquenessLeft of (q := !q, P := Q)
     have((q ==> ∃!(x, P(x)), !q ==> ∃!(x, Q(x)), q ==> P(x), q ==> P(y), !q ==> Q(x), !q ==> Q(y)) |- (q ==> (x === y)) /\ (!q ==> (x === y))) by RightAnd(uniquenessLeft, uniquenessRight)
     thenHave((q ==> ∃!(x, P(x)), !q ==> ∃!(x, Q(x))) |- (((q ==> P(x)) /\ (!q ==> Q(x))) /\ ((q ==> P(y)) /\ (!q ==> Q(y)))) ==> (x === y)) by Tautology
-    thenHave((q ==> ∃!(x, P(x)), !q ==> ∃!(x, Q(x))) |- forall(y, (((q ==> P(x)) /\ (!q ==> Q(x))) /\ ((q ==> P(y)) /\ (!q ==> Q(y)))) ==> (x === y))) by RightForall
-    thenHave((q ==> ∃!(x, P(x)), !q ==> ∃!(x, Q(x))) |- forall(x, forall(y, (((q ==> P(x)) /\ (!q ==> Q(x))) /\ ((q ==> P(y)) /\ (!q ==> Q(y)))) ==> (x === y)))) by RightForall
+    thenHave((q ==> ∃!(x, P(x)), !q ==> ∃!(x, Q(x))) |- ∀(y, (((q ==> P(x)) /\ (!q ==> Q(x))) /\ ((q ==> P(y)) /\ (!q ==> Q(y)))) ==> (x === y))) by RightForall
+    thenHave((q ==> ∃!(x, P(x)), !q ==> ∃!(x, Q(x))) |- ∀(x, ∀(y, (((q ==> P(x)) /\ (!q ==> Q(x))) /\ ((q ==> P(y)) /\ (!q ==> Q(y)))) ==> (x === y)))) by RightForall
     have((q ==> ∃!(x, P(x)), !q ==> ∃!(x, Q(x)), ∃(x, (q ==> P(x)) /\ (!q ==> Q(x)))) |- ∃!(x, (q ==> P(x)) /\ (!q ==> Q(x)))) by Cut(lastStep, existenceAndUniqueness of (P := lambda(x, (q ==> P(x)) /\ (!q ==> Q(x)))))
     have(thesis) by Cut(existence, lastStep)
   }

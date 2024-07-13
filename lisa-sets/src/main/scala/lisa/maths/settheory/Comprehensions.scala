@@ -53,15 +53,15 @@ object Comprehensions {
     protected lazy val replacer: (Term ** 2) |-> Formula = lambda((A, B), filter(A) /\ (B === map(A)))
 
     private val mainFact = have(
-      ∃(B, ∀(y, in(y, B) <=> ∃(x, in(x, A) /\ P(x, y)))).substitute(P := replacer)
+      ∃(B, ∀(y, y ∈ B <=> ∃(x, x ∈ A /\ P(x, y)))).substitute(P := replacer)
     ) subproof {
       val s = have(thesis) by Tautology.from(primReplacement of (P := replacer), functionalIsFunctional of (Filter := filter, Map := map))
     }
 
     /**
-     * forall(y, in(y, B) <=> ∃(x, in(x, A) /\ filter(x) /\ (y === map(x))
+     * forall(y, y ∈ B <=> ∃(x, x ∈ A /\ filter(x) /\ (y === map(x))
      */
-    override val definition: proof.Fact = assume(using proof)(forall(y, in(y, B) <=> ∃(x, in(x, A) /\ P(x, y))).substitute(P := replacer, A := t, B := this))
+    override val definition: proof.Fact = assume(using proof)(forall(y, y ∈ B <=> ∃(x, x ∈ A /\ P(x, y))).substitute(P := replacer, A := t, B := this))
 
     val elem_bound = definingFormula.asInstanceOf[BinderFormula].bound
 
@@ -70,8 +70,8 @@ object Comprehensions {
     }
 
     /**
-     * `in(elem, B) <=> ∃(x, in(x, A) /\ filter(x) /\ (elem === map(x))`
-     * if built with term.map, `in(elem, B) <=> ∃(x, in(x, A) /\ (elem === map(x))`
+     * `in(elem, B) <=> ∃(x, x ∈ A /\ filter(x) /\ (elem === map(x))`
+     * if built with term.map, `in(elem, B) <=> ∃(x, x ∈ A /\ (elem === map(x))`
      * if built with term.filter, `in(elem, B) <=> (in(elem, t) /\ filter(elem))`
      */
     def elim(elem: Term) = instDef of (elem_bound := elem)
@@ -97,10 +97,10 @@ object Comprehensions {
 
   // Replacement and Set Builders
 
-  private def innerRepl(c: Variable, replacer: (Term ** 2) |-> Formula, t: Term): BinderFormula = // forall(x, in(x, y) <=> (in(x, t) /\ φ(x)))
-    ∀(y, in(y, B) <=> ∃(x, in(x, A) /\ P(x, y) /\ ∀(z, P(x, z) ==> (z === y)))).substitute(P := replacer, A := t, y := c)
+  private def innerRepl(c: Variable, replacer: (Term ** 2) |-> Formula, t: Term): BinderFormula = // forall(x, x ∈ y <=> (in(x, t) /\ φ(x)))
+    ∀(y, y ∈ B <=> ∃(x, x ∈ A /\ P(x, y) /\ ∀(z, P(x, z) ==> (z === y)))).substitute(P := replacer, A := t, y := c)
 
-  // Axiom(exists(y, forall(x, in(x, y) <=> (in(x, z) /\ φ(x)))))
+  // Axiom(exists(y, forall(x, x ∈ y <=> (x ∈ z /\ φ(x)))))
 
   class Replacement(_proof: Proof, val t: Term, val replacer: (Term ** 2) |-> Formula, id: Identifier) extends LocalyDefinedVariable(_proof, id) {
     given proof.type = proof
@@ -164,7 +164,7 @@ object Comprehensions {
       val c = new Comprehension(_proof, t, lambda(x, top), map, id) {
 
         override val instDef: proof.Fact = {
-          val elim_formula = (forall(elem_bound, in(elem_bound, B) <=> ∃(x, in(x, A) /\ P(x, elem_bound))).substitute(P := lambda((A, B), B === _map(A)), A := _t, B := this)).body
+          val elim_formula = (forall(elem_bound, in(elem_bound, B) <=> ∃(x, x ∈ A /\ P(x, elem_bound))).substitute(P := lambda((A, B), B === _map(A)), A := _t, B := this)).body
 
           have(TacticSubproof(using proof) {
             val s = have(definingFormula |- definingFormula.asInstanceOf[BinderFormula].body) by InstantiateForall(elem_bound)(definition)
