@@ -223,8 +223,8 @@ object InductiveSets extends lisa.Main {
   val predicateRestrictionExists = makeTHM(
      ∃!(r, forall(x,  forall(y, pair(x, y) ∈ r <=> x ∈ A /\ in(y, A) /\ R(x, y))))
   ) {
-    val z1 = firstInPair(z)
-    val z2 = secondInPair(z)
+    val z1 = fst(z)
+    val z2 = snd(z)
 
     have ( ∃!(r, forall(z, in(z, r) <=> in(z, cartesianProduct(A, A)) /\ R(z1, z2)))) by UniqueComprehension(cartesianProduct(A, A), lambda(Seq(z, x), R(z1, z2)))
     showCurrentProof()

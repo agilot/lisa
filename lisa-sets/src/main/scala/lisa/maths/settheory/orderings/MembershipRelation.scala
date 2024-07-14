@@ -39,9 +39,9 @@ object MembershipRelation extends lisa.Main {
     *     `∃!r. ∀t. t ∈ r ⇔ (t ∈ x × x ∧ ∃a. ∃b. a ∈ b ∧ t = (a, b))`
     */
   val membershipRelationUniqueness = Lemma(
-    ∃!(z, ∀(t, t ∈ z <=> (t ∈ cartesianProduct(x, x) /\ ∃(a, ∃(b, a ∈ b /\ (t === pair(a, b)))))))
+    ∃!(z, ∀(t, t ∈ z <=> (t ∈ (x × x) /\ ∃(a, ∃(b, a ∈ b /\ (t === pair(a, b)))))))
   ) {
-    have(thesis) by UniqueComprehension(cartesianProduct(x, x), lambda(t, ∃(a, ∃(b, a ∈ b /\ (t === pair(a, b))))))
+    have(thesis) by UniqueComprehension(x × x, lambda(t, ∃(a, ∃(b, a ∈ b /\ (t === pair(a, b))))))
   }
 
   /**
@@ -49,7 +49,7 @@ object MembershipRelation extends lisa.Main {
    *
    *    `∈_x = {(a, b) ∈ x * x | a ∈ b}`
    */
-  val membershipRelation = DEF(x) --> The(z, ∀(t, t ∈ z <=> (t ∈ cartesianProduct(x, x) /\ ∃(a, ∃(b, a ∈ b /\ (t === pair(a, b)))))))(membershipRelationUniqueness)
+  val membershipRelation = DEF(x) --> The(z, ∀(t, t ∈ z <=> (t ∈ (x × x) /\ ∃(a, ∃(b, a ∈ b /\ (t === pair(a, b)))))))(membershipRelationUniqueness)
 
   /**
    * Theorem --- The membership relation is a relation.
@@ -57,11 +57,11 @@ object MembershipRelation extends lisa.Main {
    *   `∈_x ⊆ x × x`
    */
   val membershipRelationIsARelation = Lemma(relationBetween(membershipRelation(x), x, x)) {
-    have(∀(t, t ∈ membershipRelation(x) <=> (t ∈ cartesianProduct(x, x) /\ ∃(y, ∃(x, y ∈ x /\ (t === pair(y, x))))))) by InstantiateForall(membershipRelation(x))(membershipRelation.definition)
-    thenHave(t ∈ membershipRelation(x) <=> (t ∈ cartesianProduct(x, x) /\ ∃(y, ∃(x, y ∈ x /\ (t === pair(y, x)))))) by InstantiateForall(t)
-    thenHave(t ∈ membershipRelation(x) ==> t ∈ cartesianProduct(x, x)) by Weakening
-    thenHave(∀(t, t ∈ membershipRelation(x) ==> t ∈ cartesianProduct(x, x))) by RightForall
-    have(membershipRelation(x) ⊆ cartesianProduct(x, x)) by Cut(lastStep, subsetIntro of (x := membershipRelation(x), y := cartesianProduct(x, x)))
+    have(∀(t, t ∈ membershipRelation(x) <=> (t ∈ (x × x) /\ ∃(y, ∃(x, y ∈ x /\ (t === pair(y, x))))))) by InstantiateForall(membershipRelation(x))(membershipRelation.definition)
+    thenHave(t ∈ membershipRelation(x) <=> (t ∈ (x × x) /\ ∃(y, ∃(x, y ∈ x /\ (t === pair(y, x)))))) by InstantiateForall(t)
+    thenHave(t ∈ membershipRelation(x) ==> t ∈ (x × x)) by Weakening
+    thenHave(∀(t, t ∈ membershipRelation(x) ==> t ∈ (x × x))) by RightForall
+    have(membershipRelation(x) ⊆ (x × x)) by Cut(lastStep, subsetIntro of (x := membershipRelation(x), y := x × x))
     thenHave(thesis) by Substitution.ApplyRules(relationBetween.definition of (r := membershipRelation(x), a := x, b := x))
   }
 
@@ -92,9 +92,9 @@ object MembershipRelation extends lisa.Main {
       have(thesis) by RightIff(forward, backward)
     }
 
-    have(∀(t, t ∈ membershipRelation(x) <=> (t ∈ cartesianProduct(x, x) /\ ∃(y, ∃(z, y ∈ z /\ (t === pair(y, z))))))) by InstantiateForall(membershipRelation(x))(membershipRelation.definition)
-    thenHave(pair(a, b) ∈ membershipRelation(x) <=> (pair(a, b) ∈ cartesianProduct(x, x) /\ ∃(y, ∃(z, y ∈ z /\ (pair(a, b) === pair(y, z)))))) by InstantiateForall(pair(a, b))
-    thenHave(pair(a, b) ∈ membershipRelation(x) <=> (pair(a, b) ∈ cartesianProduct(x, x)) /\ a ∈ b) by Substitution.ApplyRules(pairExists)
+    have(∀(t, t ∈ membershipRelation(x) <=> (t ∈ (x × x) /\ ∃(y, ∃(z, y ∈ z /\ (t === pair(y, z))))))) by InstantiateForall(membershipRelation(x))(membershipRelation.definition)
+    thenHave(pair(a, b) ∈ membershipRelation(x) <=> (pair(a, b) ∈ (x × x) /\ ∃(y, ∃(z, y ∈ z /\ (pair(a, b) === pair(y, z)))))) by InstantiateForall(pair(a, b))
+    thenHave(pair(a, b) ∈ membershipRelation(x) <=> (pair(a, b) ∈ (x × x)) /\ a ∈ b) by Substitution.ApplyRules(pairExists)
     thenHave(thesis) by Substitution.ApplyRules(cartesianProductMembershipPair of (y := x))
   }
 
@@ -139,9 +139,9 @@ object MembershipRelation extends lisa.Main {
     * 
     *   `p ∈ ∈_x ⊢ p._1 ∈ p._2 /\ p._1 ∈ x /\ p._2 ∈ x`
     */
-  val membershipRelationElim = Lemma(p ∈ membershipRelation(x) |- firstInPair(p) ∈ secondInPair(p) /\ firstInPair(p) ∈ x /\ secondInPair(p) ∈ x){
-    have(p ∈ membershipRelation(x) |- p === pair(firstInPair(p), secondInPair(p))) by Cut(membershipRelationIsARelation, pairReconstructionInRelationBetween of (r := membershipRelation(x), a := x, b := x))
-    have(thesis) by Substitution.ApplyRules(lastStep)(membershipRelationElimPair of (a := firstInPair(p), b := secondInPair(p)))
+  val membershipRelationElim = Lemma(p ∈ membershipRelation(x) |- fst(p) ∈ snd(p) /\ fst(p) ∈ x /\ snd(p) ∈ x){
+    have(p ∈ membershipRelation(x) |- p === pair(fst(p), snd(p))) by Cut(membershipRelationIsARelation, pairReconstructionInRelationBetween of (r := membershipRelation(x), a := x, b := x))
+    have(thesis) by Substitution.ApplyRules(lastStep)(membershipRelationElimPair of (a := fst(p), b := snd(p)))
   }
 
   /**
@@ -149,7 +149,7 @@ object MembershipRelation extends lisa.Main {
     * 
     *   `p ∈ ∈_x ⊢ p._1 ∈ p._2`
     */
-  val membershipRelationIsMembership = Lemma(p ∈ membershipRelation(x) |- firstInPair(p) ∈ secondInPair(p)){
+  val membershipRelationIsMembership = Lemma(p ∈ membershipRelation(x) |- fst(p) ∈ snd(p)){
     have(thesis) by Weakening(membershipRelationElim)
   }
 
@@ -158,7 +158,7 @@ object MembershipRelation extends lisa.Main {
     * 
     *   `p ∈ ∈_x ⊢ p._1 ∈ x /\ p._2 ∈ x`
     */
-  val membershipRelationInDomain = Lemma(p ∈ membershipRelation(x) |- firstInPair(p) ∈ x /\ secondInPair(p) ∈ x){
+  val membershipRelationInDomain = Lemma(p ∈ membershipRelation(x) |- fst(p) ∈ x /\ snd(p) ∈ x){
     have(thesis) by Weakening(membershipRelationElim)
   }
 
@@ -183,8 +183,8 @@ object MembershipRelation extends lisa.Main {
    *  `∈_∅ = ∅`
    */
   val emptyMembershipRelation = Lemma(membershipRelation(∅) === ∅) {
-    have(p ∈ membershipRelation(∅) |- firstInPair(p) ∈ ∅) by Weakening(membershipRelationInDomain of (x := ∅))
-    have(p ∈ membershipRelation(∅) |- !(∅ === ∅)) by Cut(lastStep, setWithElementNonEmpty of (y := firstInPair(p), x := ∅))
+    have(p ∈ membershipRelation(∅) |- fst(p) ∈ ∅) by Weakening(membershipRelationInDomain of (x := ∅))
+    have(p ∈ membershipRelation(∅) |- ∅ =/= ∅) by Cut(lastStep, setWithElementNonEmpty of (y := fst(p), x := ∅))
     thenHave(p ∉ membershipRelation(∅)) by Restate
     thenHave(∀(p, p ∉ membershipRelation(∅))) by RightForall
     have(thesis) by Cut(lastStep, setWithNoElementsIsEmpty of (x := membershipRelation(∅)))

@@ -247,14 +247,14 @@ private class SyntacticADT[N <: Arity](using line: sourcecode.Line, file: source
   def injectivity(c1: SyntacticConstructor, c2: SyntacticConstructor) =
     require(c1.tag != c2.tag, "The given constructors must be different.")
 
-    Lemma(!(c1.term1 === c2.term2)) {
+    Lemma(c1.term1 =/= c2.term2) {
 
       // STEP 0: Caching
       val tagTerm1: Term = c1.tagTerm
       val tagTerm2: Term = c2.tagTerm
 
       // STEP 1: Prove that the tags are different
-      val diffTag = have(!(tagTerm1 === tagTerm2)) subproof {
+      val diffTag = have(tagTerm1 =/= tagTerm2) subproof {
 
         // STEP 1.1: Order the tags
         val minTag: Int = Math.min(c1.tag, c2.tag)
@@ -269,10 +269,10 @@ private class SyntacticADT[N <: Arity](using line: sourcecode.Line, file: source
           have(tagTerm1 === tagTerm2 |- midMaxTag === midMinTag) by Cut(fact, successorInjectivity of (a := midMaxTag, b := midMinTag))
         )
 
-        val chainInjectivity = thenHave(!(toTerm(maxTag - minTag) === ∅) |- !(tagTerm1 === tagTerm2)) by Restate
+        val chainInjectivity = thenHave(!(toTerm(maxTag - minTag) === ∅) |- tagTerm1 =/= tagTerm2) by Restate
 
         // STEP 1.3: Conclude using the fact that 0 is not the successor of any number
-        have(!(toTerm(maxTag - minTag) === ∅)) by Exact(successorNonEmpty)
+        have(toTerm(maxTag - minTag) =/= ∅) by Exact(successorNonEmpty)
         have(thesis) by Cut(lastStep, chainInjectivity)
       }
 
@@ -280,10 +280,10 @@ private class SyntacticADT[N <: Arity](using line: sourcecode.Line, file: source
       have(c1.term1 === c2.term2 |- (tagTerm1 === tagTerm2) /\ (c1.subterm1 === c2.subterm2)) by Apply(equivalenceRevApply).on(
         pairExtensionality of (a := tagTerm1, b := c1.subterm1, c := tagTerm2, d := c2.subterm2)
       )
-      thenHave(!(tagTerm1 === tagTerm2) |- !(c1.term1 === c2.term2)) by Weakening
+      thenHave(tagTerm1 =/= tagTerm2 |- c1.term1 =/= c2.term2) by Weakening
 
       // STEP 3: Conclude
-      have(!(c1.term1 === c2.term2)) by Cut(diffTag, lastStep)
+      have(c1.term1 =/= c2.term2) by Cut(diffTag, lastStep)
     }
 
   // *************************
@@ -488,17 +488,17 @@ private class SyntacticADT[N <: Arity](using line: sourcecode.Line, file: source
    * TODO: Try to pull out
    */
   private val heightMonotonic = benchmark(Lemma((hIsTheHeightFunction, in(n, N), in(m, N), m ⊆ n) |- subset(app(h, m), app(h, n))) {
-    have((introductionFunctionMonotonic.statement.right.head, introductionFunctionCumulative.statement.right.head, hIsTheHeightFunction, n ∈ relationDomain(h), in(m, relationDomain(h)), m ⊆ n) |- subset(app(h, m), app(h, n))) by Weakening(fixpointFunctionMonotonicity of (P2 := lambda((x, s), isInIntroductionFunctionImage(s)(x))))
-    have((introductionFunctionCumulative.statement.right.head, hIsTheHeightFunction, n ∈ relationDomain(h), in(m, relationDomain(h)), m ⊆ n) |- subset(app(h, m), app(h, n))) by 
+    have((introductionFunctionMonotonic.statement.right.head, introductionFunctionCumulative.statement.right.head, hIsTheHeightFunction, n ∈ dom(h), in(m, dom(h)), m ⊆ n) |- subset(app(h, m), app(h, n))) by Weakening(fixpointFunctionMonotonicity of (P2 := lambda((x, s), isInIntroductionFunctionImage(s)(x))))
+    have((introductionFunctionCumulative.statement.right.head, hIsTheHeightFunction, n ∈ dom(h), in(m, dom(h)), m ⊆ n) |- subset(app(h, m), app(h, n))) by 
       Cut(introductionFunctionMonotonic, lastStep)
-    have((hIsTheHeightFunction, n ∈ relationDomain(h), in(m, relationDomain(h)), m ⊆ n) |- subset(app(h, m), app(h, n))) by 
+    have((hIsTheHeightFunction, n ∈ dom(h), in(m, dom(h)), m ⊆ n) |- subset(app(h, m), app(h, n))) by 
       Cut(introductionFunctionCumulative, lastStep)
-    thenHave((hIsTheHeightFunction, in(n, N), in(m, relationDomain(h)), m ⊆ n, relationDomain(h) === N) |- subset(app(h, m), app(h, n))) by LeftSubstEq.withParametersSimple(
-      List((relationDomain(h), N)),
+    thenHave((hIsTheHeightFunction, in(n, N), in(m, dom(h)), m ⊆ n, dom(h) === N) |- subset(app(h, m), app(h, n))) by LeftSubstEq.withParametersSimple(
+      List((dom(h), N)),
       lambda(d, in(n, d))
     )
-    thenHave((hIsTheHeightFunction, in(n, N), in(m, N), m ⊆ n, relationDomain(h) === N) |- subset(app(h, m), app(h, n))) by LeftSubstEq.withParametersSimple(
-      List((relationDomain(h), N)),
+    thenHave((hIsTheHeightFunction, in(n, N), in(m, N), m ⊆ n, dom(h) === N) |- subset(app(h, m), app(h, n))) by LeftSubstEq.withParametersSimple(
+      List((dom(h), N)),
       lambda(d, in(m, d))
     )
   })
@@ -509,17 +509,17 @@ private class SyntacticADT[N <: Arity](using line: sourcecode.Line, file: source
    *     `height(n + 1) = introductionFunction(height(n))`
    */
   private val heightSuccessorWeak = benchmark(Lemma((hIsTheHeightFunction, in(n, N)) |- in(x, app(h, successor(n))) <=> isInIntroductionFunctionImage(app(h, n))(x)) {
-    have((introductionFunctionMonotonic.statement.right.head, introductionFunctionCumulative.statement.right.head, hIsTheHeightFunction, in(successor(n), relationDomain(h))) |- in(x, app(h, successor(n))) <=> isInIntroductionFunctionImage(app(h, n))(x)) by Weakening(fixpointFunctionSuccessor of (P2 := lambda((x, s), isInIntroductionFunctionImage(s)(x))))
-    have((introductionFunctionCumulative.statement.right.head, hIsTheHeightFunction, in(successor(n), relationDomain(h))) |- in(x, app(h, successor(n))) <=> isInIntroductionFunctionImage(app(h, n))(x)) by 
+    have((introductionFunctionMonotonic.statement.right.head, introductionFunctionCumulative.statement.right.head, hIsTheHeightFunction, in(successor(n), dom(h))) |- in(x, app(h, successor(n))) <=> isInIntroductionFunctionImage(app(h, n))(x)) by Weakening(fixpointFunctionSuccessor of (P2 := lambda((x, s), isInIntroductionFunctionImage(s)(x))))
+    have((introductionFunctionCumulative.statement.right.head, hIsTheHeightFunction, in(successor(n), dom(h))) |- in(x, app(h, successor(n))) <=> isInIntroductionFunctionImage(app(h, n))(x)) by 
       Cut(introductionFunctionMonotonic, lastStep)
-    have((hIsTheHeightFunction, in(successor(n), relationDomain(h))) |- in(x, app(h, successor(n))) <=> isInIntroductionFunctionImage(app(h, n))(x)) by 
+    have((hIsTheHeightFunction, in(successor(n), dom(h))) |- in(x, app(h, successor(n))) <=> isInIntroductionFunctionImage(app(h, n))(x)) by 
       Cut(introductionFunctionCumulative, lastStep)
-    thenHave((hIsTheHeightFunction, in(successor(n), N), relationDomain(h) === N) |- in(x, app(h, successor(n))) <=> isInIntroductionFunctionImage(app(h, n))(x)) by LeftSubstEq.withParametersSimple(
-      List((relationDomain(h), N)),
+    thenHave((hIsTheHeightFunction, in(successor(n), N), dom(h) === N) |- in(x, app(h, successor(n))) <=> isInIntroductionFunctionImage(app(h, n))(x)) by LeftSubstEq.withParametersSimple(
+      List((dom(h), N)),
       lambda(d, in(successor(n), d))
     )
-    have((hIsTheHeightFunction, nonsuccessorOrdinal(N), in(n, N), relationDomain(h) === N) |- in(x, app(h, successor(n))) <=> isInIntroductionFunctionImage(app(h, n))(x)) by Cut(nonsuccessorOrdinalIsInductive of (b := n, a := N), lastStep)
-    have((hIsTheHeightFunction, in(n, N), relationDomain(h) === N) |- in(x, app(h, successor(n))) <=> isInIntroductionFunctionImage(app(h, n))(x)) by Cut(heightDomainLimit, lastStep)
+    have((hIsTheHeightFunction, nonsuccessorOrdinal(N), in(n, N), dom(h) === N) |- in(x, app(h, successor(n))) <=> isInIntroductionFunctionImage(app(h, n))(x)) by Cut(nonsuccessorOrdinalIsInductive of (b := n, a := N), lastStep)
+    have((hIsTheHeightFunction, in(n, N), dom(h) === N) |- in(x, app(h, successor(n))) <=> isInIntroductionFunctionImage(app(h, n))(x)) by Cut(heightDomainLimit, lastStep)
   })
 
   // ********
@@ -603,8 +603,8 @@ private class SyntacticADT[N <: Arity](using line: sourcecode.Line, file: source
    *     ` x ∈ ADT <=> ∃n ∈ N. x ∈ height(n)`
    */
   private val termHasHeight = benchmark(Lemma(hIsTheHeightFunction |- in(x, term) <=> ∃(n, in(n, N) /\ x ∈ app(h, n))) {
-    have((functional(h), relationDomain(h) === N) |- in(x, unionRange(h)) <=> ∃(n, in(n, N) /\ x ∈ app(h, n))) by RightSubstEq.withParametersSimple(
-      List((relationDomain(h), N)),
+    have((functional(h), dom(h) === N) |- in(x, unionRange(h)) <=> ∃(n, in(n, N) /\ x ∈ app(h, n))) by RightSubstEq.withParametersSimple(
+      List((dom(h), N)),
       lambda(z, in(x, unionRange(h)) <=> ∃(n, in(n, z) /\ x ∈ app(h, n)))
     )(unionRangeMembership of (z := x))
     thenHave(hIsTheHeightFunction |- in(x, unionRange(h)) <=> ∃(n, in(n, N) /\ x ∈ app(h, n))) by Weakening
@@ -671,7 +671,7 @@ private class SyntacticADT[N <: Arity](using line: sourcecode.Line, file: source
             val constructorVarsInHNi = /\+(c.signature.zip(nSeq).map((p, ni) => in(p._1, p._2.getOrElse(app(h, ni)))))
             val constructorVarsInHNiAndN = c.signature.zip(nSeq).map((p, ni) => in(ni, N) /\ in(p._1, p._2.getOrElse(app(h, ni))))
 
-            val max = if c.arity == 0 then ∅ else nSeq.reduce[Term](setUnion(_, _))
+            val max = if c.arity == 0 then ∅ else nSeq.reduce[Term](_ ∪ _)
             val maxInN = have(niInN |- in(max, N)) by Sorry
 
             val andSeq = for ((v, ty), ni) <- c.signature.zip(nSeq) yield

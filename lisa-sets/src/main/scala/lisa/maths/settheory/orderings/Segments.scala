@@ -108,7 +108,7 @@ object Segments extends lisa.Main {
   }
 
   val elementPreimageSubsetDomain = Lemma(
-    relationBetween(r, x, x) |- subset(elementPreimage(b, r, x), x)
+    relationBetween(r, x, x) |- elementPreimage(b, r, x) ⊆ x
   ) {
     have((relationBetween(r, x, x), a ∈ elementPreimage(b, r, x)) |- a ∈ x) by Weakening(elementPreimageInDomain)
     thenHave(relationBetween(r, x, x) |- a ∈ elementPreimage(b, r, x) ==> a ∈ x) by RightImplies
@@ -159,7 +159,7 @@ object Segments extends lisa.Main {
   }
 
   val initialSegmentSubset = Lemma(
-    (strictWellOrder(r, x), pair(a, b) ∈ r) |- subset(initialSegment(a, r, x), initialSegment(b, r, x))
+    (strictWellOrder(r, x), pair(a, b) ∈ r) |- initialSegment(a, r, x) ⊆ initialSegment(b, r, x)
   ) {
     have((strictWellOrder(r, x), pair(t, a) ∈ r, pair(a, b) ∈ r) |- pair(t, b) ∈ r) by Cut(strictWellOrderTransitive, transitiveElim of (w := t, y := a, z := b))
     have((strictWellOrder(r, x), pair(t, a) ∈ r, pair(a, b) ∈ r) |- t ∈ initialSegment(b, r, x)) by Tautology.from(lastStep, initialSegmentIntro of (a := t))
@@ -170,7 +170,7 @@ object Segments extends lisa.Main {
   }
 
   val initialSegmentSubsetDomain = Lemma(
-    strictWellOrder(r, x) |- subset(initialSegment(b, r, x), x)
+    strictWellOrder(r, x) |- initialSegment(b, r, x) ⊆ x
   ) {
     have(thesis) by Cut(strictWellOrderIsRelation, elementPreimageSubsetDomain)
   }
@@ -186,7 +186,7 @@ object Segments extends lisa.Main {
   val initialSegmentTransitivity = Lemma(
     (strictWellOrder(r, x), a ∈ initialSegment(b, r, x), b ∈ initialSegment(c, r, x)) |- a ∈ initialSegment(c, r, x)
   ) {
-    have((strictWellOrder(r, x), b ∈ initialSegment(c, r, x)) |- subset(initialSegment(b, r, x), initialSegment(c, r, x))) by 
+    have((strictWellOrder(r, x), b ∈ initialSegment(c, r, x)) |- initialSegment(b, r, x) ⊆ initialSegment(c, r, x)) by 
       Cut(initialSegmentElim of (a := b, b := c), initialSegmentSubset of (a := b, b := c))
     have(thesis) by Cut(lastStep, subsetElim of (z := a, x := initialSegment(b, r, x), y := initialSegment(c, r, x)))
   }
@@ -222,28 +222,28 @@ object Segments extends lisa.Main {
   }
 
   val nonIdentitySetUniqueness = Lemma(
-    ∃!(z, ∀(t, t ∈ z <=> (t ∈ x /\ !(app(f, t) === t))))
+    ∃!(z, ∀(t, t ∈ z <=> (t ∈ x /\ (app(f, t) =/= t))))
   ) {
-    have(thesis) by UniqueComprehension(x, lambda(t, !(app(f, t) === t)))
+    have(thesis) by UniqueComprehension(x, lambda(t, app(f, t) =/= t))
   }
 
-  val nonIdentitySet = DEF(f, x) --> The(z, ∀(t, t ∈ z <=> (t ∈ x /\ !(app(f, t) === t))))(nonIdentitySetUniqueness)
+  val nonIdentitySet = DEF(f, x) --> The(z, ∀(t, t ∈ z <=> (t ∈ x /\ (app(f, t) =/= t))))(nonIdentitySetUniqueness)
 
   val nonIdentitySetMembership = Lemma(
-    t ∈ nonIdentitySet(f, x) <=> (t ∈ x /\ !(app(f, t) === t))
+    t ∈ nonIdentitySet(f, x) <=> (t ∈ x /\ (app(f, t) =/= t))
   ) {
-    have(∀(t, t ∈ nonIdentitySet(f, x) <=> (t ∈ x /\ !(app(f, t) === t)))) by InstantiateForall(nonIdentitySet(f, x))(nonIdentitySet.definition)
+    have(∀(t, t ∈ nonIdentitySet(f, x) <=> (t ∈ x /\ (app(f, t) =/= t)))) by InstantiateForall(nonIdentitySet(f, x))(nonIdentitySet.definition)
     thenHave(thesis) by InstantiateForall(t)
   }
 
   val nonIdentitySetIntro = Lemma(
-    (t ∈ x, !(app(f, t) === t)) |- t ∈ nonIdentitySet(f, x)
+    (t ∈ x, app(f, t) =/= t) |- t ∈ nonIdentitySet(f, x)
   ) {
     have(thesis) by Weakening(nonIdentitySetMembership)
   }
 
   val nonIdentitySetElim = Lemma(
-    t ∈ nonIdentitySet(f, x) |- !(app(f, t) === t)
+    t ∈ nonIdentitySet(f, x) |- app(f, t) =/= t
   ) {
     have(thesis) by Weakening(nonIdentitySetMembership)
   }
@@ -307,10 +307,10 @@ object Segments extends lisa.Main {
   ) {
     val fIsIsomorphism = relationIsomorphism(f, r, x, initialSegmentOrder(b, r, x), initialSegment(b, r, x))
    
-    val nonIdentitySetNotEmpty = have((b ∈ x, fIsIsomorphism, strictWellOrder(r, x)) |- !(nonIdentitySet(f, x) === ∅)) subproof {
+    val nonIdentitySetNotEmpty = have((b ∈ x, fIsIsomorphism, strictWellOrder(r, x)) |- nonIdentitySet(f, x) =/= ∅) subproof {
       have((b ∈ x, fIsIsomorphism, app(f, b) === b) |- b ∈ initialSegment(b, r, x)) by RightSubstEq.withParametersSimple(List((app(f, b), b)), lambda(z, z ∈ initialSegment(b, r, x)))(relationIsomorphismAppInCodomain of (r1 := r, r2 := initialSegmentOrder(b, r, x), y := initialSegment(b, r, x), a := b))
       have((b ∈ x, fIsIsomorphism, app(f, b) === b, strictWellOrder(r, x)) |- ()) by RightAnd(lastStep, notInSelfInitialSegment)
-      thenHave((b ∈ x, fIsIsomorphism, strictWellOrder(r, x)) |- !(app(f, b) === b)) by RightNot
+      thenHave((b ∈ x, fIsIsomorphism, strictWellOrder(r, x)) |- app(f, b) =/= b) by RightNot
       have((b ∈ x, fIsIsomorphism,strictWellOrder(r, x)) |- b ∈ nonIdentitySet(f, x)) by Cut(lastStep, nonIdentitySetIntro of (t := b))
       have(thesis) by Cut(lastStep, setWithElementNonEmpty of (x := nonIdentitySet(f, x), y := b))
     } 
@@ -318,11 +318,11 @@ object Segments extends lisa.Main {
 
     val fANotBelowA = have((strictWellOrder(r, x), fIsIsomorphism, isLeastElement(a, nonIdentitySet(f, x), r, x), app(f, a) ∈ x) |- pair(app(f, a), a) ∉ r) subproof{
 
-      have((irreflexive(initialSegmentOrder(b, r, x), initialSegment(b, r, x)), fIsIsomorphism, pair(app(f, a), a) ∈ r) |- !(app(f, app(f, a)) === app(f, a))) by Cut(
+      have((irreflexive(initialSegmentOrder(b, r, x), initialSegment(b, r, x)), fIsIsomorphism, pair(app(f, a), a) ∈ r) |- app(f, app(f, a)) =/= app(f, a)) by Cut(
         relationIsomorphismElimForward of (r1 := r, r2 := initialSegmentOrder(b, r, x), y := initialSegment(b, r, x), a := app(f, a), b := a), 
         pairInAntiReflexiveRelation of (r := initialSegmentOrder(b, r, x), x := initialSegment(b, r, x), a := app(f, app(f, a)), b := app(f, a)))
-      have((strictWellOrder(initialSegmentOrder(b, r, x), initialSegment(b, r, x)), fIsIsomorphism, pair(app(f, a), a) ∈ r) |- !(app(f, app(f, a)) === app(f, a))) by Cut(strictWellOrderIrreflexive of (r := initialSegmentOrder(b, r, x), x := initialSegment(b, r, x)), lastStep)
-      val right = have((strictWellOrder(r, x), fIsIsomorphism, pair(app(f, a), a) ∈ r) |- !(app(f, app(f, a)) === app(f, a))) by Cut(initialSegmentStrictWellOrder, lastStep)
+      have((strictWellOrder(initialSegmentOrder(b, r, x), initialSegment(b, r, x)), fIsIsomorphism, pair(app(f, a), a) ∈ r) |- app(f, app(f, a)) =/= app(f, a)) by Cut(strictWellOrderIrreflexive of (r := initialSegmentOrder(b, r, x), x := initialSegment(b, r, x)), lastStep)
+      val right = have((strictWellOrder(r, x), fIsIsomorphism, pair(app(f, a), a) ∈ r) |- app(f, app(f, a)) =/= app(f, a)) by Cut(initialSegmentStrictWellOrder, lastStep)
 
       val left = have((isLeastElement(a, nonIdentitySet(f, x), r, x), pair(app(f, a), a) ∈ r, app(f, a) ∈ x) |- app(f, app(f, a)) === app(f, a)) by Cut(belowLeastElement of (b := app(f, a), y := nonIdentitySet(f, x)), notInNonIdentitySetElim of (t := app(f, a)))
     
@@ -335,9 +335,9 @@ object Segments extends lisa.Main {
         (relationIsomorphismElimBackward of (r1 := r, r2 := initialSegmentOrder(b, r, x), y := initialSegment(b, r, x), a := app(inverseRelation(f), a), b := a))
       
       val left = have((pair(a, app(f, a)) ∈ initialSegmentOrder(b, r, x), app(inverseRelation(f), a) ∈ x, a ∈ x, fIsIsomorphism, isLeastElement(a, nonIdentitySet(f, x), r, x), bijective(f, x, initialSegment(b, r, x)), a ∈ initialSegment(b, r, x)) |- app(inverseRelation(f), a) ∉ nonIdentitySet(f, x)) by Cut(fInverseBelowA, belowLeastElement of (b := app(inverseRelation(f), a), y := nonIdentitySet(f, x)))
-      have((irreflexive(r, x), pair(a, app(f, a)) ∈ initialSegmentOrder(b, r, x), app(inverseRelation(f), a) ∈ x, a ∈ x, fIsIsomorphism, bijective(f, x, initialSegment(b, r, x)), a ∈ initialSegment(b, r, x)) |- !(app(inverseRelation(f), a) === a)) by Cut(fInverseBelowA, pairInAntiReflexiveRelation of (a := app(inverseRelation(f), a), b := a))
-      have((strictWellOrder(r, x), pair(a, app(f, a)) ∈ initialSegmentOrder(b, r, x), app(inverseRelation(f), a) ∈ x, a ∈ x, fIsIsomorphism, bijective(f, x, initialSegment(b, r, x)), a ∈ initialSegment(b, r, x)) |- !(app(inverseRelation(f), a) === a)) by Cut(strictWellOrderIrreflexive, lastStep)
-      thenHave((strictWellOrder(r, x), bijective(f, x, initialSegment(b, r, x)), pair(a, app(f, a)) ∈ initialSegmentOrder(b, r, x), app(inverseRelation(f), a) ∈ x, a ∈ x, fIsIsomorphism, a ∈ initialSegment(b, r, x)) |- !(app(inverseRelation(f), a) === app(f, app(inverseRelation(f), a)))) by Substitution.ApplyRules(inverseRelationRightCancel of (y := initialSegment(b, r, x), b := a))
+      have((irreflexive(r, x), pair(a, app(f, a)) ∈ initialSegmentOrder(b, r, x), app(inverseRelation(f), a) ∈ x, a ∈ x, fIsIsomorphism, bijective(f, x, initialSegment(b, r, x)), a ∈ initialSegment(b, r, x)) |- app(inverseRelation(f), a) =/= a) by Cut(fInverseBelowA, pairInAntiReflexiveRelation of (a := app(inverseRelation(f), a), b := a))
+      have((strictWellOrder(r, x), pair(a, app(f, a)) ∈ initialSegmentOrder(b, r, x), app(inverseRelation(f), a) ∈ x, a ∈ x, fIsIsomorphism, bijective(f, x, initialSegment(b, r, x)), a ∈ initialSegment(b, r, x)) |- app(inverseRelation(f), a) =/= a) by Cut(strictWellOrderIrreflexive, lastStep)
+      thenHave((strictWellOrder(r, x), bijective(f, x, initialSegment(b, r, x)), pair(a, app(f, a)) ∈ initialSegmentOrder(b, r, x), app(inverseRelation(f), a) ∈ x, a ∈ x, fIsIsomorphism, a ∈ initialSegment(b, r, x)) |- app(inverseRelation(f), a) =/= app(f, app(inverseRelation(f), a))) by Substitution.ApplyRules(inverseRelationRightCancel of (y := initialSegment(b, r, x), b := a))
 
       val right = have((strictWellOrder(r, x), bijective(f, x, initialSegment(b, r, x)), pair(a, app(f, a)) ∈ initialSegmentOrder(b, r, x), app(inverseRelation(f), a) ∈ x, a ∈ x, fIsIsomorphism, a ∈ initialSegment(b, r, x)) |- app(inverseRelation(f), a) ∈ nonIdentitySet(f, x)) by Cut(
         lastStep, nonIdentitySetIntro of (t := app(inverseRelation(f), a))
@@ -361,20 +361,20 @@ object Segments extends lisa.Main {
 
 
     have((strictWellOrder(r, x), fIsIsomorphism, isLeastElement(a, nonIdentitySet(f, x), r, x), a ∈ x, app(f, a) ∈ x) |- pair(app(f, a), a) ∉ r /\ pair(a, app(f, a)) ∉ r) by RightAnd(fANotBelowA, aNotBelowFA)
-    val right = have((strictWellOrder(r, x), fIsIsomorphism, isLeastElement(a, nonIdentitySet(f, x), r, x), a ∈ x, app(f, a) ∈ x, a ∈ nonIdentitySet(f, x)) |- pair(app(f, a), a) ∉ r /\ pair(a, app(f, a)) ∉ r /\ !(a === app(f, a))) by RightAnd(lastStep, nonIdentitySetElim of (t := a))   
+    val right = have((strictWellOrder(r, x), fIsIsomorphism, isLeastElement(a, nonIdentitySet(f, x), r, x), a ∈ x, app(f, a) ∈ x, a ∈ nonIdentitySet(f, x)) |- pair(app(f, a), a) ∉ r /\ pair(a, app(f, a)) ∉ r /\ (a =/= app(f, a))) by RightAnd(lastStep, nonIdentitySetElim of (t := a))   
 
     val left = have((strictWellOrder(r, x), a ∈ x, app(f, a) ∈ x) |- pair(app(f, a), a) ∈ r \/ (pair(a, app(f, a)) ∈ r) \/ (a === app(f, a))) by Cut(
       strictWellOrderConnected, connectedElim of (z := app(f, a), y := a))
     
     have((strictWellOrder(r, x), fIsIsomorphism, isLeastElement(a, nonIdentitySet(f, x), r, x), a ∈ x, a ∈ nonIdentitySet(f, x), app(f, a) ∈ x) |- ()) by RightAnd(left, right)
-    have((strictWellOrder(r, x), fIsIsomorphism, isLeastElement(a, nonIdentitySet(f, x), r, x), a ∈ x, a ∈ nonIdentitySet(f, x), subset(initialSegment(b, r, x), x), app(f, a) ∈ initialSegment(b, r, x)) |- ()) by Cut(subsetElim of (z := app(f, a), x := initialSegment(b, r, x), y := x), lastStep)
+    have((strictWellOrder(r, x), fIsIsomorphism, isLeastElement(a, nonIdentitySet(f, x), r, x), a ∈ x, a ∈ nonIdentitySet(f, x), initialSegment(b, r, x) ⊆ x, app(f, a) ∈ initialSegment(b, r, x)) |- ()) by Cut(subsetElim of (z := app(f, a), x := initialSegment(b, r, x), y := x), lastStep)
     have((strictWellOrder(r, x), fIsIsomorphism, isLeastElement(a, nonIdentitySet(f, x), r, x), a ∈ x, a ∈ nonIdentitySet(f, x), app(f, a) ∈ initialSegment(b, r, x)) |- ()) by Cut(initialSegmentSubsetDomain, lastStep)
     have((strictWellOrder(r, x), fIsIsomorphism, isLeastElement(a, nonIdentitySet(f, x), r, x), a ∈ x, a ∈ nonIdentitySet(f, x)) |- ()) by Cut(relationIsomorphismAppInCodomain of (r1 := r, r2 := initialSegmentOrder(b, r, x), y := initialSegment(b, r, x)), lastStep)
     have((strictWellOrder(r, x), fIsIsomorphism, isLeastElement(a, nonIdentitySet(f, x), r, x), a ∈ x) |- ()) by Cut(isLeastElementInSubset of (y := nonIdentitySet(f, x)), lastStep)
     have((strictWellOrder(r, x), fIsIsomorphism, isLeastElement(a, nonIdentitySet(f, x), r, x)) |- ()) by Cut(isLeastElementInDomain of (y := nonIdentitySet(f, x)), lastStep)
     thenHave((strictWellOrder(r, x), fIsIsomorphism, ∃(a, isLeastElement(a, nonIdentitySet(f, x), r, x))) |- ()) by LeftExists
-    have((strictWellOrder(r, x), fIsIsomorphism, nonIdentitySet(f, x) ⊆ x, !(nonIdentitySet(f, x) === ∅)) |- ()) by Cut(strictWellOrderElim of (y := nonIdentitySet(f, x)), lastStep)
-    have((strictWellOrder(r, x), fIsIsomorphism, !(nonIdentitySet(f, x) === ∅)) |- ()) by Cut(nonIdentitySetSubsetDomain, lastStep) 
+    have((strictWellOrder(r, x), fIsIsomorphism, nonIdentitySet(f, x) ⊆ x, nonIdentitySet(f, x) =/= ∅) |- ()) by Cut(strictWellOrderElim of (y := nonIdentitySet(f, x)), lastStep)
+    have((strictWellOrder(r, x), fIsIsomorphism, nonIdentitySet(f, x) =/= ∅) |- ()) by Cut(nonIdentitySetSubsetDomain, lastStep) 
     have((strictWellOrder(r, x), fIsIsomorphism, b ∈ x) |- ()) by Cut(nonIdentitySetNotEmpty, lastStep)
     thenHave((strictWellOrder(r, x), b ∈ x) |- !fIsIsomorphism) by RightNot
     thenHave((strictWellOrder(r, x), b ∈ x) |- ∀(f, !fIsIsomorphism)) by RightForall
@@ -387,8 +387,8 @@ object Segments extends lisa.Main {
       ∃(b, b ∈ y /\ relationIsomorphism(f, r1, x, initialSegmentOrder(b, r2, y), initialSegment(b, r2, y)))
     )  
   ) {
-    val fDef = ∀(p, p ∈ f <=> (p ∈ cartesianProduct(x, y) /\ 
-      ∃(g, relationIsomorphism(g, initialSegmentOrder(firstInPair(p), r1, x), initialSegment(firstInPair(p), r1, x), initialSegmentOrder(secondInPair(p), r2, y), initialSegment(secondInPair(p), r2, y)))))
+    val fDef = ∀(p, p ∈ f <=> (p ∈ (x × y) /\ 
+      ∃(g, relationIsomorphism(g, initialSegmentOrder(fst(p), r1, x), initialSegment(fst(p), r1, x), initialSegmentOrder(snd(p), r2, y), initialSegment(snd(p), r2, y)))))
     sorry
   }
 

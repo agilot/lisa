@@ -174,17 +174,17 @@ object Ordinals extends lisa.Main {
     * 
     *  `∀ x ∈ y. transitiveSet(x) |- transitiveSet((∪ y) ∪ y)`
     */
-  val transitiveSetUnionAndElement = Lemma(∀(x, x ∈ y ==> transitiveSet(x)) |- transitiveSet(setUnion(union(y), y))) {
+  val transitiveSetUnionAndElement = Lemma(∀(x, x ∈ y ==> transitiveSet(x)) |- transitiveSet(union(y) ∪ y)) {
     
-    have((z ∈ setUnion(union(y), y), w ∈ z) |- (z ∈ union(y), w ∈ union(y))) by Cut(setUnionElim of (x := union(y)), unionIntro of (z := w, y := z, x := y))
-    have((z ∈ setUnion(union(y), y), w ∈ z) |- (z ∈ union(y), w ∈ setUnion(union(y), y))) by Cut(lastStep, setUnionLeftIntro of (z := w, x := union(y)))
-    have((z ∈ setUnion(union(y), y), w ∈ z, transitiveSet(union(y))) |- (w ∈ union(y), w ∈ setUnion(union(y), y))) by Cut(lastStep, transitiveSetAltElim of (z := w, y := z, x := union(y)))
-    have((z ∈ setUnion(union(y), y), w ∈ z, transitiveSet(union(y))) |- w ∈ setUnion(union(y), y)) by Cut(lastStep, setUnionLeftIntro of (z := w, x := union(y)))
-    have((z ∈ setUnion(union(y), y), w ∈ z, ∀(x, x ∈ y ==> transitiveSet(x))) |- w ∈ setUnion(union(y), y)) by Cut(unionTransitive, lastStep)
-    thenHave(∀(x, x ∈ y ==> transitiveSet(x)) |- w ∈ z /\ z ∈ setUnion(union(y), y) ==> w ∈ setUnion(union(y), y)) by Restate
-    thenHave(∀(x, x ∈ y ==> transitiveSet(x)) |- ∀(z, w ∈ z /\ z ∈ setUnion(union(y), y) ==> w ∈ setUnion(union(y), y))) by RightForall
-    thenHave(∀(x, x ∈ y ==> transitiveSet(x)) |- ∀(w, ∀(z, w ∈ z /\ z ∈ setUnion(union(y), y) ==> w ∈ setUnion(union(y), y)))) by RightForall
-    have(thesis) by Cut(lastStep, transitiveSetAltIntro of (x := setUnion(union(y), y)))
+    have((z ∈ (union(y) ∪ y), w ∈ z) |- (z ∈ union(y), w ∈ union(y))) by Cut(setUnionElim of (x := union(y)), unionIntro of (z := w, y := z, x := y))
+    have((z ∈ (union(y) ∪ y), w ∈ z) |- (z ∈ union(y), w ∈ (union(y) ∪ y))) by Cut(lastStep, setUnionLeftIntro of (z := w, x := union(y)))
+    have((z ∈ (union(y) ∪ y), w ∈ z, transitiveSet(union(y))) |- (w ∈ union(y), w ∈ (union(y) ∪ y))) by Cut(lastStep, transitiveSetAltElim of (z := w, y := z, x := union(y)))
+    have((z ∈ (union(y) ∪ y), w ∈ z, transitiveSet(union(y))) |- w ∈ (union(y) ∪ y)) by Cut(lastStep, setUnionLeftIntro of (z := w, x := union(y)))
+    have((z ∈ (union(y) ∪ y), w ∈ z, ∀(x, x ∈ y ==> transitiveSet(x))) |- w ∈ (union(y) ∪ y)) by Cut(unionTransitive, lastStep)
+    thenHave(∀(x, x ∈ y ==> transitiveSet(x)) |- w ∈ z /\ z ∈ (union(y) ∪ y) ==> w ∈ (union(y) ∪ y)) by Restate
+    thenHave(∀(x, x ∈ y ==> transitiveSet(x)) |- ∀(z, w ∈ z /\ z ∈ (union(y) ∪ y) ==> w ∈ (union(y) ∪ y))) by RightForall
+    thenHave(∀(x, x ∈ y ==> transitiveSet(x)) |- ∀(w, ∀(z, w ∈ z /\ z ∈ (union(y) ∪ y) ==> w ∈ (union(y) ∪ y)))) by RightForall
+    have(thesis) by Cut(lastStep, transitiveSetAltIntro of (x := union(y) ∪ y))
   }
 
   /**
@@ -311,11 +311,11 @@ object Ordinals extends lisa.Main {
   val transitiveStrictWellOrderElem = Lemma((transitiveSet(x), strictWellOrder(membershipRelation(x), x), y ∈ x) |- strictWellOrder(membershipRelation(y), y)) {
     have((transitiveSet(x), isLeastElement(a, z, membershipRelation(x), x), y ∈ x, z ⊆ y) |- ∃(a, isLeastElement(a, z, membershipRelation(y), y))) by RightExists(transitiveSetLeastElement)
     thenHave((transitiveSet(x), ∃(a, isLeastElement(a, z, membershipRelation(x), x)), y ∈ x, z ⊆ y) |- ∃(a, isLeastElement(a, z, membershipRelation(y), y))) by LeftExists
-    have((transitiveSet(x), strictWellOrder(membershipRelation(x), x), z ⊆ x, !(z === ∅), y ∈ x, z ⊆ y) |- ∃(a, isLeastElement(a, z, membershipRelation(y), y))) by Cut(strictWellOrderElim of (y := z, r := membershipRelation(x)), lastStep)
-    have((transitiveSet(x), strictWellOrder(membershipRelation(x), x), !(z === ∅), y ∈ x, y ⊆ x, z ⊆ y) |- ∃(a, isLeastElement(a, z, membershipRelation(y), y))) by Cut(subsetTransitivity of (x := z, z := x), lastStep)
-    have((transitiveSet(x), strictWellOrder(membershipRelation(x), x), !(z === ∅), y ∈ x, z ⊆ y) |- ∃(a, isLeastElement(a, z, membershipRelation(y), y))) by Cut(transitiveSetElim, lastStep)
-    thenHave((transitiveSet(x), strictWellOrder(membershipRelation(x), x), y ∈ x) |- (z ⊆ y /\ !(z === ∅)) ==> ∃(a, isLeastElement(a, z, membershipRelation(y), y))) by Restate
-    thenHave((transitiveSet(x), strictWellOrder(membershipRelation(x), x), y ∈ x) |- ∀(z, (z ⊆ y /\ !(z === ∅)) ==> ∃(a, isLeastElement(a, z, membershipRelation(y), y)))) by RightForall
+    have((transitiveSet(x), strictWellOrder(membershipRelation(x), x), z ⊆ x, z =/= ∅, y ∈ x, z ⊆ y) |- ∃(a, isLeastElement(a, z, membershipRelation(y), y))) by Cut(strictWellOrderElim of (y := z, r := membershipRelation(x)), lastStep)
+    have((transitiveSet(x), strictWellOrder(membershipRelation(x), x), z =/= ∅, y ∈ x, y ⊆ x, z ⊆ y) |- ∃(a, isLeastElement(a, z, membershipRelation(y), y))) by Cut(subsetTransitivity of (x := z, z := x), lastStep)
+    have((transitiveSet(x), strictWellOrder(membershipRelation(x), x), z =/= ∅, y ∈ x, z ⊆ y) |- ∃(a, isLeastElement(a, z, membershipRelation(y), y))) by Cut(transitiveSetElim, lastStep)
+    thenHave((transitiveSet(x), strictWellOrder(membershipRelation(x), x), y ∈ x) |- (z ⊆ y /\ (z =/= ∅)) ==> ∃(a, isLeastElement(a, z, membershipRelation(y), y))) by Restate
+    thenHave((transitiveSet(x), strictWellOrder(membershipRelation(x), x), y ∈ x) |- ∀(z, (z ⊆ y /\ (z =/= ∅)) ==> ∃(a, isLeastElement(a, z, membershipRelation(y), y)))) by RightForall
     have((transitiveSet(x), strictWellOrder(membershipRelation(x), x), y ∈ x, strictTotalOrder(membershipRelation(y), y)) |- strictWellOrder(membershipRelation(y), y)) by Cut(lastStep, strictWellOrderIntro of (r := membershipRelation(y), x := y))
     have((transitiveSet(x), strictWellOrder(membershipRelation(x), x), y ∈ x, strictTotalOrder(membershipRelation(x), x)) |- strictWellOrder(membershipRelation(y), y)) by Cut(transitiveStrictTotalOrderElem, lastStep)
     have(thesis) by Cut(strictWellOrderTotal of (r := membershipRelation(x)), lastStep)
@@ -479,8 +479,8 @@ object Ordinals extends lisa.Main {
     have((ordIsomorphism, ordinal(a), ordinal(b), sLeastElem) |- s ∉ nonIdentitySet(f, a)) by Cut(isLeastElementInDomain of (a := s, y := nonIdentitySet(f, a), r := membershipRelation(a), x := a), lastStep)
     have((ordIsomorphism, ordinal(a), ordinal(b), sLeastElem) |- ()) by RightAnd(lastStep, isLeastElementInSubset of (a := s, y := nonIdentitySet(f, a), r := membershipRelation(a), x := a))
     thenHave((ordIsomorphism, ordinal(a), ordinal(b), ∃(s, sLeastElem)) |- ()) by LeftExists
-    have((strictWellOrder(membershipRelation(a), a), ordIsomorphism, ordinal(a), ordinal(b), nonIdentitySet(f, a) ⊆ a, !(nonIdentitySet(f, a) === ∅)) |- ()) by Cut(strictWellOrderElim of (y := nonIdentitySet(f, a), r := membershipRelation(a), x := a), lastStep)
-    have((strictWellOrder(membershipRelation(a), a), ordIsomorphism, ordinal(a), ordinal(b), !(nonIdentitySet(f, a) === ∅)) |- ()) by Cut(nonIdentitySetSubsetDomain of (x := a), lastStep)
+    have((strictWellOrder(membershipRelation(a), a), ordIsomorphism, ordinal(a), ordinal(b), nonIdentitySet(f, a) ⊆ a, nonIdentitySet(f, a) =/= ∅) |- ()) by Cut(strictWellOrderElim of (y := nonIdentitySet(f, a), r := membershipRelation(a), x := a), lastStep)
+    have((strictWellOrder(membershipRelation(a), a), ordIsomorphism, ordinal(a), ordinal(b), nonIdentitySet(f, a) =/= ∅) |- ()) by Cut(nonIdentitySetSubsetDomain of (x := a), lastStep)
     thenHave((strictWellOrder(membershipRelation(a), a), ordIsomorphism, ordinal(a), ordinal(b)) |- nonIdentitySet(f, a) === ∅) by Restate
     have((ordIsomorphism, ordinal(a), ordinal(b)) |-  nonIdentitySet(f, a) === ∅) by Cut(ordinalStrictWellOrder, lastStep)
     have((ordIsomorphism, ordinal(a), ordinal(b), surjective(f, a, b)) |- a === b) by Cut(lastStep, nonIdentitySetEmpty of (x := a, y := b))
@@ -615,7 +615,7 @@ object Ordinals extends lisa.Main {
     val leastElementExists = have((aInterP, ordClass, ordinal(a), ∃(b, P(b) /\ a ∉ b /\ (a =/= b))) |- ∃(c, isLeastElement(c, z, membershipRelation(a), a))) subproof {
       have((ordinal(a), ordinal(b), P(b), a ∉ b, a =/= b) |- b ∈ a /\ P(b)) by Tautology.from(ordinalCases)
       val bInZ = thenHave((aInterP, ordinal(a), ordinal(b), P(b), a ∉ b, a =/= b) |- b ∈ z) by Substitution.ApplyRules(aInterPDef of (t := b))
-      have((aInterP, ordinal(a), ordinal(b), P(b), a ∉ b, a =/= b) |- !(z === ∅)) by Cut(lastStep, setWithElementNonEmpty of (y := b, x := z))
+      have((aInterP, ordinal(a), ordinal(b), P(b), a ∉ b, a =/= b) |- z =/= ∅) by Cut(lastStep, setWithElementNonEmpty of (y := b, x := z))
       have((aInterP, ordinal(a), strictWellOrder(membershipRelation(a), a), z ⊆ a, ordinal(b), P(b), a ∉ b, a =/= b) |- ∃(c, isLeastElement(c, z, membershipRelation(a), a))) by Cut(lastStep, strictWellOrderElim of (y := z, r := membershipRelation(a), x := a))
       have((aInterP, ordinal(a), strictWellOrder(membershipRelation(a), a), ordinal(b), P(b), a ∉ b, a =/= b) |- ∃(c, isLeastElement(c, z, membershipRelation(a), a))) by Cut(inAInterPSubset, lastStep)
       have((aInterP, ordinal(a), ordinal(b), P(b), a ∉ b, a =/= b) |- ∃(c, isLeastElement(c, z, membershipRelation(a), a))) by Cut(ordinalStrictWellOrder, lastStep)
@@ -659,7 +659,7 @@ object Ordinals extends lisa.Main {
     *   `0 ≠ x ⊆ Ord |- ∃a ∈ x. ∀b ∈ x. a ≤ b`
     */
   val setOfOrdinalsHasLeastElement = Lemma(
-    (∀(a, a ∈ x ==> ordinal(a)), !(x === ∅)) |- ∃(a, a ∈ x /\ ∀(b, b ∈ x ==> (a ∈ b \/ (a === b))))
+    (∀(a, a ∈ x ==> ordinal(a)), x =/= ∅) |- ∃(a, a ∈ x /\ ∀(b, b ∈ x ==> (a ∈ b \/ (a === b))))
   ) {
     have(thesis) by Cut(nonEmptySetHasAnElement, ordinalSubclassHasMinimalElement of (P := lambda(a, a ∈ x)))
   }
@@ -725,10 +725,10 @@ object Ordinals extends lisa.Main {
     thenHave((elemOrd, a ∈ y /\ ∀(b, b ∈ y ==> (a ∈ b \/ (a === b))), y ⊆ x) |- isLeastElement(a, y, membershipRelation(x), x)) by LeftAnd
     thenHave((elemOrd, a ∈ y /\ ∀(b, b ∈ y ==> (a ∈ b \/ (a === b))), y ⊆ x) |- ∃(a, isLeastElement(a, y, membershipRelation(x), x))) by RightExists
     thenHave((elemOrd, ∃(a, a ∈ y /\ ∀(b, b ∈ y ==> (a ∈ b \/ (a === b)))), y ⊆ x) |- ∃(a, isLeastElement(a, y, membershipRelation(x), x))) by LeftExists
-    have((elemOrd, ∀(a, a ∈ y ==> ordinal(a)), y ⊆ x, !(y === ∅)) |- ∃(a, isLeastElement(a, y, membershipRelation(x), x))) by Cut(setOfOrdinalsHasLeastElement of (x := y), lastStep)
-    have((elemOrd, y ⊆ x, !(y === ∅)) |- ∃(a, isLeastElement(a, y, membershipRelation(x), x))) by Cut(subsetElemOrdinals, lastStep)
-    thenHave(elemOrd |- (y ⊆ x /\ !(y === ∅)) ==> ∃(a, isLeastElement(a, y, membershipRelation(x), x))) by Restate
-    thenHave(elemOrd |- ∀(y, y ⊆ x /\ !(y === ∅) ==> ∃(a, isLeastElement(a, y, membershipRelation(x), x)))) by RightForall
+    have((elemOrd, ∀(a, a ∈ y ==> ordinal(a)), y ⊆ x, y =/= ∅) |- ∃(a, isLeastElement(a, y, membershipRelation(x), x))) by Cut(setOfOrdinalsHasLeastElement of (x := y), lastStep)
+    have((elemOrd, y ⊆ x, y =/= ∅) |- ∃(a, isLeastElement(a, y, membershipRelation(x), x))) by Cut(subsetElemOrdinals, lastStep)
+    thenHave(elemOrd |- (y ⊆ x /\ (y =/= ∅)) ==> ∃(a, isLeastElement(a, y, membershipRelation(x), x))) by Restate
+    thenHave(elemOrd |- ∀(y, y ⊆ x /\ (y =/= ∅) ==> ∃(a, isLeastElement(a, y, membershipRelation(x), x)))) by RightForall
     have((elemOrd, strictTotalOrder(membershipRelation(x), x)) |- strictWellOrder(membershipRelation(x), x)) by Cut(lastStep, strictWellOrderIntro of (r := membershipRelation(x)))
     have(elemOrd |- strictWellOrder(membershipRelation(x), x)) by Cut(strictTotOrd, lastStep)
     have(thesis) by Cut(lastStep, ordinalIntro of (a := x))
@@ -824,7 +824,7 @@ object Ordinals extends lisa.Main {
 
 
 
-  val successor = DEF(a) --> setUnion(a, singleton(a))
+  val successor = DEF(a) --> a ∪ singleton(a)
 
   /**
    * Theorem --- Any number is smaller than its successor
@@ -837,7 +837,7 @@ object Ordinals extends lisa.Main {
   }
 
   val inSuccessorLeq = Lemma(b ∈ successor(a) |- (b ∈ a, a === b)) {
-    have(b ∈ setUnion(a, singleton(a)) |-  (b ∈ a, a === b)) by Cut(setUnionElim of (x := a, y := singleton(a), z := b), singletonElim of (y := b, x := a))
+    have(b ∈ (a ∪ singleton(a)) |-  (b ∈ a, a === b)) by Cut(setUnionElim of (x := a, y := singleton(a), z := b), singletonElim of (y := b, x := a))
     thenHave(thesis) by Substitution.ApplyRules(successor.shortDefinition)
   }
 
@@ -851,8 +851,8 @@ object Ordinals extends lisa.Main {
     thenHave((transitiveSet(a), x ∈ singleton(a)) |- transitiveSet(x)) by Substitution.ApplyRules(singletonElim)
     thenHave(transitiveSet(a) |- x ∈ singleton(a) ==> transitiveSet(x)) by RightImplies
     thenHave(transitiveSet(a) |- ∀(x, x ∈ singleton(a) ==> transitiveSet(x))) by RightForall
-    have(transitiveSet(a) |- transitiveSet(setUnion(union(singleton(a)), singleton(a)))) by Cut(lastStep, transitiveSetUnionAndElement of (y := singleton(a)))
-    thenHave(transitiveSet(a) |- transitiveSet(setUnion(a, singleton(a)))) by Substitution.ApplyRules(unionSingleton)
+    have(transitiveSet(a) |- transitiveSet(union(singleton(a)) ∪ singleton(a))) by Cut(lastStep, transitiveSetUnionAndElement of (y := singleton(a)))
+    thenHave(transitiveSet(a) |- transitiveSet(a ∪ singleton(a))) by Substitution.ApplyRules(unionSingleton)
     thenHave(thesis) by Substitution.ApplyRules(successor.shortDefinition)
   }
 
@@ -911,7 +911,7 @@ object Ordinals extends lisa.Main {
    * 
    *   `a ≠ 0`
    */
-  val successorNonEmpty = Lemma(!(successor(a) === ∅)) {
+  val successorNonEmpty = Lemma(successor(a) =/= ∅) {
     have(thesis) by Cut(inSuccessor, setWithElementNonEmpty of (y := a, x := successor(a)))
   }
 
@@ -958,9 +958,9 @@ object Ordinals extends lisa.Main {
   }
 
   val nonsuccessorOrdinalElim = Lemma(
-    nonsuccessorOrdinal(a) |- !(a === successor(b))
+    nonsuccessorOrdinal(a) |- a =/= successor(b)
   ) {
-    have(nonsuccessorOrdinal(a) |- ∀(b, !(a === successor(b)))) by Weakening(nonsuccessorOrdinal.definition)
+    have(nonsuccessorOrdinal(a) |- ∀(b, a =/= successor(b))) by Weakening(nonsuccessorOrdinal.definition)
     thenHave(thesis) by InstantiateForall(b)
   }
 

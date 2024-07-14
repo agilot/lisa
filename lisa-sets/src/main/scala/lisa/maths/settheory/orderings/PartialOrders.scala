@@ -213,7 +213,7 @@ object PartialOrders extends lisa.Main {
     *   `isLeastElement(a, y, r, x), (a, b) ∈ r ⊢ b ∉ y`
     */
   val belowLeastElement = Lemma((isLeastElement(a, y, r, x), pair(b, a) ∈ r) |- b ∉ y) {
-    val left = have((strictPartialOrder(r, x), pair(b, a) ∈ r) |- !(a === b)) by Cut(strictPartialOrderIrreflexive, pairInAntiReflexiveRelation of (a := b, b := a))
+    val left = have((strictPartialOrder(r, x), pair(b, a) ∈ r) |- a =/= b) by Cut(strictPartialOrderIrreflexive, pairInAntiReflexiveRelation of (a := b, b := a))
     val right = have((strictPartialOrder(r, x), pair(b, a) ∈ r) |- pair(a, b) ∉ r) by Cut(strictPartialOrderAsymmetric, asymmetricElim of (y := b, z := a))
 
     have((strictPartialOrder(r, x), pair(b, a) ∈ r) |- !(pair(a, b) ∈ r \/ (a === b))) by RightAnd(left, right)
@@ -511,7 +511,7 @@ object PartialOrders extends lisa.Main {
    *   `strictTotalOrder(r, x) ∧ ∀ ∅ ≠ y ⊆ x. ∃ a. isLeastElement(a, y, r, x)`
    */
   val strictWellOrder = DEF(r, x) -->
-    strictTotalOrder(r, x) /\ ∀(y, (y ⊆ x /\ !(y === ∅)) ==> ∃(a, isLeastElement(a, y, r, x)))
+    strictTotalOrder(r, x) /\ ∀(y, (y ⊆ x /\ (y =/= ∅)) ==> ∃(a, isLeastElement(a, y, r, x)))
 
   /**
    * Theorem --- Strict well-order introduction rule
@@ -519,7 +519,7 @@ object PartialOrders extends lisa.Main {
    *  `strictTotalOrder(r, x), ∀ ∅ ≠ y ⊆ x. ∃ a. isLeastElement(a, y, r, x) ⊢ strictWellOrder(r, x)`
    */
   val strictWellOrderIntro = Lemma(
-    (strictTotalOrder(r, x), ∀(y, (y ⊆ x /\ !(y === ∅)) ==> ∃(a, isLeastElement(a, y, r, x)))) |- strictWellOrder(r, x)
+    (strictTotalOrder(r, x), ∀(y, (y ⊆ x /\ (y =/= ∅)) ==> ∃(a, isLeastElement(a, y, r, x)))) |- strictWellOrder(r, x)
   ) {
     have(thesis) by Weakening(strictWellOrder.definition)
   }
@@ -530,9 +530,9 @@ object PartialOrders extends lisa.Main {
    *   `strictWellOrder(r, x), y ⊆ x, y ≠ ∅ ⊢ ∃ a. isLeastElement(a, y, r, x)`
    */
   val strictWellOrderElim = Lemma(
-    (strictWellOrder(r, x), y ⊆ x, !(y === ∅)) |- ∃(a, isLeastElement(a, y, r, x))
+    (strictWellOrder(r, x), y ⊆ x, y =/= ∅) |- ∃(a, isLeastElement(a, y, r, x))
   ) {
-    have(strictWellOrder(r, x) |- ∀(y, (y ⊆ x /\ !(y === ∅)) ==> ∃(a, isLeastElement(a, y, r, x)))) by Weakening(strictWellOrder.definition)
+    have(strictWellOrder(r, x) |- ∀(y, (y ⊆ x /\ (y =/= ∅)) ==> ∃(a, isLeastElement(a, y, r, x)))) by Weakening(strictWellOrder.definition)
     thenHave(thesis) by InstantiateForall(y)
   }
 
@@ -598,8 +598,8 @@ object PartialOrders extends lisa.Main {
   val emptyStrictWellOrder = Lemma(
     strictWellOrder(∅, ∅)
   ) {
-    have((y ⊆ ∅ /\ !(y === ∅)) ==> ∃(a, isLeastElement(a, y, ∅, ∅))) by Weakening(subsetEmptySet of (x := y))
-    thenHave(∀(y, (y ⊆ ∅ /\ !(y === ∅)) ==> ∃(a, isLeastElement(a, y, ∅, ∅)))) by RightForall
+    have((y ⊆ ∅ /\ (y =/= ∅)) ==> ∃(a, isLeastElement(a, y, ∅, ∅))) by Weakening(subsetEmptySet of (x := y))
+    thenHave(∀(y, (y ⊆ ∅ /\ (y =/= ∅)) ==> ∃(a, isLeastElement(a, y, ∅, ∅)))) by RightForall
     have(strictTotalOrder(∅, ∅) |- strictWellOrder(∅, ∅)) by Cut(lastStep, strictWellOrderIntro of (r -> ∅, x -> ∅))
     have(thesis) by Cut(emptySetStrictTotalOrder, lastStep)
   }
@@ -614,17 +614,17 @@ object PartialOrders extends lisa.Main {
   ) {
     have((isLeastElement(a, z, r, x), z ⊆ y) |- ∃(a, isLeastElement(a, z, relationRestriction(r, y, y), y))) by RightExists(relationRestrictionLeastElement)
     thenHave((∃(a, isLeastElement(a, z, r, x)), z ⊆ y) |- ∃(a, isLeastElement(a, z, relationRestriction(r, y, y), y))) by LeftExists
-    have((strictWellOrder(r, x), z ⊆ x, !(z === ∅), z ⊆ y) |- ∃(a, isLeastElement(a, z, relationRestriction(r, y, y), y))) by Cut(
+    have((strictWellOrder(r, x), z ⊆ x, z =/= ∅, z ⊆ y) |- ∃(a, isLeastElement(a, z, relationRestriction(r, y, y), y))) by Cut(
       strictWellOrderElim of (y := z),
       lastStep
     )
-    have((strictWellOrder(r, x), !(z === ∅), z ⊆ y, y ⊆ x) |- ∃(a, isLeastElement(a, z, relationRestriction(r, y, y), y))) by Cut(
+    have((strictWellOrder(r, x), z =/= ∅, z ⊆ y, y ⊆ x) |- ∃(a, isLeastElement(a, z, relationRestriction(r, y, y), y))) by Cut(
       subsetTransitivity of (x := z, z := x),
       lastStep
     )
-    thenHave((strictWellOrder(r, x), z ⊆ y /\ !(z === ∅), y ⊆ x) |- ∃(a, isLeastElement(a, z, relationRestriction(r, y, y), y))) by LeftAnd
-    thenHave((strictWellOrder(r, x), y ⊆ x) |- (z ⊆ y /\ !(z === ∅)) ==> ∃(a, isLeastElement(a, z, relationRestriction(r, y, y), y))) by RightImplies
-    thenHave((strictWellOrder(r, x), y ⊆ x) |- ∀(z, (z ⊆ y /\ !(z === ∅)) ==> ∃(a, isLeastElement(a, z, relationRestriction(r, y, y), y)))) by RightForall
+    thenHave((strictWellOrder(r, x), z ⊆ y /\ (z =/= ∅), y ⊆ x) |- ∃(a, isLeastElement(a, z, relationRestriction(r, y, y), y))) by LeftAnd
+    thenHave((strictWellOrder(r, x), y ⊆ x) |- (z ⊆ y /\ (z =/= ∅)) ==> ∃(a, isLeastElement(a, z, relationRestriction(r, y, y), y))) by RightImplies
+    thenHave((strictWellOrder(r, x), y ⊆ x) |- ∀(z, (z ⊆ y /\ (z =/= ∅)) ==> ∃(a, isLeastElement(a, z, relationRestriction(r, y, y), y)))) by RightForall
     have((strictWellOrder(r, x), y ⊆ x, strictTotalOrder(relationRestriction(r, y, y), y)) |- strictWellOrder(relationRestriction(r, y, y), y)) by Cut(
       lastStep,
       strictWellOrderIntro of (r := relationRestriction(r, y, y), x := y)

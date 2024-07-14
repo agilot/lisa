@@ -256,7 +256,7 @@ object SetTheory extends lisa.Main {
    *   `x ≠ ∅ ⊢ ∃ y. y ∈ x`
    */
   val nonEmptySetHasAnElement = Lemma(
-    !(x === ∅) |- ∃(y, y ∈ x)
+    x =/= ∅ |- ∃(y, y ∈ x)
   ) {
     have(thesis) by Restate.from(setWithNoElementsIsEmpty)
   }
@@ -350,7 +350,7 @@ object SetTheory extends lisa.Main {
     val forward = have(x ⊆ ∅ ==> (x === ∅)) subproof {
       have((x ⊆ ∅, z ∈ x) |- ()) by RightAnd(subsetElim of (y := ∅), emptySetAxiom of (x := z))
       thenHave((x ⊆ ∅, ∃(z, z ∈ x)) |- ()) by LeftExists
-      have((x ⊆ ∅, !(x === ∅)) |- ()) by Cut(nonEmptySetHasAnElement, lastStep)
+      have((x ⊆ ∅, x =/= ∅) |- ()) by Cut(nonEmptySetHasAnElement, lastStep)
     }
 
     val backward = have((x === ∅) ==> x ⊆ ∅) subproof {
@@ -366,7 +366,7 @@ object SetTheory extends lisa.Main {
    *     `x ⊆ y, x ≠ ∅ ⊢ y ≠ ∅`
    */
   val subsetNotEmpty = Lemma(
-    (x ⊆ y, !(x === ∅)) |- !(y === ∅)
+    (x ⊆ y, x =/= ∅) |- y =/= ∅
   ) {
     have(x ⊆ ∅ |- x === ∅) by Weakening(subsetEmptySet)
     thenHave((x ⊆ y, y === ∅) |- x === ∅) by LeftSubstEq.withParametersSimple(List((y, ∅)), lambda(y, x ⊆ y))
@@ -382,7 +382,7 @@ object SetTheory extends lisa.Main {
    *  `x ⊆ y ⊢ x ∈ 𝓟(y)`
    */
   val powerSetIntro = Lemma(
-    x ⊆ y |- x ∈ powerSet(y)
+    x ⊆ y |- x ∈ 𝓟(y)
   ) {
     have(thesis) by Weakening(powerAxiom)
   }
@@ -393,7 +393,7 @@ object SetTheory extends lisa.Main {
    *  `x ∈ 𝓟(y) ⊢ x ⊆ y`
    */
   val powerSetElim = Lemma(
-    x ∈ powerSet(y) |- x ⊆ y
+    x ∈ 𝓟(y) |- x ⊆ y
   ) {
     have(thesis) by Weakening(powerAxiom)
   }
@@ -404,7 +404,7 @@ object SetTheory extends lisa.Main {
    *  `x ∈ 𝓟(x)`
    */
   val powerSetContainsSet = Lemma(
-    x ∈ powerSet(x)
+    x ∈ 𝓟(x)
   ) {
     have(thesis) by Cut(subsetReflexivity, powerSetIntro of (y := x))
   }
@@ -415,7 +415,7 @@ object SetTheory extends lisa.Main {
    *    `∅ ∈ 𝓟(x)`
    */
   val powerSetContainsEmptySet = Lemma(
-    ∅ ∈ powerSet(x)
+    ∅ ∈ 𝓟(x)
   ) {
     have(thesis) by Cut(emptySetSubset, powerSetIntro of (x := ∅, y := x))
   }
@@ -426,9 +426,9 @@ object SetTheory extends lisa.Main {
    *    `𝓟(x) ≠ ∅`
    */
   val powerSetNonEmpty = Lemma(
-    !(powerSet(x) === ∅)
+    𝓟(x) =/= ∅
   ) {
-    have(thesis) by Cut(powerSetContainsEmptySet, setWithElementNonEmpty of (y := ∅, x := powerSet(x)))
+    have(thesis) by Cut(powerSetContainsEmptySet, setWithElementNonEmpty of (y := ∅, x := 𝓟(x)))
   }
 
   /**
@@ -476,7 +476,7 @@ object SetTheory extends lisa.Main {
    *   `{x, y} ≠ ∅`
    */
   val unorderedPairNonEmpty = Lemma(
-    !(unorderedPair(x, y) === ∅)
+    unorderedPair(x, y) =/= ∅
   ) {
     have(thesis) by Cut(unorderedPairRightIntro, setWithElementNonEmpty of (x := unorderedPair(x, y)))
   }
@@ -561,10 +561,10 @@ object SetTheory extends lisa.Main {
    *    `a ∈ x ∧ b ∈ x <=> {a, b} ∈ 𝓟(x)` 
    */
   val unorderedPairInPowerSet = Lemma(
-    (x ∈ z /\ y ∈ z) <=> unorderedPair(x, y) ∈ powerSet(z)
+    (x ∈ z /\ y ∈ z) <=> unorderedPair(x, y) ∈ 𝓟(z)
   ) {
-    have(unorderedPair(x, y) ⊆ z <=> (x ∈ z /\ y ∈ z) |- (x ∈ z /\ y ∈ z) <=> unorderedPair(x, y) ∈ powerSet(z)) by RightSubstIff.withParametersSimple(
-      List((unorderedPair(x, y) ⊆ z, x ∈ z /\ y ∈ z)), lambda(h, h <=> unorderedPair(x, y) ∈ powerSet(z))
+    have(unorderedPair(x, y) ⊆ z <=> (x ∈ z /\ y ∈ z) |- (x ∈ z /\ y ∈ z) <=> unorderedPair(x, y) ∈ 𝓟(z)) by RightSubstIff.withParametersSimple(
+      List((unorderedPair(x, y) ⊆ z, x ∈ z /\ y ∈ z)), lambda(h, h <=> unorderedPair(x, y) ∈ 𝓟(z))
     )(powerAxiom of (x := unorderedPair(x, y), y := z))
     have(thesis) by Cut(unorderedPairSubset, lastStep)
   }
@@ -611,7 +611,7 @@ object SetTheory extends lisa.Main {
    *    `! {x} = ∅`
    */
   val singletonNonEmpty = Lemma(
-    !(singleton(x) === ∅)
+    singleton(x) =/= ∅
   ) {
     have(thesis) by Cut(singletonIntro, setWithElementNonEmpty of (y := x, x := singleton(x)))
   }
@@ -645,7 +645,7 @@ object SetTheory extends lisa.Main {
    *   `x ∈ y <=> {x} ∈ 𝓟(y)`
    */
   val singletonInPowerSet = Lemma(
-    x ∈ y <=> singleton(x) ∈ powerSet(y)
+    x ∈ y <=> singleton(x) ∈ 𝓟(y)
   ) {
     have(thesis) by Substitution.ApplyRules(singleton.shortDefinition)(unorderedPairInPowerSet of (y := x, z := y))
   }
@@ -756,13 +756,17 @@ object SetTheory extends lisa.Main {
    */
   val setUnion: ConstantFunctionLabel[2] = DEF(x, y) --> union(unorderedPair(x, y))
 
+  extension (x: Term) {
+    infix def ∪(y: Term) = setUnion(x, y)
+  }
+
   /**
    * Lemma --- Binary Union Membership
    *
    *   `z ∈ x ∪ y ⇔ z ∈ x ∨ z ∈ y`
    */
   val setUnionMembership = Lemma(
-    z ∈ setUnion(x, y) <=> (z ∈ x \/ (z ∈ y))
+    z ∈ (x ∪ y) <=> (z ∈ x \/ (z ∈ y))
   ) {
     have((z ∈ a /\ ((a === x) \/ (a === y))) <=> (((a === x) /\ z ∈ a) \/ ((a === y) /\ z ∈ a))) by Tautology
     thenHave((z ∈ a /\ a ∈ unorderedPair(x, y)) <=> (((a === x) /\ z ∈ a) \/ ((a === y) /\ z ∈ a))) by Substitution.ApplyRules(pairAxiom of (z := a))
@@ -785,7 +789,7 @@ object SetTheory extends lisa.Main {
    *
    *   `z ∈ x ⊢ z ∈ x ∪ y`
    */
-  val setUnionLeftIntro = Lemma(z ∈ x |- z ∈ setUnion(x, y)) {
+  val setUnionLeftIntro = Lemma(z ∈ x |- z ∈ (x ∪ y)) {
     have(thesis) by Weakening(setUnionMembership)
   }
 
@@ -794,7 +798,7 @@ object SetTheory extends lisa.Main {
    *
    *   `z ∈ y ⊢ z ∈ x ∪ y`
    */
-  val setUnionRightIntro = Lemma(z ∈ y |- z ∈ setUnion(x, y)) {
+  val setUnionRightIntro = Lemma(z ∈ y |- z ∈ (x ∪ y)) {
     have(thesis) by Weakening(setUnionMembership)
   }
 
@@ -803,7 +807,7 @@ object SetTheory extends lisa.Main {
    *
    *   `z ∈ x ∪ y ⊢ z ∈ x ∨ z ∈ y`
    */
-  val setUnionElim = Lemma(z ∈ setUnion(x, y) |- (z ∈ x, z ∈ y)) {
+  val setUnionElim = Lemma(z ∈ (x ∪ y) |- (z ∈ x, z ∈ y)) {
     have(thesis) by Weakening(setUnionMembership)
   }
 
@@ -813,11 +817,11 @@ object SetTheory extends lisa.Main {
    *    `a ∪ b = b ∪ a`
    */
   val setUnionCommutativity = Lemma(
-    setUnion(a, b) === setUnion(b, a)
+    a ∪ b === b ∪ a
   ) {
-    have(z ∈ setUnion(a, b) <=> z ∈ setUnion(b, a)) by Substitution.ApplyRules(setUnionMembership of (x := b, y := a))(setUnionMembership of (x := a, y := b))
-    thenHave(∀(z, z ∈ setUnion(a, b) <=> z ∈ setUnion(b, a))) by RightForall
-    have(thesis) by Cut(lastStep, equalityIntro of (x := setUnion(a, b), y := setUnion(b, a)))
+    have(z ∈ (a ∪ b) <=> z ∈ (b ∪ a)) by Substitution.ApplyRules(setUnionMembership of (x := b, y := a))(setUnionMembership of (x := a, y := b))
+    thenHave(∀(z, z ∈ (a ∪ b) <=> z ∈ (b ∪ a))) by RightForall
+    have(thesis) by Cut(lastStep, equalityIntro of (x := a ∪ b, y := b ∪ a))
   }
 
   /**
@@ -826,11 +830,11 @@ object SetTheory extends lisa.Main {
    *    `a ⊆ a ∪ b`
    */
   val setUnionLeftSubset = Lemma(
-    a ⊆ setUnion(a, b)
+    a ⊆ (a ∪ b)
   ) {
-    have(z ∈ a ==> z ∈ setUnion(a, b)) by RightImplies(setUnionLeftIntro of (x := a, y := b))
-    thenHave(∀(z, z ∈ a ==> z ∈ setUnion(a, b))) by RightForall
-    have(thesis) by Cut(lastStep, subsetIntro of (x := a, y := setUnion(a, b)))
+    have(z ∈ a ==> z ∈ (a ∪ b)) by RightImplies(setUnionLeftIntro of (x := a, y := b))
+    thenHave(∀(z, z ∈ a ==> z ∈ (a ∪ b))) by RightForall
+    have(thesis) by Cut(lastStep, subsetIntro of (x := a, y := a ∪ b))
   }
 
   /**
@@ -839,7 +843,7 @@ object SetTheory extends lisa.Main {
    *    `b ⊆ a ∪ b`
    */
   val setUnionRightSubset = Lemma(
-    b ⊆ setUnion(a, b)
+    b ⊆ (a ∪ b)
   ) {
     have(thesis) by Substitution.ApplyRules(setUnionCommutativity)(setUnionLeftSubset of (a := b, b := a))
   }
@@ -850,13 +854,13 @@ object SetTheory extends lisa.Main {
    *    `a ⊆ c ∧ b ⊆ c ⊢ a ∪ b ⊆ c`
    */
   val unionOfTwoSubsets = Lemma(
-    (a ⊆ c, b ⊆ c) |- subset(setUnion(a, b), c)
+    (a ⊆ c, b ⊆ c) |- (a ∪ b) ⊆ c
   ) {
-    have((z ∈ setUnion(a, b), a ⊆ c) |- (z ∈ c, z ∈ b)) by Cut(setUnionElim of (x := a, y := b), subsetElim of (x := a, y := c))
-    have((z ∈ setUnion(a, b), a ⊆ c, b ⊆ c) |- z ∈ c) by Cut(lastStep, subsetElim of (x := b, y := c))
-    thenHave((a ⊆ c, b ⊆ c) |- z ∈ setUnion(a, b) ==> z ∈ c) by RightImplies
-    thenHave((a ⊆ c, b ⊆ c) |- ∀(z, z ∈ setUnion(a, b) ==> z ∈ c)) by RightForall
-    have(thesis) by Cut(lastStep, subsetIntro of (x := setUnion(a, b), y := c))
+    have((z ∈ (a ∪ b), a ⊆ c) |- (z ∈ c, z ∈ b)) by Cut(setUnionElim of (x := a, y := b), subsetElim of (x := a, y := c))
+    have((z ∈ (a ∪ b), a ⊆ c, b ⊆ c) |- z ∈ c) by Cut(lastStep, subsetElim of (x := b, y := c))
+    thenHave((a ⊆ c, b ⊆ c) |- z ∈ (a ∪ b) ==> z ∈ c) by RightImplies
+    thenHave((a ⊆ c, b ⊆ c) |- ∀(z, z ∈ (a ∪ b) ==> z ∈ c)) by RightForall
+    have(thesis) by Cut(lastStep, subsetIntro of (x := a ∪ b, y := c))
   }
 
   /**
@@ -865,15 +869,15 @@ object SetTheory extends lisa.Main {
    *    `a ⊆ c ∧ b ⊆ d ⊢ a ∪ b ⊆ c ∪ d`
    */
   val unionOfSubsetsOfDifferentSets = Lemma(
-    (a ⊆ c, b ⊆ d) |- subset(setUnion(a, b), setUnion(c, d))
+    (a ⊆ c, b ⊆ d) |- (a ∪ b) ⊆ (c ∪ d)
   ) {
-    have((z ∈ setUnion(a, b), a ⊆ c) |- (z ∈ c, z ∈ b)) by Cut(setUnionElim of (x := a, y := b), subsetElim of (x := a, y := c))
-    have((z ∈ setUnion(a, b), a ⊆ c, b ⊆ d) |- (z ∈ c, z ∈ d)) by Cut(lastStep, subsetElim of (x := b, y := d))
-    have((z ∈ setUnion(a, b), a ⊆ c, b ⊆ d) |- (z ∈ setUnion(c, d), z ∈ d)) by Cut(lastStep, setUnionLeftIntro of (x := c, y := d))
-    have((z ∈ setUnion(a, b), a ⊆ c, b ⊆ d) |- z ∈ setUnion(c, d)) by Cut(lastStep, setUnionRightIntro of (x := c, y := d))
-    thenHave((a ⊆ c, b ⊆ d) |- z ∈ setUnion(a, b) ==> z ∈ setUnion(c, d)) by RightImplies
-    thenHave((a ⊆ c, b ⊆ d) |- ∀(z, z ∈ setUnion(a, b) ==> z ∈ setUnion(c, d))) by RightForall
-    have(thesis) by Cut(lastStep, subsetIntro of (x := setUnion(a, b), y := setUnion(c, d)))
+    have((z ∈ (a ∪ b), a ⊆ c) |- (z ∈ c, z ∈ b)) by Cut(setUnionElim of (x := a, y := b), subsetElim of (x := a, y := c))
+    have((z ∈ (a ∪ b), a ⊆ c, b ⊆ d) |- (z ∈ c, z ∈ d)) by Cut(lastStep, subsetElim of (x := b, y := d))
+    have((z ∈ (a ∪ b), a ⊆ c, b ⊆ d) |- (z ∈ (c ∪ d), z ∈ d)) by Cut(lastStep, setUnionLeftIntro of (x := c, y := d))
+    have((z ∈ (a ∪ b), a ⊆ c, b ⊆ d) |- z ∈ (c ∪ d)) by Cut(lastStep, setUnionRightIntro of (x := c, y := d))
+    thenHave((a ⊆ c, b ⊆ d) |- z ∈ (a ∪ b) ==> z ∈ (c ∪ d)) by RightImplies
+    thenHave((a ⊆ c, b ⊆ d) |- ∀(z, z ∈ (a ∪ b) ==> z ∈ (c ∪ d))) by RightForall
+    have(thesis) by Cut(lastStep, subsetIntro of (x := a ∪ b, y := c ∪ d))
   }
 
   /**
@@ -882,12 +886,12 @@ object SetTheory extends lisa.Main {
    *   `x ∪ ∅ = x`
    */
   val setUnionRightEmpty = Lemma(
-    setUnion(a, ∅) === a
+    a ∪ ∅ === a
   ) {
     have(z ∈ ∅ <=> False) by Restate.from(emptySetAxiom of (x := z))
-    have(z ∈ setUnion(a, ∅) <=> (z ∈ a \/ False)) by Substitution.ApplyRules(lastStep)(setUnionMembership of (x := a, y := ∅))
-    thenHave(∀(z, z ∈ setUnion(a, ∅) <=> z ∈ a)) by RightForall
-    have(thesis) by Cut(lastStep, equalityIntro of (x := setUnion(a, ∅), y := a))
+    have(z ∈ (a ∪ ∅) <=> (z ∈ a \/ False)) by Substitution.ApplyRules(lastStep)(setUnionMembership of (x := a, y := ∅))
+    thenHave(∀(z, z ∈ (a ∪ ∅) <=> z ∈ a)) by RightForall
+    have(thesis) by Cut(lastStep, equalityIntro of (x := a ∪ ∅, y := a))
   }
 
   /**
@@ -896,7 +900,7 @@ object SetTheory extends lisa.Main {
    *   `∅ ∪ x = x`
    */
   val setUnionLeftEmpty = Lemma(
-    setUnion(∅, a) === a
+    ∅ ∪ a === a
   ) {
     have(thesis) by Substitution.ApplyRules(setUnionCommutativity)(setUnionRightEmpty)
   }
@@ -928,15 +932,15 @@ object SetTheory extends lisa.Main {
    *    `x ≠ ∅ ⊢ z ∈ ∩ x ⇔ ∀ y ∈ x. z ∈ y`
    */
   val intersectionMembership = Lemma(
-    !(x === ∅) |- z ∈ intersection(x) <=> ∀(y, y ∈ x ==> z ∈ y)
+    x =/= ∅ |- z ∈ intersection(x) <=> ∀(y, y ∈ x ==> z ∈ y)
   ) {
 
     have(∀(y, y ∈ x ==> z ∈ y) |- ∀(y, y ∈ x ==> z ∈ y)) by Hypothesis
     thenHave((∀(y, y ∈ x ==> z ∈ y), y ∈ x) |- z ∈ y) by InstantiateForall(y)
     have((∀(y, y ∈ x ==> z ∈ y), y ∈ x) |- z ∈ union(x)) by Cut(lastStep, unionIntro)
     thenHave((∀(y, y ∈ x ==> z ∈ y), ∃(y, y ∈ x)) |- z ∈ union(x)) by LeftExists
-    have((∀(y, y ∈ x ==> z ∈ y), !(x === ∅)) |- z ∈ union(x)) by Cut(nonEmptySetHasAnElement, lastStep)
-    val assumption = thenHave(!(x === ∅) |- ∀(y, y ∈ x ==> z ∈ y) ==> z ∈ union(x)) by RightImplies
+    have((∀(y, y ∈ x ==> z ∈ y), x =/= ∅) |- z ∈ union(x)) by Cut(nonEmptySetHasAnElement, lastStep)
+    val assumption = thenHave(x =/= ∅ |- ∀(y, y ∈ x ==> z ∈ y) ==> z ∈ union(x)) by RightImplies
     
     have(∀(z, z ∈ intersection(x) <=> (z ∈ union(x) /\ ∀(y, y ∈ x ==> z ∈ y)))) by InstantiateForall(intersection(x))(intersection.definition)
     thenHave(z ∈ intersection(x) <=> (z ∈ union(x) /\ ∀(y, y ∈ x ==> z ∈ y))) by InstantiateForall(z)
@@ -950,7 +954,7 @@ object SetTheory extends lisa.Main {
    *    `x ≠ ∅, ∀ y ∈ x. z ∈ y ⊢ z ∈ ∩ x`
    */
   val intersectionIntro = Lemma(
-    (!(x === ∅), ∀(y, y ∈ x ==> z ∈ y)) |- z ∈ intersection(x)
+    (x =/= ∅, ∀(y, y ∈ x ==> z ∈ y)) |- z ∈ intersection(x)
   ) {
     have(thesis) by Weakening(intersectionMembership)
   }
@@ -961,9 +965,9 @@ object SetTheory extends lisa.Main {
    *    `x ≠ ∅, z ∈ ∩ x, y ∈ x ⊢ z ∈ y`
    */
   val intersectionElim = Lemma(
-    (!(x === ∅), z ∈ intersection(x), y ∈ x) |- z ∈ y
+    (x =/= ∅, z ∈ intersection(x), y ∈ x) |- z ∈ y
   ) {
-    have((!(x === ∅), z ∈ intersection(x)) |- ∀(y, y ∈ x ==> z ∈ y)) by Weakening(intersectionMembership) 
+    have((x =/= ∅, z ∈ intersection(x)) |- ∀(y, y ∈ x ==> z ∈ y)) by Weakening(intersectionMembership) 
     thenHave(thesis) by InstantiateForall(y)
   }
 
@@ -1029,7 +1033,7 @@ object SetTheory extends lisa.Main {
    *    `z ∈ x ∩ y <=> z ∈ x ∧ z ∈ y`
    */
   val setIntersectionMembership = Lemma(
-    z ∈ setIntersection(x, y) <=> (z ∈ x /\ z ∈ y)
+    z ∈ (x ∩ y) <=> (z ∈ x /\ z ∈ y)
   ) {
     val forward = have(∀(w, w ∈ unorderedPair(x, y) ==> z ∈ w) ==> (z ∈ x /\ z ∈ y)) subproof {
       have(∀(w, w ∈ unorderedPair(x, y) ==> z ∈ w) |- ∀(w, w ∈ unorderedPair(x, y) ==> z ∈ w)) by Hypothesis
@@ -1062,7 +1066,7 @@ object SetTheory extends lisa.Main {
    *    `z ∈ x, z ∈ y ⊢ z ∈ x ∩ y`
    */
   val setIntersectionIntro = Lemma(
-    (z ∈ x, z ∈ y) |- z ∈ setIntersection(x, y)
+    (z ∈ x, z ∈ y) |- z ∈ (x ∩ y)
   ) {
     have(thesis) by Weakening(setIntersectionMembership)
   }
@@ -1073,7 +1077,7 @@ object SetTheory extends lisa.Main {
    *    `z ∈ x ∩ y ⊢ z ∈ x /\ z ∈ y`
    */
   val setIntersectionElim = Lemma(
-    z ∈ setIntersection(x, y) |- z ∈ x /\ z ∈ y
+    z ∈ (x ∩ y) |- z ∈ x /\ z ∈ y
   ) {
     have(thesis) by Weakening(setIntersectionMembership)
   }
@@ -1084,7 +1088,7 @@ object SetTheory extends lisa.Main {
    *    `z ∈ x ∩ y ⊢ z ∈ x`
    */
   val setIntersectionLeftElim = Lemma(
-    z ∈ setIntersection(x, y) |- z ∈ x
+    z ∈ (x ∩ y) |- z ∈ x
   ) {
     have(thesis) by Weakening(setIntersectionElim)
   }
@@ -1095,7 +1099,7 @@ object SetTheory extends lisa.Main {
    *    `z ∈ x ∩ y ⊢ z ∈ y`
    */
   val setIntersectionRightElim = Lemma(
-    z ∈ setIntersection(x, y) |- z ∈ y
+    z ∈ (x ∩ y) |- z ∈ y
   ) {
     have(thesis) by Weakening(setIntersectionElim)
   }
@@ -1106,11 +1110,11 @@ object SetTheory extends lisa.Main {
    *    `x ∩ y = y ∩ x`
    */
   val setIntersectionCommutativity = Lemma(
-    setIntersection(x, y) === setIntersection(y, x)
+    x ∩ y === y ∩ x
   ) {
-    have(z ∈ setIntersection(x, y) <=> z ∈ setIntersection(y, x)) by Substitution.ApplyRules(setIntersectionMembership)(setIntersectionMembership)
-    thenHave(∀(z, z ∈ setIntersection(x, y) <=> z ∈ setIntersection(y, x))) by RightForall
-    have(setIntersection(x, y) === setIntersection(y, x)) by Cut(lastStep, equalityIntro of (x := setIntersection(x, y), y := setIntersection(y, x)))
+    have(z ∈ (x ∩ y) <=> z ∈ (y ∩ x)) by Substitution.ApplyRules(setIntersectionMembership)(setIntersectionMembership)
+    thenHave(∀(z, z ∈ (x ∩ y) <=> z ∈ (y ∩ x))) by RightForall
+    have(x ∩ y === y ∩ x) by Cut(lastStep, equalityIntro of (x := x ∩ y, y := y ∩ x))
   }
 
   /**
@@ -1121,9 +1125,9 @@ object SetTheory extends lisa.Main {
   val setIntersectionLeftSubset = Lemma(
     x ∩ y ⊆ x
   ) {
-    have(z ∈ setIntersection(x, y) ==> z ∈ x) by RightImplies(setIntersectionLeftElim)
-    thenHave(∀(z, z ∈ setIntersection(x, y) ==> z ∈ x)) by RightForall
-    have(thesis) by Cut(lastStep, subsetIntro of (x := setIntersection(x, y), y := x))
+    have(z ∈ (x ∩ y) ==> z ∈ x) by RightImplies(setIntersectionLeftElim)
+    thenHave(∀(z, z ∈ (x ∩ y) ==> z ∈ x)) by RightForall
+    have(thesis) by Cut(lastStep, subsetIntro of (x := x ∩ y, y := x))
   }
 
   /**
@@ -1132,11 +1136,11 @@ object SetTheory extends lisa.Main {
    *   `x ∩ y ⊆ y`
    */
   val setIntersectionRightSubset = Lemma(
-    subset(setIntersection(x, y), y)
+    (x ∩ y) ⊆ y
   ) {
-    have(z ∈ setIntersection(x, y) ==> z ∈ y) by RightImplies(setIntersectionRightElim)
-    thenHave(∀(z, z ∈ setIntersection(x, y) ==> z ∈ y)) by RightForall
-    have(thesis) by Cut(lastStep, subsetIntro of (x := setIntersection(x, y), y := y))
+    have(z ∈ (x ∩ y) ==> z ∈ y) by RightImplies(setIntersectionRightElim)
+    thenHave(∀(z, z ∈ (x ∩ y) ==> z ∈ y)) by RightForall
+    have(thesis) by Cut(lastStep, subsetIntro of (x := x ∩ y, y := y))
   }
 
   /**
@@ -1145,13 +1149,13 @@ object SetTheory extends lisa.Main {
    *   `x ⊆ y ⊢ x ∩ y = x`
    */
   val setIntersectionOfSubsetForward = Lemma(
-    x ⊆ y |- setIntersection(x, y) === x
+    x ⊆ y |- x ∩ y === x
   ) {
-    have((z ∈ x, x ⊆ y) |- z ∈ setIntersection(x, y)) by Cut(subsetElim, setIntersectionIntro)
-    thenHave(x ⊆ y |- z ∈ x ==> z ∈ setIntersection(x, y)) by RightImplies
-    thenHave(x ⊆ y |- ∀(z, z ∈ x ==> z ∈ setIntersection(x, y))) by RightForall
-    have(x ⊆ y |- subset(x, setIntersection(x, y))) by Cut(lastStep, subsetIntro of (y := setIntersection(x, y)))
-    have((x ⊆ y, subset(setIntersection(x, y), x)) |- x === setIntersection(x, y)) by Cut(lastStep, subsetAntisymmetry of (y := setIntersection(x, y)))
+    have((z ∈ x, x ⊆ y) |- z ∈ (x ∩ y)) by Cut(subsetElim, setIntersectionIntro)
+    thenHave(x ⊆ y |- z ∈ x ==> z ∈ (x ∩ y)) by RightImplies
+    thenHave(x ⊆ y |- ∀(z, z ∈ x ==> z ∈ (x ∩ y))) by RightForall
+    have(x ⊆ y |- x ⊆ (x ∩ y)) by Cut(lastStep, subsetIntro of (y := x ∩ y))
+    have((x ⊆ y, (x ∩ y) ⊆ x) |- x === x ∩ y) by Cut(lastStep, subsetAntisymmetry of (y := x ∩ y))
     have(thesis) by Cut(setIntersectionLeftSubset, lastStep)
   }
 
@@ -1161,7 +1165,7 @@ object SetTheory extends lisa.Main {
    *   `y ⊆ x ⊢ x ∩ y = y`
    */
   val setIntersectionOfSubsetBackward = Lemma(
-    y ⊆ x |- setIntersection(x, y) === y
+    y ⊆ x |- x ∩ y === y
   ) {
     have(thesis) by Substitution.ApplyRules(setIntersectionCommutativity)(setIntersectionOfSubsetForward of (x := y, y := x))
   }
@@ -1171,7 +1175,7 @@ object SetTheory extends lisa.Main {
    * 
    *   `disjoint(x, y) <=> x ∩ y = ∅`
    */
-  val disjoint = DEF(x, y) --> (setIntersection(x, y) === ∅)
+  val disjoint = DEF(x, y) --> (x ∩ y === ∅)
 
   /**
    * Lemma --- Disjoint definition unfolding
@@ -1179,7 +1183,7 @@ object SetTheory extends lisa.Main {
    *  `disjoint(x, y) ⊢ x ∩ y = ∅`
    */
   val disjointUnfold = Lemma(
-    disjoint(x, y) |- setIntersection(x, y) === ∅
+    disjoint(x, y) |- x ∩ y === ∅
   ) {
     have(thesis) by Weakening(disjoint.definition)
   }
@@ -1190,7 +1194,7 @@ object SetTheory extends lisa.Main {
    *  `x ∩ y = ∅ ⊢ disjoint(x, y)`
    */
   val disjointFold = Lemma(
-    setIntersection(x, y) === ∅ |- disjoint(x, y)
+    x ∩ y === ∅ |- disjoint(x, y)
   ) {
     have(thesis) by Weakening(disjoint.definition)
   }
@@ -1203,8 +1207,8 @@ object SetTheory extends lisa.Main {
   val disjointElim = Lemma(
     (disjoint(x, y), z ∈ x, z ∈ y) |- ()
   ) {
-    have((setIntersection(x, y) === ∅, z ∈ setIntersection(x, y)) |- ()) by Restate.from(setEmptyHasNoElements of (x := setIntersection(x, y), y := z))
-    have((setIntersection(x, y) === ∅, z ∈ x, z ∈ y) |- ()) by Cut(setIntersectionIntro of (x := x, y := y), lastStep)
+    have((x ∩ y === ∅, z ∈ (x ∩ y)) |- ()) by Restate.from(setEmptyHasNoElements of (x := x ∩ y, y := z))
+    have((x ∩ y === ∅, z ∈ x, z ∈ y) |- ()) by Cut(setIntersectionIntro of (x := x, y := y), lastStep)
     thenHave(thesis) by Substitution.ApplyRules(disjoint.definition)
   }
 
@@ -1216,9 +1220,9 @@ object SetTheory extends lisa.Main {
   val nonDisjointElim = Lemma(
     !disjoint(x, y) |- ∃(z, z ∈ x /\ z ∈ y)
   ) {
-    have(z ∈ setIntersection(x, y) |- ∃(z, z ∈ x /\ z ∈ y)) by RightExists(setIntersectionElim) 
-    thenHave(∃(z, z ∈ setIntersection(x, y)) |- ∃(z, z ∈ x /\ z ∈ y)) by LeftExists
-    have(!(setIntersection(x, y) === ∅) |- ∃(z, z ∈ x /\ z ∈ y)) by Cut(nonEmptySetHasAnElement of (x := setIntersection(x, y)), lastStep)
+    have(z ∈ (x ∩ y) |- ∃(z, z ∈ x /\ z ∈ y)) by RightExists(setIntersectionElim) 
+    thenHave(∃(z, z ∈ (x ∩ y)) |- ∃(z, z ∈ x /\ z ∈ y)) by LeftExists
+    have(!(x ∩ y === ∅) |- ∃(z, z ∈ x /\ z ∈ y)) by Cut(nonEmptySetHasAnElement of (x := x ∩ y), lastStep)
     thenHave(thesis) by Substitution.ApplyRules(disjoint.definition)
   }
 
@@ -1230,8 +1234,8 @@ object SetTheory extends lisa.Main {
   val disjointSymmetry = Lemma(
     disjoint(x, y) <=> disjoint(y, x)
   ) {
-    have((setIntersection(x, y) === ∅) <=> (setIntersection(x, y) === ∅)) by Restate
-    thenHave((setIntersection(x, y) === ∅) <=> (setIntersection(y, x) === ∅)) by Substitution.ApplyRules(setIntersectionCommutativity)
+    have((x ∩ y === ∅) <=> (x ∩ y === ∅)) by Restate
+    thenHave((x ∩ y === ∅) <=> (y ∩ x === ∅)) by Substitution.ApplyRules(setIntersectionCommutativity)
     thenHave(thesis) by Substitution.ApplyRules(disjoint.definition, disjoint.definition of (x := y, y := x))
   }
 
@@ -1316,7 +1320,7 @@ object SetTheory extends lisa.Main {
     val backward = have(((a === c) /\ (b === d)) ==> (pair(a, b) === pair(c, d))) by Weakening(equiv)
     have(thesis) by RightIff(forward, backward)
   }
-
+  
   /**
    * Lemma --- The union of an ordered pair is the corresponding unordered pair.
    *
@@ -1329,8 +1333,8 @@ object SetTheory extends lisa.Main {
 
       val left = have(z ∈ unorderedPair(x, y) |- z ∈ unorderedPair(x, y)) by Hypothesis
       val right = have(z ∈ singleton(x) |- z ∈ unorderedPair(x, y)) by Substitution.ApplyRules(singletonElim)(unorderedPairLeftIntro)
-      have(z ∈ setUnion(unorderedPair(x, y), singleton(x)) |- (z ∈ unorderedPair(x, y), z ∈ singleton(x))) by Cut(setUnionElim of (x := unorderedPair(x, y), y := singleton(x)), left)
-      have(z ∈ setUnion(unorderedPair(x, y), singleton(x)) |- z ∈ unorderedPair(x, y)) by Cut(lastStep, right)
+      have(z ∈ (unorderedPair(x, y) ∪ singleton(x)) |- (z ∈ unorderedPair(x, y), z ∈ singleton(x))) by Cut(setUnionElim of (x := unorderedPair(x, y), y := singleton(x)), left)
+      have(z ∈ (unorderedPair(x, y) ∪ singleton(x)) |- z ∈ unorderedPair(x, y)) by Cut(lastStep, right)
       thenHave(z ∈ union(unorderedPair(unorderedPair(x, y), singleton(x))) |- z ∈ unorderedPair(x, y)) by Substitution.ApplyRules(setUnion.shortDefinition)
       thenHave(z ∈ union(pair(x, y)) |- z ∈ unorderedPair(x, y)) by Substitution.ApplyRules(pair.shortDefinition)
     }
@@ -1362,14 +1366,14 @@ object SetTheory extends lisa.Main {
   val pairIntersection = Lemma(
     intersection(pair(x, y)) === singleton(x)
   ) {
-    have(subset(singleton(x), unorderedPair(x, y))) by Substitution.ApplyRules(singletonSubset)(unorderedPairLeftIntro)
-    have(setIntersection(unorderedPair(x, y), singleton(x)) === singleton(x)) by Cut(lastStep, setIntersectionOfSubsetBackward of (x := unorderedPair(x, y), y := singleton(x)))
+    have(singleton(x) ⊆ unorderedPair(x, y)) by Substitution.ApplyRules(singletonSubset)(unorderedPairLeftIntro)
+    have(unorderedPair(x, y) ∩ singleton(x) === singleton(x)) by Cut(lastStep, setIntersectionOfSubsetBackward of (x := unorderedPair(x, y), y := singleton(x)))
     thenHave(intersection(unorderedPair(unorderedPair(x, y), singleton(x))) === singleton(x)) by Substitution.ApplyRules(setIntersection.shortDefinition)
     thenHave(intersection(pair(x, y)) === singleton(x)) by Substitution.ApplyRules(pair.shortDefinition) 
   }
 
   val foundation = Lemma(
-    !(x === ∅) |- ∃(y, y ∈ x /\ ∀(z, z ∈ x ==> z ∉ y))
+    x =/= ∅ |- ∃(y, y ∈ x /\ ∀(z, z ∈ x ==> z ∉ y))
   ) {
     have(thesis) by Restate.from(foundationAxiom)
   }
@@ -1442,15 +1446,15 @@ object SetTheory extends lisa.Main {
   }
 
   val pairInPowerPowerSet = Lemma(
-    pair(x, y) ∈ powerSet(powerSet(z)) <=> (x ∈ z /\ y ∈ z) 
+    pair(x, y) ∈ 𝓟(𝓟(z)) <=> (x ∈ z /\ y ∈ z) 
   ) {
     have((x ∈ z /\ x ∈ z /\ y ∈ z) <=> (x ∈ z /\ y ∈ z)) by Restate
-    thenHave((x ∈ z <=> singleton(x) ∈ powerSet(z), (x ∈ z /\ y ∈ z) <=> unorderedPair(x, y) ∈ powerSet(z)) |- (singleton(x) ∈ powerSet(z) /\ unorderedPair(x, y) ∈ powerSet(z)) <=> (x ∈ z /\ y ∈ z)) by RightSubstIff.withParametersSimple(
-      List((x ∈ z, singleton(x) ∈ powerSet(z)), (x ∈ z /\ y ∈ z, unorderedPair(x, y) ∈ powerSet(z))), lambda((h, q), (h /\ q) <=> (x ∈ z /\ y ∈ z))
+    thenHave((x ∈ z <=> singleton(x) ∈ 𝓟(z), (x ∈ z /\ y ∈ z) <=> unorderedPair(x, y) ∈ 𝓟(z)) |- (singleton(x) ∈ 𝓟(z) /\ unorderedPair(x, y) ∈ 𝓟(z)) <=> (x ∈ z /\ y ∈ z)) by RightSubstIff.withParametersSimple(
+      List((x ∈ z, singleton(x) ∈ 𝓟(z)), (x ∈ z /\ y ∈ z, unorderedPair(x, y) ∈ 𝓟(z))), lambda((h, q), (h /\ q) <=> (x ∈ z /\ y ∈ z))
     )
-    have(x ∈ z <=> singleton(x) ∈ powerSet(z) |- (singleton(x) ∈ powerSet(z) /\ unorderedPair(x, y) ∈ powerSet(z)) <=> (x ∈ z /\ y ∈ z)) by Cut(unorderedPairInPowerSet, lastStep)
-    have((singleton(x) ∈ powerSet(z) /\ unorderedPair(x, y) ∈ powerSet(z)) <=> (x ∈ z /\ y ∈ z)) by Cut(singletonInPowerSet of (y := z), lastStep)
-    thenHave(unorderedPair(unorderedPair(x, y), singleton(x)) ∈ powerSet(powerSet(z)) <=> (x ∈ z /\ y ∈ z)) by Substitution.ApplyRules(unorderedPairInPowerSet of (x := unorderedPair(x, y), y := singleton(x), z := powerSet(z)))
+    have(x ∈ z <=> singleton(x) ∈ 𝓟(z) |- (singleton(x) ∈ 𝓟(z) /\ unorderedPair(x, y) ∈ 𝓟(z)) <=> (x ∈ z /\ y ∈ z)) by Cut(unorderedPairInPowerSet, lastStep)
+    have((singleton(x) ∈ 𝓟(z) /\ unorderedPair(x, y) ∈ 𝓟(z)) <=> (x ∈ z /\ y ∈ z)) by Cut(singletonInPowerSet of (y := z), lastStep)
+    thenHave(unorderedPair(unorderedPair(x, y), singleton(x)) ∈ 𝓟(𝓟(z)) <=> (x ∈ z /\ y ∈ z)) by Substitution.ApplyRules(unorderedPairInPowerSet of (x := unorderedPair(x, y), y := singleton(x), z := 𝓟(z)))
     thenHave(thesis) by Substitution.ApplyRules(pair.shortDefinition)
   }
 
@@ -1476,6 +1480,8 @@ object SetTheory extends lisa.Main {
    */
   val firstInPair = DEF(p) --> union(intersection(p))
 
+  val fst = firstInPair
+
   /**
    * Lemma --- The [[firstInPair]] operation when applied to an ordered pair
    * produces the first element of the pair.
@@ -1483,10 +1489,10 @@ object SetTheory extends lisa.Main {
    *    `first((x, y)) = x`
    */
   val firstInPairReduction = Lemma(
-    (firstInPair(pair(x, y)) === x)
+    (fst(pair(x, y)) === x)
   ) {
     have(union(intersection(pair(x, y))) === x) by Substitution.ApplyRules(pairIntersection)(unionSingleton)
-    thenHave(thesis) by Substitution.ApplyRules(firstInPair.shortDefinition)
+    thenHave(thesis) by Substitution.ApplyRules(fst.shortDefinition)
   }
 
   val secondInPairSingletonUniqueness = Lemma(
@@ -1519,6 +1525,7 @@ object SetTheory extends lisa.Main {
    */
   val secondInPair = DEF(p) --> union(secondInPairSingleton(p))
 
+  val snd = secondInPair
 
   /**
    * Lemma --- The [[secondInPairSingleton]] operation when applied to an
@@ -1571,16 +1578,16 @@ object SetTheory extends lisa.Main {
   }
 
   /**
-   * Lemma --- The [[secondInPair]] operation when applied to an ordered pair
+   * Lemma --- The [[snd]] operation when applied to an ordered pair
    * produces the second element of the pair.
    *
    *    `second((x, y)) = y`
    */
   val secondInPairReduction = Lemma(
-    secondInPair(pair(x, y)) === y
+    snd(pair(x, y)) === y
   ) {
     have(union(secondInPairSingleton(pair(x, y))) === y) by Substitution.ApplyRules(secondInPairSingletonReduction)(unionSingleton of (x := y))
-    thenHave(thesis) by Substitution.ApplyRules(secondInPair.shortDefinition)
+    thenHave(thesis) by Substitution.ApplyRules(snd.shortDefinition)
   }
 
   /**
@@ -1590,14 +1597,14 @@ object SetTheory extends lisa.Main {
    * projection on it is invertible, so `x = (fst x, snd x)`.
    */
   val pairReconstruction = Lemma(
-    ∃(y, ∃(z, pair(y, z) === x)) |- x === pair(firstInPair(x), secondInPair(x))
+    ∃(y, ∃(z, pair(y, z) === x)) |- x === pair(fst(x), snd(x))
   ) {
-    val left = have(pair(y, z) === x |- firstInPair(x) === y) by RightSubstEq.withParametersSimple(List((pair(y, z), x)), lambda(x, firstInPair(x) === y))(firstInPairReduction of (x := y, y := z))
-    val right = have(pair(y, z) === x |- secondInPair(x) === z) by RightSubstEq.withParametersSimple(List((pair(y, z), x)), lambda(x, secondInPair(x) === z))(secondInPairReduction of (x := y, y := z))
-    have(pair(y, z) === x |- (firstInPair(x) === y) /\ (secondInPair(x) === z)) by RightAnd(left, right)
-    thenHave(pair(y, z) === x |- pair(y, z) === pair(firstInPair(x), secondInPair(x))) by Substitution.ApplyRules(pairExtensionality of (a := y, b := z, c := firstInPair(x), d := secondInPair(x)))
-    thenHave(pair(y, z) === x |- x === pair(firstInPair(x), secondInPair(x))) by RightSubstEq.withParametersSimple(List((pair(y, z), x)), lambda(z, z === pair(firstInPair(x), secondInPair(x))))
-    thenHave(∃(z, pair(y, z) === x) |- x === pair(firstInPair(x), secondInPair(x))) by LeftExists
+    val left = have(pair(y, z) === x |- fst(x) === y) by RightSubstEq.withParametersSimple(List((pair(y, z), x)), lambda(x, fst(x) === y))(firstInPairReduction of (x := y, y := z))
+    val right = have(pair(y, z) === x |- snd(x) === z) by RightSubstEq.withParametersSimple(List((pair(y, z), x)), lambda(x, snd(x) === z))(secondInPairReduction of (x := y, y := z))
+    have(pair(y, z) === x |- (fst(x) === y) /\ (snd(x) === z)) by RightAnd(left, right)
+    thenHave(pair(y, z) === x |- pair(y, z) === pair(fst(x), snd(x))) by Substitution.ApplyRules(pairExtensionality of (a := y, b := z, c := fst(x), d := snd(x)))
+    thenHave(pair(y, z) === x |- x === pair(fst(x), snd(x))) by RightSubstEq.withParametersSimple(List((pair(y, z), x)), lambda(z, z === pair(fst(x), snd(x))))
+    thenHave(∃(z, pair(y, z) === x) |- x === pair(fst(x), snd(x))) by LeftExists
     thenHave(thesis) by LeftExists
   }
 
@@ -1606,10 +1613,10 @@ object SetTheory extends lisa.Main {
    */
 
   val cartesianProductUniqueness = Lemma(
-    ∃!(z, ∀(t, t ∈ z <=> (t ∈  powerSet(powerSet(setUnion(x, y))) /\ ∃(a, ∃(b, (t === pair(a, b)) /\ a ∈ x /\ b ∈ y)))))
+    ∃!(z, ∀(t, t ∈ z <=> (t ∈  𝓟(𝓟(x ∪ y)) /\ ∃(a, ∃(b, (t === pair(a, b)) /\ a ∈ x /\ b ∈ y)))))
   ) {
-    have(∃!(z, ∀(t, t ∈ z <=> (t ∈ powerSet(powerSet(setUnion(x, y))) /\ ∃(a, ∃(b, (t === pair(a, b)) /\ a ∈ x /\ b ∈ y)))))) by UniqueComprehension(
-      powerSet(powerSet(setUnion(x, y))),
+    have(∃!(z, ∀(t, t ∈ z <=> (t ∈ 𝓟(𝓟(x ∪ y)) /\ ∃(a, ∃(b, (t === pair(a, b)) /\ a ∈ x /\ b ∈ y)))))) by UniqueComprehension(
+      𝓟(𝓟(x ∪ y)),
       lambda(t, ∃(a, ∃(b, (t === pair(a, b)) /\ a ∈ x /\ b ∈ y)))
     )
   }
@@ -1628,20 +1635,21 @@ object SetTheory extends lisa.Main {
    * @param y set
    */
   val cartesianProduct =
-    DEF(x, y) --> The(z, ∀(t, t ∈ z <=> (t ∈ powerSet(powerSet(setUnion(x, y))) /\ ∃(a, ∃(b, (t === pair(a, b)) /\ a ∈ x /\ b ∈ y)))))(cartesianProductUniqueness)
+    DEF(x, y) --> The(z, ∀(t, t ∈ z <=> (t ∈ 𝓟(𝓟(x ∪ y)) /\ ∃(a, ∃(b, (t === pair(a, b)) /\ a ∈ x /\ b ∈ y)))))(cartesianProductUniqueness)
 
-  infix def ×(x: Term, y: Term): Term = cartesianProduct(x, y)
+  extension (x: Term)
+    def × (y: Term): Term = cartesianProduct(x, y)
 
 
   val elemOfPowerPowerUnion = Lemma(
-    ∃(a, ∃(b, (p === pair(a, b)) /\ a ∈ x /\ b ∈ y)) |- p ∈ powerSet(powerSet(setUnion(x, y)))
+    ∃(a, ∃(b, (p === pair(a, b)) /\ a ∈ x /\ b ∈ y)) |- p ∈ 𝓟(𝓟(x ∪ y))
   ) {
-    have((a ∈ setUnion(x, y), b ∈  setUnion(x, y)) |- pair(a, b) ∈ powerSet(powerSet(setUnion(x, y)))) by Weakening(pairInPowerPowerSet of (x := a, y := b, z := setUnion(x, y)))
-    have((a ∈ x, b ∈ setUnion(x, y)) |- pair(a, b) ∈ powerSet(powerSet(setUnion(x, y)))) by Cut(setUnionLeftIntro of (z := a), lastStep)
-    have((a ∈ x, b ∈ y) |- pair(a, b) ∈  powerSet(powerSet(setUnion(x, y)))) by Cut(setUnionRightIntro of (z := b), lastStep)
-    thenHave((p === pair(a, b), a ∈ x, b ∈ y) |- p ∈ powerSet(powerSet(setUnion(x, y)))) by RightSubstEq.withParametersSimple(List((p, pair(a, b))), lambda(p, p ∈ powerSet(powerSet(setUnion(x, y)))))
-    thenHave((p === pair(a, b)) /\ a ∈ x /\ b ∈ y |- p ∈ powerSet(powerSet(setUnion(x, y)))) by Restate
-    thenHave(∃(b, (p === pair(a, b)) /\ a ∈ x /\ b ∈ y) |- p ∈ powerSet(powerSet(setUnion(x, y)))) by LeftExists
+    have((a ∈ (x ∪ y), b ∈ (x ∪ y)) |- pair(a, b) ∈ 𝓟(𝓟(x ∪ y))) by Weakening(pairInPowerPowerSet of (x := a, y := b, z := x ∪ y))
+    have((a ∈ x, b ∈ (x ∪ y)) |- pair(a, b) ∈ 𝓟(𝓟(x ∪ y))) by Cut(setUnionLeftIntro of (z := a), lastStep)
+    have((a ∈ x, b ∈ y) |- pair(a, b) ∈  𝓟(𝓟(x ∪ y))) by Cut(setUnionRightIntro of (z := b), lastStep)
+    thenHave((p === pair(a, b), a ∈ x, b ∈ y) |- p ∈ 𝓟(𝓟(x ∪ y))) by RightSubstEq.withParametersSimple(List((p, pair(a, b))), lambda(p, p ∈ 𝓟(𝓟(x ∪ y))))
+    thenHave((p === pair(a, b)) /\ a ∈ x /\ b ∈ y |- p ∈ 𝓟(𝓟(x ∪ y))) by Restate
+    thenHave(∃(b, (p === pair(a, b)) /\ a ∈ x /\ b ∈ y) |- p ∈ 𝓟(𝓟(x ∪ y))) by LeftExists
     thenHave(thesis) by LeftExists
   }
 
@@ -1656,32 +1664,32 @@ object SetTheory extends lisa.Main {
    * [[elemOfPowerPowerUnion]] for the redundancy proof.
    */
   val elemOfCartesianProduct = Lemma(
-    p ∈ cartesianProduct(x, y) <=> ∃(a, ∃(b, (p === pair(a, b)) /\ a ∈ x /\ b ∈ y))
+    p ∈ (x × y) <=> ∃(a, ∃(b, (p === pair(a, b)) /\ a ∈ x /\ b ∈ y))
   ) {
-    val powerPowerSet = have(∃(a, ∃(b, (p === pair(a, b)) /\ a ∈ x /\ b ∈ y)) ==> p ∈ powerSet(powerSet(setUnion(x, y)))) by RightImplies(elemOfPowerPowerUnion)
+    val powerPowerSet = have(∃(a, ∃(b, (p === pair(a, b)) /\ a ∈ x /\ b ∈ y)) ==> p ∈ 𝓟(𝓟(x ∪ y))) by RightImplies(elemOfPowerPowerUnion)
 
-    have(∀(p, p ∈ cartesianProduct(x, y) <=> (p ∈ powerSet(powerSet(setUnion(x, y))) /\ ∃(a, ∃(b, (p === pair(a, b)) /\ a ∈ x /\ b ∈ y))))) by InstantiateForall(
-      cartesianProduct(x, y)
+    have(∀(p, p ∈ (x × y) <=> (p ∈ 𝓟(𝓟(x ∪ y)) /\ ∃(a, ∃(b, (p === pair(a, b)) /\ a ∈ x /\ b ∈ y))))) by InstantiateForall(
+      x × y
     )(cartesianProduct.definition)
-    thenHave(p ∈ cartesianProduct(x, y) <=> (p ∈ powerSet(powerSet(setUnion(x, y))) /\ ∃(a, ∃(b, (p === pair(a, b)) /\ a ∈ x /\ b ∈ y)))) by InstantiateForall(p)
-    thenHave(∃(a, ∃(b, (p === pair(a, b)) /\ a ∈ x /\ b ∈ y)) ==> p ∈ powerSet(powerSet(setUnion(x, y))) |- p ∈ cartesianProduct(x, y) <=> ∃(a, ∃(b, (p === pair(a, b)) /\ a ∈ x /\ b ∈ y))) by Tautology
+    thenHave(p ∈ (x × y) <=> (p ∈ 𝓟(𝓟(x ∪ y)) /\ ∃(a, ∃(b, (p === pair(a, b)) /\ a ∈ x /\ b ∈ y)))) by InstantiateForall(p)
+    thenHave(∃(a, ∃(b, (p === pair(a, b)) /\ a ∈ x /\ b ∈ y)) ==> p ∈ 𝓟(𝓟(x ∪ y)) |- p ∈ (x × y) <=> ∃(a, ∃(b, (p === pair(a, b)) /\ a ∈ x /\ b ∈ y))) by Tautology
     have(thesis) by Cut(powerPowerSet, lastStep)
   }
 
   val pairReconstructionInCartesianProduct = Lemma(
-    p ∈ cartesianProduct(x, y) |- p === pair(firstInPair(p), secondInPair(p))
+    p ∈ (x × y) |- p === pair(fst(p), snd(p))
   ) {
     have((p === pair(a, b)) /\ a ∈ x /\ b ∈ y |- p === pair(a, b)) by Restate
     thenHave((p === pair(a, b)) /\ a ∈ x /\ b ∈ y |- ∃(b, p === pair(a, b))) by RightExists
     thenHave(∃(b, (p === pair(a, b)) /\ a ∈ x /\ b ∈ y) |- ∃(b, p === pair(a, b))) by LeftExists
     thenHave(∃(b, (p === pair(a, b)) /\ a ∈ x /\ b ∈ y) |- ∃(a, ∃(b, p === pair(a, b)))) by RightExists
     thenHave(∃(a, ∃(b, (p === pair(a, b)) /\ a ∈ x /\ b ∈ y)) |- ∃(a, ∃(b, p === pair(a, b)))) by LeftExists
-    thenHave(p ∈ cartesianProduct(x, y) |- ∃(a, ∃(b, p === pair(a, b)))) by Substitution.ApplyRules(elemOfCartesianProduct)
+    thenHave(p ∈ (x × y) |- ∃(a, ∃(b, p === pair(a, b)))) by Substitution.ApplyRules(elemOfCartesianProduct)
     have(thesis) by Cut(lastStep, pairReconstruction of (x := p))
   }
 
   val cartesianProductIntro = Lemma(
-    (a ∈ x, b ∈ y) |- pair(a, b) ∈ cartesianProduct(x, y)
+    (a ∈ x, b ∈ y) |- pair(a, b) ∈ (x × y)
   ) {
     have((a ∈ x, b ∈ y) |- (pair(a, b) === pair(a, b)) /\ a ∈ x /\ b ∈ y) by Restate
     thenHave((a ∈ x, b ∈ y) |- ∃(d, (pair(a, b) === pair(a, d)) /\ a ∈ x /\ d ∈ y)) by RightExists
@@ -1690,7 +1698,7 @@ object SetTheory extends lisa.Main {
   }
 
   val cartesianProductElimPair = Lemma(
-    pair(a, b) ∈ cartesianProduct(x, y) |- a ∈ x /\ b ∈ y
+    pair(a, b) ∈ (x × y) |- a ∈ x /\ b ∈ y
   ) {
     have(c ∈ x /\ d ∈ y |- c ∈ x /\ d ∈ y) by Hypothesis
     thenHave((a === c, b === d, c ∈ x /\ d ∈ y) |- a ∈ x /\ b ∈ y) by RightSubstEq.withParametersSimple(List((a, c), (b, d)), lambda(Seq(a, b), a ∈ x /\ b ∈ y))
@@ -1707,153 +1715,153 @@ object SetTheory extends lisa.Main {
    *   `p ∈ x * y ⇒ fst p ∈ x ∧ snd p ∈ y`
    */
   val cartesianProductElim = Lemma(
-    p ∈ cartesianProduct(x, y) |- firstInPair(p) ∈ x /\ secondInPair(p) ∈ y
+    p ∈ (x × y) |- fst(p) ∈ x /\ snd(p) ∈ y
   ) {
-    have(thesis) by Substitution.ApplyRules(pairReconstructionInCartesianProduct)(cartesianProductElimPair of (a := firstInPair(p), b := secondInPair(p)))
+    have(thesis) by Substitution.ApplyRules(pairReconstructionInCartesianProduct)(cartesianProductElimPair of (a := fst(p), b := snd(p)))
   }
 
   val cartesianProductMembershipPair = Lemma(
-    pair(a, b) ∈ cartesianProduct(x, y) <=> (a ∈ x /\ b ∈ y)
+    pair(a, b) ∈ (x × y) <=> (a ∈ x /\ b ∈ y)
   ) {
-    val forward = have(pair(a, b) ∈ cartesianProduct(x, y) ==> (a ∈ x /\ b ∈ y)) by Restate.from(cartesianProductElimPair)
-    val backward = have((a ∈ x /\ b ∈ y) ==> pair(a, b) ∈ cartesianProduct(x, y)) by Restate.from(cartesianProductIntro)
+    val forward = have(pair(a, b) ∈ (x × y) ==> (a ∈ x /\ b ∈ y)) by Restate.from(cartesianProductElimPair)
+    val backward = have((a ∈ x /\ b ∈ y) ==> pair(a, b) ∈ (x × y)) by Restate.from(cartesianProductIntro)
     have(thesis) by RightIff(forward, backward)
   }
 
   val cartesianProductLeftEmpty = Lemma(
-    cartesianProduct(∅, y) === ∅
+    ∅ × y === ∅
   ) {
-    have(firstInPair(p) ∈ ∅ /\ secondInPair(p) ∈ y |- ()) by Weakening(emptySetAxiom of (x := firstInPair(p)))
-    have(p ∈ cartesianProduct(∅, y) |- ()) by Cut(cartesianProductElim of (x := ∅), lastStep)
-    thenHave(∃(p, p ∈ cartesianProduct(∅, y)) |- ()) by LeftExists
-    have(!(cartesianProduct(∅, y) === ∅) |- ()) by Cut(nonEmptySetHasAnElement of (x := cartesianProduct(∅, y)), lastStep)
+    have(fst(p) ∈ ∅ /\ snd(p) ∈ y |- ()) by Weakening(emptySetAxiom of (x := fst(p)))
+    have(p ∈ (∅ × y) |- ()) by Cut(cartesianProductElim of (x := ∅), lastStep)
+    thenHave(∃(p, p ∈ (∅ × y)) |- ()) by LeftExists
+    have(∅ × y =/= ∅ |- ()) by Cut(nonEmptySetHasAnElement of (x := ∅ × y), lastStep)
   }
 
   val cartesianProductRightEmpty = Lemma(
-    cartesianProduct(x, ∅) === ∅
+    x × ∅ === ∅
   ) {
-    have(firstInPair(p) ∈ x /\ secondInPair(p) ∈ ∅ |- ()) by Weakening(emptySetAxiom of (x := secondInPair(p)))
-    have(p ∈ cartesianProduct(x, ∅) |- ()) by Cut(cartesianProductElim of (y := ∅), lastStep)
-    thenHave(∃(p, p ∈ cartesianProduct(x, ∅)) |- ()) by LeftExists
-    have(!(cartesianProduct(x, ∅) === ∅) |- ()) by Cut(nonEmptySetHasAnElement of (x := cartesianProduct(x, ∅)), lastStep)
+    have(fst(p) ∈ x /\ snd(p) ∈ ∅ |- ()) by Weakening(emptySetAxiom of (x := snd(p)))
+    have(p ∈ (x × ∅) |- ()) by Cut(cartesianProductElim of (y := ∅), lastStep)
+    thenHave(∃(p, p ∈ (x × ∅)) |- ()) by LeftExists
+    have(x × ∅ =/= ∅ |- ()) by Cut(nonEmptySetHasAnElement of (x := x × ∅), lastStep)
   }
 
   val cartesianProductSubset = Lemma(
-    (subset(w, y), x ⊆ z) |- subset(cartesianProduct(w, x), cartesianProduct(y, z))
+    (w ⊆ y, x ⊆ z) |- (w × x) ⊆ (y × z)
   ) {
-    have((firstInPair(p) ∈ w, secondInPair(p) ∈ z, subset(w, y)) |- pair(firstInPair(p), secondInPair(p)) ∈ cartesianProduct(y, z)) by
-      Cut(subsetElim of (z := firstInPair(p), x := w), cartesianProductIntro of (a := firstInPair(p), b := secondInPair(p), x := y, y := z))
-    have((firstInPair(p) ∈ w, secondInPair(p) ∈ x, subset(w, y), x ⊆ z) |- pair(firstInPair(p), secondInPair(p)) ∈ cartesianProduct(y, z)) by
-      Cut(subsetElim of (z := secondInPair(p), y := z), lastStep)
-    thenHave((firstInPair(p) ∈ w /\ secondInPair(p) ∈ x, subset(w, y), x ⊆ z) |- pair(firstInPair(p), secondInPair(p)) ∈ cartesianProduct(y, z)) by
+    have((fst(p) ∈ w, snd(p) ∈ z, w ⊆ y) |- pair(fst(p), snd(p)) ∈ (y × z)) by
+      Cut(subsetElim of (z := fst(p), x := w), cartesianProductIntro of (a := fst(p), b := snd(p), x := y, y := z))
+    have((fst(p) ∈ w, snd(p) ∈ x, w ⊆ y, x ⊆ z) |- pair(fst(p), snd(p)) ∈ (y × z)) by
+      Cut(subsetElim of (z := snd(p), y := z), lastStep)
+    thenHave((fst(p) ∈ w /\ snd(p) ∈ x, w ⊆ y, x ⊆ z) |- pair(fst(p), snd(p)) ∈ (y × z)) by
       LeftAnd
-    have((p ∈ cartesianProduct(w, x), subset(w, y), x ⊆ z) |- pair(firstInPair(p), secondInPair(p)) ∈ cartesianProduct(y, z)) by Cut(cartesianProductElim of (x := w, y := x), lastStep)
-    thenHave((p ∈ cartesianProduct(w, x), subset(w, y), x ⊆ z) |- p ∈ cartesianProduct(y, z)) by Substitution.ApplyRules(pairReconstructionInCartesianProduct of (x := w, y := x))
-    thenHave((subset(w, y), x ⊆ z) |- p ∈ cartesianProduct(w, x) ==> p ∈ cartesianProduct(y, z)) by RightImplies
-    thenHave((subset(w, y), x ⊆ z) |- ∀(p, p ∈ cartesianProduct(w, x) ==> p ∈ cartesianProduct(y, z))) by RightForall
-    have(thesis) by Cut(lastStep, subsetIntro of (x := cartesianProduct(w, x), y := cartesianProduct(y, z)))
+    have((p ∈ (w × x), w ⊆ y, x ⊆ z) |- pair(fst(p), snd(p)) ∈ (y × z)) by Cut(cartesianProductElim of (x := w, y := x), lastStep)
+    thenHave((p ∈ (w × x), w ⊆ y, x ⊆ z) |- p ∈ (y × z)) by Substitution.ApplyRules(pairReconstructionInCartesianProduct of (x := w, y := x))
+    thenHave((w ⊆ y, x ⊆ z) |- p ∈ (w × x) ==> p ∈ (y × z)) by RightImplies
+    thenHave((w ⊆ y, x ⊆ z) |- ∀(p, p ∈ (w × x) ==> p ∈ (y × z))) by RightForall
+    have(thesis) by Cut(lastStep, subsetIntro of (x := w × x, y := y × z))
   }
 
   val singletonCartesianProduct = Lemma(
-    singleton(pair(x, y)) === cartesianProduct(singleton(x), singleton(y))
+    singleton(pair(x, y)) === singleton(x) × singleton(y)
   ) {
-    val forward = have(p ∈ singleton(pair(x, y)) ==> p ∈ cartesianProduct(singleton(x), singleton(y)))subproof {
-      have(y ∈ singleton(y) |- pair(x, y) ∈ cartesianProduct(singleton(x), singleton(y))) by
+    val forward = have(p ∈ singleton(pair(x, y)) ==> p ∈ (singleton(x) × singleton(y)))subproof {
+      have(y ∈ singleton(y) |- pair(x, y) ∈ (singleton(x) × singleton(y))) by
         Cut(singletonIntro, cartesianProductIntro of (a := x, b := y, x := singleton(x), y := singleton(y)))
-      have(pair(x, y) ∈ cartesianProduct(singleton(x), singleton(y))) by Cut(singletonIntro of (x := y), lastStep) 
-      thenHave(p ∈ singleton(pair(x, y)) |- p ∈ cartesianProduct(singleton(x), singleton(y))) by
+      have(pair(x, y) ∈ (singleton(x) × singleton(y))) by Cut(singletonIntro of (x := y), lastStep) 
+      thenHave(p ∈ singleton(pair(x, y)) |- p ∈ (singleton(x) × singleton(y))) by
         Substitution.ApplyRules(singletonElim) 
     }
 
-    val backward = have(p ∈ cartesianProduct(singleton(x), singleton(y)) ==> p ∈ singleton(pair(x, y))) subproof {
-      have((firstInPair(p) === x, secondInPair(p) === y) |- pair(firstInPair(p), secondInPair(p)) ∈ singleton(pair(x, y))) by
-        Substitution.ApplyRules(firstInPair(p) === x, secondInPair(p) === y)(singletonIntro of (x := pair(x, y)))
-      have((firstInPair(p) ∈ singleton(x), secondInPair(p) === y) |- pair(firstInPair(p), secondInPair(p)) ∈ singleton(pair(x, y)) )by
-        Cut(singletonElim of (y := firstInPair(p)), lastStep)
-      have((firstInPair(p) ∈ singleton(x), secondInPair(p) ∈ singleton(y)) |- pair(firstInPair(p), secondInPair(p)) ∈ singleton(pair(x, y))) by 
-        Cut(singletonElim of (x := y, y := secondInPair(p)), lastStep)
-      thenHave(firstInPair(p) ∈ singleton(x) /\ secondInPair(p) ∈ singleton(y) |- pair(firstInPair(p), secondInPair(p)) ∈ singleton(pair(x, y))) by LeftAnd
-      have(p ∈ cartesianProduct(singleton(x), singleton(y)) |- pair(firstInPair(p), secondInPair(p)) ∈ singleton(pair(x, y))) by
+    val backward = have(p ∈ (singleton(x) × singleton(y)) ==> p ∈ singleton(pair(x, y))) subproof {
+      have((fst(p) === x, snd(p) === y) |- pair(fst(p), snd(p)) ∈ singleton(pair(x, y))) by
+        Substitution.ApplyRules(fst(p) === x, snd(p) === y)(singletonIntro of (x := pair(x, y)))
+      have((fst(p) ∈ singleton(x), snd(p) === y) |- pair(fst(p), snd(p)) ∈ singleton(pair(x, y)) )by
+        Cut(singletonElim of (y := fst(p)), lastStep)
+      have((fst(p) ∈ singleton(x), snd(p) ∈ singleton(y)) |- pair(fst(p), snd(p)) ∈ singleton(pair(x, y))) by 
+        Cut(singletonElim of (x := y, y := snd(p)), lastStep)
+      thenHave(fst(p) ∈ singleton(x) /\ snd(p) ∈ singleton(y) |- pair(fst(p), snd(p)) ∈ singleton(pair(x, y))) by LeftAnd
+      have(p ∈ (singleton(x) × singleton(y)) |- pair(fst(p), snd(p)) ∈ singleton(pair(x, y))) by
         Cut(cartesianProductElim of (x := singleton(x), y := singleton(y)), lastStep)
-      thenHave(p ∈ cartesianProduct(singleton(x), singleton(y)) |- p ∈ singleton(pair(x, y))) by
+      thenHave(p ∈ (singleton(x) × singleton(y)) |- p ∈ singleton(pair(x, y))) by
         Substitution.ApplyRules(pairReconstructionInCartesianProduct of (x := singleton(x), y := singleton(y)))
     }
 
-    have(p ∈ singleton(pair(x, y)) <=> p ∈ cartesianProduct(singleton(x), singleton(y))) by RightIff(forward, backward)
-    thenHave(∀(p, p ∈ singleton(pair(x, y)) <=> p ∈ cartesianProduct(singleton(x), singleton(y)))) by RightForall
-    have(singleton(pair(x, y)) === cartesianProduct(singleton(x), singleton(y))) by Cut(lastStep, equalityIntro of (x := singleton(pair(x, y)), y := cartesianProduct(singleton(x), singleton(y))))
+    have(p ∈ singleton(pair(x, y)) <=> p ∈ (singleton(x) × singleton(y))) by RightIff(forward, backward)
+    thenHave(∀(p, p ∈ singleton(pair(x, y)) <=> p ∈ (singleton(x) × singleton(y)))) by RightForall
+    have(singleton(pair(x, y)) === singleton(x) × singleton(y)) by Cut(lastStep, equalityIntro of (x := singleton(pair(x, y)), y := singleton(x) × singleton(y)))
   }
 
   val pairInSingletonCartesianProduct = Lemma(
-    pair(x, y) ∈ cartesianProduct(singleton(x), singleton(y))
+    pair(x, y) ∈ (singleton(x) × singleton(y))
   ){
     have(thesis) by Substitution.ApplyRules(singletonCartesianProduct)(singletonIntro of (x := pair(x, y)))
   }
 
   val cartesianProductLeftUnion = Lemma(
-    cartesianProduct(setUnion(a, b), c) === setUnion(cartesianProduct(a, c), cartesianProduct(b, c))
+    (a ∪ b) × c === ((a × c) ∪ (b × c))
   ) {
-    val forward = have(p ∈ cartesianProduct(setUnion(a, b), c) ==> p ∈ setUnion(cartesianProduct(a, c), cartesianProduct(b, c))) subproof {
-      val hyp = have(secondInPair(p) ∈ c |- secondInPair(p) ∈ c) by Hypothesis
-      val cartProdIntro = have(firstInPair(p) ∈ a /\ secondInPair(p) ∈ c |- pair(firstInPair(p), secondInPair(p)) ∈ cartesianProduct(a, c)) by LeftAnd(
-        cartesianProductIntro of (a := firstInPair(p), b := secondInPair(p), x := a, y := c)
+    val forward = have(p ∈ ((a ∪ b) × c) ==> p ∈ ((a × c) ∪ (b × c))) subproof {
+      val hyp = have(snd(p) ∈ c |- snd(p) ∈ c) by Hypothesis
+      val cartProdIntro = have(fst(p) ∈ a /\ snd(p) ∈ c |- pair(fst(p), snd(p)) ∈ (a × c)) by LeftAnd(
+        cartesianProductIntro of (a := fst(p), b := snd(p), x := a, y := c)
       )
 
-      have((firstInPair(p) ∈ setUnion(a, b), secondInPair(p) ∈ c) |- (firstInPair(p) ∈ a, firstInPair(p) ∈ b /\ secondInPair(p) ∈ c)) by RightAnd(
-        setUnionElim of (z := firstInPair(p), x := a, y := b),
+      have((fst(p) ∈ (a ∪ b), snd(p) ∈ c) |- (fst(p) ∈ a, fst(p) ∈ b /\ snd(p) ∈ c)) by RightAnd(
+        setUnionElim of (z := fst(p), x := a, y := b),
         hyp
       )
-      have((firstInPair(p) ∈ setUnion(a, b), secondInPair(p) ∈ c) |- (firstInPair(p) ∈ a /\ secondInPair(p) ∈ c, firstInPair(p) ∈ b /\ secondInPair(p) ∈ c)) by RightAnd(
+      have((fst(p) ∈ (a ∪ b), snd(p) ∈ c) |- (fst(p) ∈ a /\ snd(p) ∈ c, fst(p) ∈ b /\ snd(p) ∈ c)) by RightAnd(
         lastStep,
         hyp
       )
-      thenHave((firstInPair(p) ∈ setUnion(a, b) /\ secondInPair(p) ∈ c) |- (firstInPair(p) ∈ a /\ secondInPair(p) ∈ c, firstInPair(p) ∈ b /\ secondInPair(p) ∈ c)) by LeftAnd
-      have(p ∈ cartesianProduct(setUnion(a, b), c) |- (firstInPair(p) ∈ a /\ secondInPair(p) ∈ c, firstInPair(p) ∈ b /\ secondInPair(p) ∈ c)) by
-        Cut(cartesianProductElim of (a := firstInPair(p), b := secondInPair(p), x := setUnion(a, b), y := c), lastStep)
-      have(p ∈ cartesianProduct(setUnion(a, b), c) |- (pair(firstInPair(p), secondInPair(p)) ∈ cartesianProduct(a, c), firstInPair(p) ∈ b /\ secondInPair(p) ∈ c)) by
+      thenHave((fst(p) ∈ (a ∪ b) /\ snd(p) ∈ c) |- (fst(p) ∈ a /\ snd(p) ∈ c, fst(p) ∈ b /\ snd(p) ∈ c)) by LeftAnd
+      have(p ∈ ((a ∪ b) × c) |- (fst(p) ∈ a /\ snd(p) ∈ c, fst(p) ∈ b /\ snd(p) ∈ c)) by
+        Cut(cartesianProductElim of (a := fst(p), b := snd(p), x := a ∪ b, y := c), lastStep)
+      have(p ∈ ((a ∪ b) × c) |- (pair(fst(p), snd(p)) ∈ (a × c), fst(p) ∈ b /\ snd(p) ∈ c)) by
         Cut(lastStep, cartProdIntro)
-      have(p ∈ cartesianProduct(setUnion(a, b), c) |- (pair(firstInPair(p), secondInPair(p)) ∈ cartesianProduct(a, c), pair(firstInPair(p), secondInPair(p)) ∈ cartesianProduct(b, c))) by
+      have(p ∈ ((a ∪ b) × c) |- (pair(fst(p), snd(p)) ∈ (a × c), pair(fst(p), snd(p)) ∈ (b × c))) by
         Cut(lastStep, cartProdIntro of (a := b))
-      thenHave(p ∈ cartesianProduct(setUnion(a, b), c) |- (p ∈ cartesianProduct(a, c), p ∈ cartesianProduct(b, c))) by
-        Substitution.ApplyRules(pairReconstructionInCartesianProduct of (x := setUnion(a, b), y := c))
-      have(p ∈ cartesianProduct(setUnion(a, b), c) |- (p ∈ setUnion(cartesianProduct(a, c), cartesianProduct(b, c)), p ∈ cartesianProduct(b, c))) by
-        Cut(lastStep, setUnionLeftIntro of (x := cartesianProduct(a, c), y := cartesianProduct(b, c), z := p))
-      have(p ∈ cartesianProduct(setUnion(a, b), c) |- p ∈ setUnion(cartesianProduct(a, c), cartesianProduct(b, c))) by
-        Cut(lastStep, setUnionRightIntro of (x := cartesianProduct(a, c), y := cartesianProduct(b, c), z := p))
+      thenHave(p ∈ ((a ∪ b) × c) |- (p ∈ (a × c), p ∈ (b × c))) by
+        Substitution.ApplyRules(pairReconstructionInCartesianProduct of (x := a ∪ b, y := c))
+      have(p ∈ ((a ∪ b) × c) |- (p ∈ ((a × c) ∪ (b × c)), p ∈ (b × c))) by
+        Cut(lastStep, setUnionLeftIntro of (x := a × c, y := b × c, z := p))
+      have(p ∈ ((a ∪ b) × c) |- p ∈ ((a × c) ∪ (b × c))) by
+        Cut(lastStep, setUnionRightIntro of (x := a × c, y := b × c, z := p))
     }
-    val backward = have(p ∈ setUnion(cartesianProduct(a, c), cartesianProduct(b, c)) ==> p ∈ cartesianProduct(setUnion(a, b), c)) subproof {
+    val backward = have(p ∈ ((a × c) ∪ (b × c)) ==> p ∈ ((a ∪ b) × c)) subproof {
 
-      val cartesianProdIntro = have(firstInPair(p) ∈ setUnion(a, b) /\ secondInPair(p) ∈ c |- pair(firstInPair(p), secondInPair(p)) ∈ cartesianProduct(setUnion(a, b), c)) by
-        LeftAnd(cartesianProductIntro of (a := firstInPair(p), b := secondInPair(p), x := setUnion(a, b), y := c))
+      val cartesianProdIntro = have(fst(p) ∈ (a ∪ b) /\ snd(p) ∈ c |- pair(fst(p), snd(p)) ∈ ((a ∪ b) × c)) by
+        LeftAnd(cartesianProductIntro of (a := fst(p), b := snd(p), x := a ∪ b, y := c))
 
-      val unElim = have(p ∈ setUnion(cartesianProduct(a, c), cartesianProduct(b, c)) |- p ∈ cartesianProduct(a, c) \/ (p ∈ cartesianProduct(b, c))) by
-        RightOr(setUnionElim of (z := p, x := cartesianProduct(a, c), y := cartesianProduct(b, c)))
+      val unElim = have(p ∈ ((a × c) ∪ (b × c)) |- p ∈ (a × c) \/ (p ∈ (b × c))) by
+        RightOr(setUnionElim of (z := p, x := a × c, y := (b × c)))
 
-      have(p ∈ setUnion(cartesianProduct(a, c), cartesianProduct(b, c)) |- (firstInPair(p) ∈ a /\ secondInPair(p) ∈ c, p ∈ cartesianProduct(b, c))) by
-        Cut(setUnionElim of (z := p, x := cartesianProduct(a, c), y := cartesianProduct(b, c)), cartesianProductElim of (x := a, y := c))
-      have(p ∈ setUnion(cartesianProduct(a, c), cartesianProduct(b, c)) |- (firstInPair(p) ∈ a /\ secondInPair(p) ∈ c, firstInPair(p) ∈ b /\ secondInPair(p) ∈ c)) by
+      have(p ∈ ((a × c) ∪ (b × c)) |- (fst(p) ∈ a /\ snd(p) ∈ c, p ∈ (b × c))) by
+        Cut(setUnionElim of (z := p, x := a × c, y := b × c), cartesianProductElim of (x := a, y := c))
+      have(p ∈ ((a × c) ∪ (b × c)) |- (fst(p) ∈ a /\ snd(p) ∈ c, fst(p) ∈ b /\ snd(p) ∈ c)) by
         Cut(lastStep, cartesianProductElim of (x := b, y := c))
-      thenHave(p ∈ setUnion(cartesianProduct(a, c), cartesianProduct(b, c)) |- (firstInPair(p) ∈ a \/ (firstInPair(p) ∈ b)) /\ secondInPair(p) ∈ c) by Tautology
-      thenHave(p ∈ setUnion(cartesianProduct(a, c), cartesianProduct(b, c)) |- firstInPair(p) ∈ setUnion(a, b) /\ secondInPair(p) ∈ c) by Substitution.ApplyRules(setUnionMembership)
+      thenHave(p ∈ ((a × c) ∪ (b × c)) |- (fst(p) ∈ a \/ (fst(p) ∈ b)) /\ snd(p) ∈ c) by Tautology
+      thenHave(p ∈ ((a × c) ∪ (b × c)) |- fst(p) ∈ (a ∪ b) /\ snd(p) ∈ c) by Substitution.ApplyRules(setUnionMembership)
       val beforeSubst =
-        have(p ∈ setUnion(cartesianProduct(a, c), cartesianProduct(b, c)) |- pair(firstInPair(p), secondInPair(p)) ∈ cartesianProduct(setUnion(a, b), c)) by Cut(lastStep, cartesianProdIntro)
+        have(p ∈ ((a × c) ∪ (b × c)) |- pair(fst(p), snd(p)) ∈ ((a ∪ b) × c)) by Cut(lastStep, cartesianProdIntro)
 
-      val left = thenHave((p ∈ setUnion(cartesianProduct(a, c), cartesianProduct(b, c)), p ∈ cartesianProduct(a, c)) |- p ∈ cartesianProduct(setUnion(a, b), c)) by
+      val left = thenHave((p ∈ ((a × c) ∪ (b × c)), p ∈ (a × c)) |- p ∈ ((a ∪ b) × c)) by
         Substitution.ApplyRules(pairReconstructionInCartesianProduct of (x := a, y := c))
 
-      val right = have((p ∈ setUnion(cartesianProduct(a, c), cartesianProduct(b, c)), p ∈ cartesianProduct(b, c)) |- p ∈ cartesianProduct(setUnion(a, b), c)) by
+      val right = have((p ∈ ((a × c) ∪ (b × c)), p ∈ (b × c)) |- p ∈ ((a ∪ b) × c)) by
         Substitution.ApplyRules(pairReconstructionInCartesianProduct of (x := b, y := c))(beforeSubst)
 
-      have((p ∈ setUnion(cartesianProduct(a, c), cartesianProduct(b, c)), p ∈ cartesianProduct(a, c) \/ (p ∈ cartesianProduct(b, c))) |- p ∈ cartesianProduct(setUnion(a, b), c)) by LeftOr(
+      have((p ∈ ((a × c) ∪ (b × c)), p ∈ (a × c) \/ (p ∈ (b × c))) |- p ∈ ((a ∪ b) × c)) by LeftOr(
         left,
         right
       )
-      have(p ∈ setUnion(cartesianProduct(a, c), cartesianProduct(b, c)) |- p ∈ cartesianProduct(setUnion(a, b), c)) by Cut(unElim, lastStep)
+      have(p ∈ ((a × c) ∪ (b × c)) |- p ∈ ((a ∪ b) × c)) by Cut(unElim, lastStep)
     }
 
-    have(p ∈ cartesianProduct(setUnion(a, b), c) <=> p ∈ setUnion(cartesianProduct(a, c), cartesianProduct(b, c))) by RightIff(forward, backward)
-    thenHave(∀(p, p ∈ cartesianProduct(setUnion(a, b), c) <=> p ∈ setUnion(cartesianProduct(a, c), cartesianProduct(b, c)))) by RightForall
-    have(thesis) by Cut(lastStep, equalityIntro of (x := cartesianProduct(setUnion(a, b), c), y := setUnion(cartesianProduct(a, c), cartesianProduct(b, c))))
+    have(p ∈ ((a ∪ b) × c) <=> p ∈ ((a × c) ∪ (b × c))) by RightIff(forward, backward)
+    thenHave(∀(p, p ∈ ((a ∪ b) × c) <=> p ∈ ((a × c) ∪ (b × c)))) by RightForall
+    have(thesis) by Cut(lastStep, equalityIntro of (x := (a ∪ b) × c, y := (a × c) ∪ (b × c)))
   }
 
   /**
@@ -1862,68 +1870,64 @@ object SetTheory extends lisa.Main {
    *    `a * b ∪ c * d ⊆ (a ∪ c) * (b ∪ d)`
    */
   val unionOfCartesianProducts = Lemma(
-    subset(setUnion(cartesianProduct(a, b), cartesianProduct(c, d)), cartesianProduct(setUnion(a, c), setUnion(b, d)))
+    ((a × b) ∪ (c × d)) ⊆ ((a ∪ c) × (b ∪ d))
   ) {
-    val left = have(subset(cartesianProduct(a, b), cartesianProduct(setUnion(a, c), setUnion(b, d)))) subproof {
-      have((firstInPair(p) ∈ a, secondInPair(p) ∈ setUnion(b, d)) |- pair(firstInPair(p), secondInPair(p)) ∈ cartesianProduct(setUnion(a, c), setUnion(b, d))) by Cut(
-        setUnionLeftIntro of (z := firstInPair(p), x := a, y := c),
-        cartesianProductIntro of (a := firstInPair(p), b := secondInPair(p), x := setUnion(a, c), y := setUnion(b, d))
+    val left = have((a × b) ⊆ ((a ∪ c) × (b ∪ d))) subproof {
+      have((fst(p) ∈ a, snd(p) ∈ (b ∪ d)) |- pair(fst(p), snd(p)) ∈ ((a ∪ c) × (b ∪ d))) by Cut(
+        setUnionLeftIntro of (z := fst(p), x := a, y := c),
+        cartesianProductIntro of (a := fst(p), b := snd(p), x := (a ∪ c), y := (b ∪ d))
       )
-      have((firstInPair(p) ∈ a, secondInPair(p) ∈ b) |- pair(firstInPair(p), secondInPair(p)) ∈ cartesianProduct(setUnion(a, c), setUnion(b, d))) by Cut(
-        setUnionLeftIntro of (z := secondInPair(p), x := b, y := d),
+      have((fst(p) ∈ a, snd(p) ∈ b) |- pair(fst(p), snd(p)) ∈ ((a ∪ c) × (b ∪ d))) by Cut(
+        setUnionLeftIntro of (z := snd(p), x := b, y := d),
         lastStep
       )
-      thenHave(firstInPair(p) ∈ a /\ secondInPair(p) ∈ b |- pair(firstInPair(p), secondInPair(p)) ∈ cartesianProduct(setUnion(a, c), setUnion(b, d))) by LeftAnd
-      have(p ∈ cartesianProduct(a, b) |- pair(firstInPair(p), secondInPair(p)) ∈ cartesianProduct(setUnion(a, c), setUnion(b, d))) by Cut(cartesianProductElim of (x := a, y := b), lastStep)
-      thenHave(p ∈ cartesianProduct(a, b) |- p ∈ cartesianProduct(setUnion(a, c), setUnion(b, d))) by Substitution.ApplyRules(pairReconstructionInCartesianProduct of (x := a, y := b))
-      thenHave(p ∈ cartesianProduct(a, b) ==> p ∈ cartesianProduct(setUnion(a, c), setUnion(b, d))) by RightImplies
-      thenHave(∀(p, p ∈ cartesianProduct(a, b) ==> p ∈ cartesianProduct(setUnion(a, c), setUnion(b, d)))) by RightForall
-      have(thesis) by Cut(lastStep, subsetIntro of (x := cartesianProduct(a, b), y := cartesianProduct(setUnion(a, c), setUnion(b, d))))
+      thenHave(fst(p) ∈ a /\ snd(p) ∈ b |- pair(fst(p), snd(p)) ∈ ((a ∪ c) × (b ∪ d))) by LeftAnd
+      have(p ∈ (a × b) |- pair(fst(p), snd(p)) ∈ ((a ∪ c) × (b ∪ d))) by Cut(cartesianProductElim of (x := a, y := b), lastStep)
+      thenHave(p ∈ (a × b) |- p ∈ ((a ∪ c) × (b ∪ d))) by Substitution.ApplyRules(pairReconstructionInCartesianProduct of (x := a, y := b))
+      thenHave(p ∈ (a × b) ==> p ∈ ((a ∪ c) × (b ∪ d))) by RightImplies
+      thenHave(∀(p, p ∈ (a × b) ==> p ∈ ((a ∪ c) × (b ∪ d)))) by RightForall
+      have(thesis) by Cut(lastStep, subsetIntro of (x := a × b, y := (a ∪ c) × (b ∪ d)))
     }
 
-    val right = have(subset(cartesianProduct(c, d), cartesianProduct(setUnion(a, c), setUnion(b, d)))) subproof {
-      have((firstInPair(p) ∈ c, secondInPair(p) ∈ setUnion(b, d)) |- pair(firstInPair(p), secondInPair(p)) ∈ cartesianProduct(setUnion(a, c), setUnion(b, d))) by Cut(
-        setUnionRightIntro of (z := firstInPair(p), x := a, y := c),
-        cartesianProductIntro of (a := firstInPair(p), b := secondInPair(p), x := setUnion(a, c), y := setUnion(b, d))
+    val right = have((c × d) ⊆ ((a ∪ c) × (b ∪ d))) subproof {
+      have((fst(p) ∈ c, snd(p) ∈ (b ∪ d)) |- pair(fst(p), snd(p)) ∈ ((a ∪ c) × (b ∪ d))) by Cut(
+        setUnionRightIntro of (z := fst(p), x := a, y := c),
+        cartesianProductIntro of (a := fst(p), b := snd(p), x := (a ∪ c), y := (b ∪ d))
       )
-      have((firstInPair(p) ∈ c, secondInPair(p) ∈ d) |- pair(firstInPair(p), secondInPair(p)) ∈ cartesianProduct(setUnion(a, c), setUnion(b, d))) by Cut(
-        setUnionRightIntro of (z := secondInPair(p), x := b, y := d),
+      have((fst(p) ∈ c, snd(p) ∈ d) |- pair(fst(p), snd(p)) ∈ ((a ∪ c) × (b ∪ d))) by Cut(
+        setUnionRightIntro of (z := snd(p), x := b, y := d),
         lastStep
       )
-      thenHave(firstInPair(p) ∈ c /\ secondInPair(p) ∈ d |- pair(firstInPair(p), secondInPair(p)) ∈ cartesianProduct(setUnion(a, c), setUnion(b, d))) by LeftAnd
-      have(p ∈ cartesianProduct(c, d) |- pair(firstInPair(p), secondInPair(p)) ∈ cartesianProduct(setUnion(a, c), setUnion(b, d))) by Cut(cartesianProductElim of (x := c, y := d), lastStep)
-      thenHave(p ∈ cartesianProduct(c, d) |- p ∈ cartesianProduct(setUnion(a, c), setUnion(b, d))) by Substitution.ApplyRules(pairReconstructionInCartesianProduct of (x := c, y := d))
-      thenHave(p ∈ cartesianProduct(c, d) ==> p ∈ cartesianProduct(setUnion(a, c), setUnion(b, d))) by RightImplies
-      thenHave(∀(p, p ∈ cartesianProduct(c, d) ==> p ∈ cartesianProduct(setUnion(a, c), setUnion(b, d)))) by RightForall
-      have(thesis) by Cut(lastStep, subsetIntro of (x := cartesianProduct(c, d), y := cartesianProduct(setUnion(a, c), setUnion(b, d))))
+      thenHave(fst(p) ∈ c /\ snd(p) ∈ d |- pair(fst(p), snd(p)) ∈ ((a ∪ c) × (b ∪ d))) by LeftAnd
+      have(p ∈ (c × d) |- pair(fst(p), snd(p)) ∈ ((a ∪ c) × (b ∪ d))) by Cut(cartesianProductElim of (x := c, y := d), lastStep)
+      thenHave(p ∈ (c × d) |- p ∈ ((a ∪ c) × (b ∪ d))) by Substitution.ApplyRules(pairReconstructionInCartesianProduct of (x := c, y := d))
+      thenHave(p ∈ (c × d) ==> p ∈ ((a ∪ c) × (b ∪ d))) by RightImplies
+      thenHave(∀(p, p ∈ (c × d) ==> p ∈ ((a ∪ c) × (b ∪ d)))) by RightForall
+      have(thesis) by Cut(lastStep, subsetIntro of (x := c × d, y := (a ∪ c) × (b ∪ d)))
     }
 
-    have(
-      subset(cartesianProduct(c, d), cartesianProduct(setUnion(a, c), setUnion(b, d))) |- subset(
-        setUnion(cartesianProduct(a, b), cartesianProduct(c, d)),
-        cartesianProduct(setUnion(a, c), setUnion(b, d))
-      )
-    ) by Cut(left, unionOfTwoSubsets of (a := cartesianProduct(a, b), b := cartesianProduct(c, d), c := cartesianProduct(setUnion(a, c), setUnion(b, d))))
+    have((c × d) ⊆ ((a ∪ c) × (b ∪ d)) |- ((a × b) ∪ (c × d)) ⊆ ((a ∪ c) × (b ∪ d))) by 
+      Cut(left, unionOfTwoSubsets of (a := a × b, b := c × d, c := (a ∪ c) × (b ∪ d)))
     have(thesis) by Cut(right, lastStep)
   }
 
   val swapUniqueness = Lemma(
-    ∃!(z, (∃(x, ∃(y, p === pair(x, y))) ==> (z === pair(secondInPair(p), firstInPair(p)))) /\ (!(∃(x, ∃(y, p === pair(x, y)))) ==> (z === p)))
+    ∃!(z, (∃(x, ∃(y, p === pair(x, y))) ==> (z === pair(snd(p), fst(p)))) /\ (!(∃(x, ∃(y, p === pair(x, y)))) ==> (z === p)))
   ) {
-    val left = have(∃(x, ∃(y, p === pair(x, y))) ==> ∃!(z, z === pair(secondInPair(p), firstInPair(p)))) by Weakening(existsOneEquality of (y := pair(secondInPair(p), firstInPair(p))))
+    val left = have(∃(x, ∃(y, p === pair(x, y))) ==> ∃!(z, z === pair(snd(p), fst(p)))) by Weakening(existsOneEquality of (y := pair(snd(p), fst(p))))
     val right = have(!(∃(x, ∃(y, p === pair(x, y)))) ==> ∃!(z, z === p)) by Weakening(existsOneEquality of (y := p))
 
-    have(!(∃(x, ∃(y, p === pair(x, y)))) ==> ∃!(z, z === p) |- ∃!(z, (∃(x, ∃(y, p === pair(x, y))) ==> (z === pair(secondInPair(p), firstInPair(p)))) /\ (!(∃(x, ∃(y, p === pair(x, y)))) ==> (z === p)))) by Cut(left, existsOneCases of (q := ∃(x, ∃(y, p === pair(x, y))), P := lambda(z, z === pair(secondInPair(p), firstInPair(p))), Q := lambda(z, z === p)))
+    have(!(∃(x, ∃(y, p === pair(x, y)))) ==> ∃!(z, z === p) |- ∃!(z, (∃(x, ∃(y, p === pair(x, y))) ==> (z === pair(snd(p), fst(p)))) /\ (!(∃(x, ∃(y, p === pair(x, y)))) ==> (z === p)))) by Cut(left, existsOneCases of (q := ∃(x, ∃(y, p === pair(x, y))), P := lambda(z, z === pair(snd(p), fst(p))), Q := lambda(z, z === p)))
     have(thesis) by Cut(right, lastStep)
   }
 
-  val swap = DEF(p) --> The(z, (∃(x, ∃(y, p === pair(x, y))) ==> (z === pair(secondInPair(p), firstInPair(p)))) /\ (!(∃(x, ∃(y, p === pair(x, y)))) ==> (z === p)))(swapUniqueness)
+  val swap = DEF(p) --> The(z, (∃(x, ∃(y, p === pair(x, y))) ==> (z === pair(snd(p), fst(p)))) /\ (!(∃(x, ∃(y, p === pair(x, y)))) ==> (z === p)))(swapUniqueness)
 
   val swapPair = Lemma(
     swap(pair(x, y)) === pair(y, x)
   ) {
-    have((∃(a, ∃(b, pair(x, y) === pair(a, b))) ==> (swap(pair(x, y)) === pair(secondInPair(pair(x, y)), firstInPair(pair(x, y))))) /\ (!(∃(a, ∃(b, pair(x, y) === pair(a, b)))) ==> (swap(pair(x, y)) === pair(x, y)))) by InstantiateForall(swap(pair(x, y)))(swap.definition of (p := pair(x, y)))
-    thenHave(∃(a, ∃(b, pair(x, y) === pair(a, b))) |- swap(pair(x, y)) === pair(secondInPair(pair(x, y)), firstInPair(pair(x, y)))) by Weakening
+    have((∃(a, ∃(b, pair(x, y) === pair(a, b))) ==> (swap(pair(x, y)) === pair(snd(pair(x, y)), fst(pair(x, y))))) /\ (!(∃(a, ∃(b, pair(x, y) === pair(a, b)))) ==> (swap(pair(x, y)) === pair(x, y)))) by InstantiateForall(swap(pair(x, y)))(swap.definition of (p := pair(x, y)))
+    thenHave(∃(a, ∃(b, pair(x, y) === pair(a, b))) |- swap(pair(x, y)) === pair(snd(pair(x, y)), fst(pair(x, y)))) by Weakening
     val withExists = thenHave(∃(a, ∃(b, pair(x, y) === pair(a, b))) |- swap(pair(x, y)) === pair(y, x)) by Substitution.ApplyRules(secondInPairReduction, firstInPairReduction)
 
     have(pair(x, y) === pair(x, y)) by RightRefl
@@ -1933,9 +1937,9 @@ object SetTheory extends lisa.Main {
   }
 
   val swapNotPair = Lemma(
-    ∀(x, ∀(y, !(p === pair(x, y)))) |- swap(p) === p
+    ∀(x, ∀(y, p =/= pair(x, y))) |- swap(p) === p
   ) {
-    have((∃(x, ∃(y, p === pair(x, y))) ==> (swap(p) === pair(secondInPair(p), firstInPair(p)))) /\ (!(∃(x, ∃(y, p === pair(x, y)))) ==> (swap(p) === p))) by InstantiateForall(swap(p))(swap.definition)
+    have((∃(x, ∃(y, p === pair(x, y))) ==> (swap(p) === pair(snd(p), fst(p)))) /\ (!(∃(x, ∃(y, p === pair(x, y)))) ==> (swap(p) === p))) by InstantiateForall(swap(p))(swap.definition)
     thenHave(thesis) by Weakening
   }
 
@@ -1946,7 +1950,7 @@ object SetTheory extends lisa.Main {
     thenHave(p === pair(x, y) |- swap(swap(p)) === p) by RightSubstEq.withParametersSimple(List((p, pair(x, y))), lambda(p, swap(swap(p)) === p))
     thenHave(∃(y, p === pair(x, y)) |- swap(swap(p)) === p) by LeftExists
     val left = thenHave(∃(x, ∃(y, p === pair(x, y))) |- swap(swap(p)) === p) by LeftExists
-    val right = have(∀(x, ∀(y, !(p === pair(x, y)))) |- swap(swap(p)) === p) by Substitution.ApplyRules(swapNotPair)(swapNotPair of (p := swap(p)))
+    val right = have(∀(x, ∀(y, p =/= pair(x, y))) |- swap(swap(p)) === p) by Substitution.ApplyRules(swapNotPair)(swapNotPair of (p := swap(p)))
     have(thesis) by LeftOr(left, right)
   }
 
@@ -1973,24 +1977,24 @@ object SetTheory extends lisa.Main {
     thenHave((x === pair(a, b), ∃(d, y === pair(c, d)), swap(x) === swap(y)) |- x === y) by LeftExists
     val case1 = thenHave((x === pair(a, b), ∃(c, ∃(d, y === pair(c, d))), swap(x) === swap(y)) |- x === y) by LeftExists
 
-    have((pair(b, a) === y, !(y === pair(b, a))) |- x === y) by Restate
-    thenHave((pair(b, a) === y, ∀(a, !(y === pair(b, a)))) |- x === y) by LeftForall
-    thenHave((pair(b, a) === y, ∀(b, ∀(a, !(y === pair(b, a))))) |- x === y) by LeftForall
-    thenHave((swap(pair(a, b)) === swap(y), ∀(b, ∀(a, !(y === pair(b, a))))) |- x === y) by Substitution.ApplyRules(swapPair, swapNotPair)
-    val case2 = thenHave((x === pair(a, b), ∀(b, ∀(a, !(y === pair(b, a)))), swap(x) === swap(y)) |- x === y) by LeftSubstEq.withParametersSimple(List((x, pair(a, b))), lambda(x, swap(x) === swap(y)))
+    have((pair(b, a) === y, y =/= pair(b, a)) |- x === y) by Restate
+    thenHave((pair(b, a) === y, ∀(a, y =/= pair(b, a))) |- x === y) by LeftForall
+    thenHave((pair(b, a) === y, ∀(b, ∀(a, y =/= pair(b, a)))) |- x === y) by LeftForall
+    thenHave((swap(pair(a, b)) === swap(y), ∀(b, ∀(a, y =/= pair(b, a)))) |- x === y) by Substitution.ApplyRules(swapPair, swapNotPair)
+    val case2 = thenHave((x === pair(a, b), ∀(b, ∀(a, y =/= pair(b, a))), swap(x) === swap(y)) |- x === y) by LeftSubstEq.withParametersSimple(List((x, pair(a, b))), lambda(x, swap(x) === swap(y)))
 
     have((x === pair(a, b), swap(x) === swap(y)) |- x === y) by LeftOr(case1, case2)
     thenHave((∃(b, x === pair(a, b)), swap(x) === swap(y)) |- x === y) by LeftExists
     val case12 = thenHave((∃(a, ∃(b, x === pair(a, b))), swap(x) === swap(y)) |- x === y) by LeftExists
 
-    have((∀(a, ∀(b, !(x === pair(a, b)))), y === pair(a, b), swap(x) === swap(y)) |- x === y) by Restate.from(case2 of (x := y, y := x))
-    thenHave((∀(a, ∀(b, !(x === pair(a, b)))), ∃(b, y === pair(a, b)), swap(x) === swap(y)) |- x === y) by LeftExists
-    val case3 = thenHave((∀(a, ∀(b, !(x === pair(a, b)))), ∃(a, ∃(b, y === pair(a, b))), swap(x) === swap(y)) |- x === y) by LeftExists
+    have((∀(a, ∀(b, x =/= pair(a, b))), y === pair(a, b), swap(x) === swap(y)) |- x === y) by Restate.from(case2 of (x := y, y := x))
+    thenHave((∀(a, ∀(b, x =/= pair(a, b))), ∃(b, y === pair(a, b)), swap(x) === swap(y)) |- x === y) by LeftExists
+    val case3 = thenHave((∀(a, ∀(b, x =/= pair(a, b))), ∃(a, ∃(b, y === pair(a, b))), swap(x) === swap(y)) |- x === y) by LeftExists
     
     have(x === y |- x === y) by Hypothesis
-    val case4 = thenHave((∀(a, ∀(b, !(x === pair(a, b)))), ∀(a, ∀(b, !(y === pair(a, b)))), swap(x) === swap(y)) |- x === y) by Substitution.ApplyRules(swapNotPair)
+    val case4 = thenHave((∀(a, ∀(b, x =/= pair(a, b))), ∀(a, ∀(b, y =/= pair(a, b))), swap(x) === swap(y)) |- x === y) by Substitution.ApplyRules(swapNotPair)
 
-    have((∀(a, ∀(b, !(x === pair(a, b)))), swap(x) === swap(y)) |- x === y) by LeftOr(case3, case4)
+    have((∀(a, ∀(b, x =/= pair(a, b))), swap(x) === swap(y)) |- x === y) by LeftOr(case3, case4)
     have(thesis) by LeftOr(case12, lastStep)
   }
 
@@ -2001,16 +2005,16 @@ object SetTheory extends lisa.Main {
   }
 
   val swapCartesianProduct = Lemma(
-    p ∈ cartesianProduct(x, y) <=> swap(p) ∈ cartesianProduct(y, x)
+    p ∈ (x × y) <=> swap(p) ∈ (y  × x)
   ) {
-    val forward = have(p ∈ cartesianProduct(x, y) ==> swap(p) ∈ cartesianProduct(y, x)) subproof {
-      have(b ∈ y /\ a ∈ x |- pair(b, a) ∈ cartesianProduct(y, x)) by LeftAnd(cartesianProductIntro of (a := b, b := a, x := y, y := x))
-      have(pair(a, b) ∈ cartesianProduct(x, y) |- pair(b, a) ∈ cartesianProduct(y, x)) by Cut(cartesianProductElimPair, lastStep)
-      thenHave(pair(a, b) ∈ cartesianProduct(x, y) |- swap(pair(a, b)) ∈ cartesianProduct(y, x)) by Substitution.ApplyRules(swapPair)
-      thenHave((p === pair(a, b), p ∈ cartesianProduct(x, y)) |- swap(p) ∈ cartesianProduct(y, x)) by Substitution.ApplyRules(p === pair(a, b))
-      have(p ∈ cartesianProduct(x, y) |- swap(p) ∈ cartesianProduct(y, x)) by Cut(pairReconstructionInCartesianProduct, lastStep of (a := firstInPair(p), b := secondInPair(p)))
+    val forward = have(p ∈ (x × y) ==> swap(p) ∈ (y  × x)) subproof {
+      have(b ∈ y /\ a ∈ x |- pair(b, a) ∈ (y  × x)) by LeftAnd(cartesianProductIntro of (a := b, b := a, x := y, y := x))
+      have(pair(a, b) ∈ (x × y) |- pair(b, a) ∈ (y  × x)) by Cut(cartesianProductElimPair, lastStep)
+      thenHave(pair(a, b) ∈ (x × y) |- swap(pair(a, b)) ∈ (y  × x)) by Substitution.ApplyRules(swapPair)
+      thenHave((p === pair(a, b), p ∈ (x × y)) |- swap(p) ∈ (y  × x)) by Substitution.ApplyRules(p === pair(a, b))
+      have(p ∈ (x × y) |- swap(p) ∈ (y  × x)) by Cut(pairReconstructionInCartesianProduct, lastStep of (a := fst(p), b := snd(p)))
     }
-    val backward = have(swap(p) ∈ cartesianProduct(y, x) ==> p ∈ cartesianProduct(x, y)) by Substitution.ApplyRules(swapInvolutive)(forward of (p := swap(p), x := y, y := x))
+    val backward = have(swap(p) ∈ (y  × x) ==> p ∈ (x × y)) by Substitution.ApplyRules(swapInvolutive)(forward of (p := swap(p), x := y, y := x))
     have(thesis) by RightIff(forward, backward)
   }
 

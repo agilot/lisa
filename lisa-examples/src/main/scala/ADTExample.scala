@@ -127,7 +127,7 @@ object ADTExample extends lisa.Main {
     * 
     *   `n :: nat |- n != n + 1`
     */
-  val succInj = Theorem(n :: nat |- !(n === succ * n)) {
+  val succInj = Theorem(n :: nat |- n =/= succ * n) {
     
     val boolean = unorderedPair(∅, singleton(∅))
     val f = variable

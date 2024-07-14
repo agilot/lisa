@@ -244,6 +244,7 @@ object SetTheoryLibrary extends lisa.prooflib.Library {
 
   val ∅ = emptySet
   val ∈ = in
+  val 𝓟 = powerSet
 
   extension (thi: Term) {
     def ∈(that: Term): Formula = in(thi, that)
