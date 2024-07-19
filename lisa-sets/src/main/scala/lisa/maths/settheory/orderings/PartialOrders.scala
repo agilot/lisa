@@ -29,6 +29,7 @@ object PartialOrders extends lisa.Main {
   private val r = variable
   private val r1 = variable
   private val r2 = variable
+  private val r3 = variable
   private val p = variable
   private val q = variable
   private val f = variable
@@ -109,7 +110,7 @@ object PartialOrders extends lisa.Main {
   val emptyStrictPartialOrder = Lemma(
     strictPartialOrder(∅, x)
   ) {
-    have((transitive(∅, x)) |- strictPartialOrder(∅, x)) by Cut(emptyRelationIrreflexive of (a := x), strictPartialOrderIntro of (r -> ∅))
+    have((transitive(∅, x)) |- strictPartialOrder(∅, x)) by Cut(emptyRelationIrreflexive of (a := x), strictPartialOrderIntro of (r := ∅))
     have(thesis) by Cut(emptyRelationTransitive of (a := x), lastStep)
   }
 
@@ -330,7 +331,7 @@ object PartialOrders extends lisa.Main {
   val emptySetStrictTotalOrder = Lemma(
     strictTotalOrder(∅, ∅)
   ) {
-    have(total(∅, ∅) |- strictTotalOrder(∅, ∅)) by Cut(emptySetStrictPartialOrder, strictTotalOrderIntro of (r -> ∅, x -> ∅))
+    have(total(∅, ∅) |- strictTotalOrder(∅, ∅)) by Cut(emptySetStrictPartialOrder, strictTotalOrderIntro of (r := ∅, x := ∅))
     have(thesis) by Cut(emptyRelationTotalOnItself, lastStep)
   }
 
@@ -495,11 +496,11 @@ object PartialOrders extends lisa.Main {
   ) {
     have((isLimitElement(a, r, x), pair(c, a) ∈ r, ∀(b, pair(c, b) ∉ r \/ (pair(b, a) ∉ r))) |- isPredecessor(c, a, r, x)) by Cut(
       isLimitElementStrictTotalOrder,
-      isPredecessorIntro of (a -> c, b -> a)
+      isPredecessorIntro of (a := c, b := a)
     )
     have((isLimitElement(a, r, x), pair(c, a) ∈ r, ∀(b, pair(c, b) ∉ r \/ (pair(b, a) ∉ r))) |- ()) by RightAnd(
       lastStep,
-      isLimitElementElim of (b -> c)
+      isLimitElementElim of (b := c)
     )
   }
 
@@ -586,10 +587,16 @@ object PartialOrders extends lisa.Main {
    *
    *   `strictWellOrder(r, x) ⊢ relationBetween(r, x, x)`
    */
-  val strictWellOrderIsRelation = Lemma(
+  val strictWellOrderIsRelationBetween = Lemma(
     strictWellOrder(r, x) |- relationBetween(r, x, x)
   ) {
     have(thesis) by Cut(strictWellOrderTotal, strictTotalOrderIsRelation)
+  }
+
+  val strictWellOrderIsRelation = Lemma(
+    strictWellOrder(r, x) |- relation(r)
+  ) {
+    have(thesis) by Cut(strictWellOrderIsRelationBetween, relationBetweenIsRelation of (a := x, b := x))
   }
 
   /**
@@ -600,7 +607,7 @@ object PartialOrders extends lisa.Main {
   ) {
     have((y ⊆ ∅ /\ (y =/= ∅)) ==> ∃(a, isLeastElement(a, y, ∅, ∅))) by Weakening(subsetEmptySet of (x := y))
     thenHave(∀(y, (y ⊆ ∅ /\ (y =/= ∅)) ==> ∃(a, isLeastElement(a, y, ∅, ∅)))) by RightForall
-    have(strictTotalOrder(∅, ∅) |- strictWellOrder(∅, ∅)) by Cut(lastStep, strictWellOrderIntro of (r -> ∅, x -> ∅))
+    have(strictTotalOrder(∅, ∅) |- strictWellOrder(∅, ∅)) by Cut(lastStep, strictWellOrderIntro of (r := ∅, x := ∅))
     have(thesis) by Cut(emptySetStrictTotalOrder, lastStep)
   }
 
@@ -652,6 +659,10 @@ object PartialOrders extends lisa.Main {
     have(thesis) by Weakening(relationIsomorphism.definition)
   }
 
+  val relationIsomorphismFunctionFrom = Lemma(relationIsomorphism(f, r1, x, r2, y) |- functionFrom(f, x, y)) {
+    have(thesis) by Cut(relationIsomorphismBijective, bijectiveIsFunctionFrom)
+  }
+
   val relationIsomorphismDomainIsRelation = Lemma(relationIsomorphism(f, r1, x, r2, y) |- relationBetween(r1, x, x)) {
     have(thesis) by Weakening(relationIsomorphism.definition)
   }
@@ -697,15 +708,14 @@ object PartialOrders extends lisa.Main {
         relationBetween(r2, y, y),
         ∀(a, ∀(b, (a ∈ x /\ b ∈ x) ==> (pair(a, b) ∈ r1 <=> pair(app(f, a), app(f, b)) ∈ r2)))
       ) |- relationIsomorphism(f, r1, x, r2, y)
-    ) by Cut(strictWellOrderIsRelation of (r := r1), relationIsomorphismIntro)
-    have(thesis) by Cut(strictWellOrderIsRelation of (r := r2, x := y), lastStep)
+    ) by Cut(strictWellOrderIsRelationBetween of (r := r1), relationIsomorphismIntro)
+    have(thesis) by Cut(strictWellOrderIsRelationBetween of (r := r2, x := y), lastStep)
   }
 
   val relationIsomorphismAppInCodomain = Lemma(
     (relationIsomorphism(f, r1, x, r2, y), a ∈ x) |- app(f, a) ∈ y
   ) {
-    have(relationIsomorphism(f, r1, x, r2, y) |- functionFrom(f, x, y)) by Cut(relationIsomorphismBijective, bijectiveIsFunctionFrom)
-    have(thesis) by Cut(lastStep, functionFromAppInCodomain)
+    have(thesis) by Cut(relationIsomorphismFunctionFrom, functionFromAppInCodomain)
   }
 
   val inverseRelationIsomorphism = Lemma(
@@ -724,4 +734,70 @@ object PartialOrders extends lisa.Main {
     have((relationIsomorphism(f, r1, x, r2, y), relationBetween(r2, y, y)) |- relationIsomorphism(inverseRelation(f), r2, y, r1, x)) by Cut(relationIsomorphismDomainIsRelation, lastStep)
     have(thesis) by Cut(relationIsomorphismRangeIsRelation, lastStep)      
   }
+
+  val relationIsomorphismComposition = Lemma(
+    (relationIsomorphism(f, r1, x, r2, y), relationIsomorphism(g, r2, y, r3, z)) |- relationIsomorphism(g ∘ f, r1, x, r3, z)
+  ) {
+    have((relationIsomorphism(f, r1, x, r2, y), relationIsomorphism(g, r2, y, r3, z), a ∈ x, b ∈ x, app(f, a) ∈ y, app(f, b) ∈ y) |- pair(a, b) ∈ r1 <=> pair(app(g, app(f, a)), app(g, app(f, b))) ∈ r3) by 
+      Substitution.ApplyRules(relationIsomorphismElim of (f := g, r1 := r2, r2 := r3, x := y, y := z, a := app(f, a), b := app(f, b)))(relationIsomorphismElim)
+    have((relationIsomorphism(f, r1, x, r2, y), relationIsomorphism(g, r2, y, r3, z), a ∈ x, b ∈ x, app(f, b) ∈ y) |- pair(a, b) ∈ r1 <=> pair(app(g, app(f, a)), app(g, app(f, b))) ∈ r3) by Cut(relationIsomorphismAppInCodomain, lastStep)
+    have((relationIsomorphism(f, r1, x, r2, y), relationIsomorphism(g, r2, y, r3, z), a ∈ x, b ∈ x) |- pair(a, b) ∈ r1 <=> pair(app(g, app(f, a)), app(g, app(f, b))) ∈ r3) by Cut(relationIsomorphismAppInCodomain of (a := b), lastStep)
+    thenHave((relationIsomorphism(f, r1, x, r2, y), relationIsomorphism(g, r2, y, r3, z), functionFrom(f, x, y), functionFrom(g, y, z), a ∈ x, b ∈ x) |- pair(a, b) ∈ r1 <=> pair(app(g ∘ f, a), app(g ∘ f, b)) ∈ r3) by Substitution.ApplyRules(functionCompositionApp)
+    have((relationIsomorphism(f, r1, x, r2, y), relationIsomorphism(g, r2, y, r3, z), functionFrom(g, y, z), a ∈ x, b ∈ x) |- pair(a, b) ∈ r1 <=> pair(app(g ∘ f, a), app(g ∘ f, b)) ∈ r3) by Cut(relationIsomorphismFunctionFrom, lastStep)
+    have((relationIsomorphism(f, r1, x, r2, y), relationIsomorphism(g, r2, y, r3, z), a ∈ x, b ∈ x) |- pair(a, b) ∈ r1 <=> pair(app(g ∘ f, a), app(g ∘ f, b)) ∈ r3) by Cut(relationIsomorphismFunctionFrom of (f := g, x := y, y := z, r1 := r2, r2 := r3), lastStep)
+    thenHave((relationIsomorphism(f, r1, x, r2, y), relationIsomorphism(g, r2, y, r3, z)) |- (a ∈ x /\ b ∈ x) ==> pair(a, b) ∈ r1 <=> pair(app(g ∘ f, a), app(g ∘ f, b)) ∈ r3) by Restate
+    thenHave((relationIsomorphism(f, r1, x, r2, y), relationIsomorphism(g, r2, y, r3, z)) |- ∀(b, (a ∈ x /\ b ∈ x) ==> pair(a, b) ∈ r1 <=> pair(app(g ∘ f, a), app(g ∘ f, b)) ∈ r3)) by RightForall
+    thenHave((relationIsomorphism(f, r1, x, r2, y), relationIsomorphism(g, r2, y, r3, z)) |- ∀(a, ∀(b, (a ∈ x /\ b ∈ x) ==> pair(a, b) ∈ r1 <=> pair(app(g ∘ f, a), app(g ∘ f, b)) ∈ r3))) by RightForall
+    have((relationIsomorphism(f, r1, x, r2, y), relationIsomorphism(g, r2, y, r3, z), relationBetween(r1, x, x), relationBetween(r3, z, z), bijective(g ∘ f, x, z)) |- relationIsomorphism(g ∘ f, r1, x, r3, z)) by Cut(lastStep, relationIsomorphismIntro of (f := g ∘ f, r2 := r3, y := z))
+    have((relationIsomorphism(f, r1, x, r2, y), relationIsomorphism(g, r2, y, r3, z), relationBetween(r3, z, z), bijective(g ∘ f, x, z)) |- relationIsomorphism(g ∘ f, r1, x, r3, z)) by Cut(relationIsomorphismDomainIsRelation, lastStep)
+    have((relationIsomorphism(f, r1, x, r2, y), relationIsomorphism(g, r2, y, r3, z), bijective(g ∘ f, x, z)) |- relationIsomorphism(g ∘ f, r1, x, r3, z)) by Cut(relationIsomorphismRangeIsRelation of (r1 := r2, r2 := r3, f := g, x := y, y := z), lastStep)
+    have((relationIsomorphism(f, r1, x, r2, y), relationIsomorphism(g, r2, y, r3, z), bijective(f, x, y), bijective(g, y, z)) |- relationIsomorphism(g ∘ f, r1, x, r3, z)) by Cut(functionCompositionBijective, lastStep)
+    have((relationIsomorphism(f, r1, x, r2, y), relationIsomorphism(g, r2, y, r3, z), bijective(g, y, z)) |- relationIsomorphism(g ∘ f, r1, x, r3, z)) by Cut(relationIsomorphismBijective, lastStep)
+    have(thesis) by Cut(relationIsomorphismBijective of (f := g, r1 := r2, r2 := r3, x := y, y := z), lastStep)
+  }
+
+  val strictWellOrderIsomorphismUnique = Lemma(
+    (strictWellOrder(r1, x), strictWellOrder(r2, y), relationIsomorphism(f, r1, x, r2, y), relationIsomorphism(g, r1, x, r2, y)) |- f === g
+  ) {
+    sorry
+  }
+
+  val isomorphic = DEF(r1, x, r2, y) --> ∃(f, relationIsomorphism(f, r1, x, r2, y))
+
+  extension (p1: (Term, Term)) 
+    def ≅ (p2: (Term, Term)): Formula = isomorphic(p1._1, p1._2, p2._1, p2._2)
+    def ≃ (p2: (Term, Term)): Formula = isomorphic(p1._1, p1._2, p2._1, p2._2)
+
+  val isomorphicIntro = Lemma(
+    relationIsomorphism(f, r1, x, r2, y) |- (r1, x) ≃ (r2, y)
+  ) {
+    have(relationIsomorphism(f, r1, x, r2, y) |- relationIsomorphism(f, r1, x, r2, y)) by Hypothesis
+    thenHave(relationIsomorphism(f, r1, x, r2, y) |- ∃(f, relationIsomorphism(f, r1, x, r2, y))) by RightExists
+    thenHave(thesis) by Substitution.ApplyRules(isomorphic.definition)
+  }
+
+  val isomorphicElim = Lemma(
+    (r1, x) ≃ (r2, y) |- ∃(f, relationIsomorphism(f, r1, x, r2, y))
+  ) {
+    have(thesis) by Weakening(isomorphic.definition)
+  }
+
+  val isomorphicTransitivity = Lemma(
+    ((r1, x) ≃ (r2, y), (r2, y) ≃ (r3, z)) |- (r1, x) ≃ (r3, z)
+  ) {
+    have((relationIsomorphism(f, r1, x, r2, y), relationIsomorphism(g, r2, y, r3, z)) |- (r1, x) ≃ (r3, z)) by Cut(relationIsomorphismComposition, isomorphicIntro of (f := g ∘ f, r2 := r3, y := z))
+    thenHave((∃(f, relationIsomorphism(f, r1, x, r2, y)), relationIsomorphism(g, r2, y, r3, z)) |- (r1, x) ≃ (r3, z)) by LeftExists
+    thenHave((∃(f, relationIsomorphism(f, r1, x, r2, y)), ∃(g, relationIsomorphism(g, r2, y, r3, z))) |- (r1, x) ≃ (r3, z)) by LeftExists
+    have(((r1, x) ≃ (r2, y), ∃(g, relationIsomorphism(g, r2, y, r3, z))) |- (r1, x) ≃ (r3, z)) by Cut(isomorphicElim, lastStep)
+    have(thesis) by Cut(isomorphicElim of (r1 := r2, x := y, r2 := r3, y := z), lastStep)
+  }
+
+  val isomorphicSymmetry = Lemma(
+    (r1, x) ≃ (r2, y) |- (r2, y) ≃ (r1, x)
+  ) {
+    have((relationIsomorphism(f, r1, x, r2, y)) |- (r2, y) ≃ (r1, x)) by Cut(inverseRelationIsomorphism, isomorphicIntro of (f := inverseRelation(f), r1 := r2, x := y, r2 := r1, y := x))
+    thenHave((∃(f, relationIsomorphism(f, r1, x, r2, y))) |- (r2, y) ≃ (r1, x)) by LeftExists
+    have(thesis) by Cut(isomorphicElim, lastStep)
+  }
+  
 }

@@ -44,35 +44,35 @@ object Recursion extends lisa.Main {
   private val R = predicate[2]
 
   val transfiniteRecursionClassFunction = Theorem(
-    (classFunction(R), ordinal(a)) |- ∃!(f, functionalOver(f, successor(a)) /\ ∀(b, (b ∈ a \/ (b === a)) ==> R(domainRestriction(f, b), app(f, b))))
+    (classFunction(R), ordinal(a)) |- ∃!(f, functionalOver(f, successor(a)) /\ ∀(b, (b ∈ a \/ (b === a)) ==> R(f ↾ b, app(f, b))))
   ) {
 
-    def isF(f: Term, d: Term) = functionalOver(f, successor(d)) /\ ∀(b, (b ∈ d \/ (b === d)) ==> R(domainRestriction(f, b), app(f, b)))
+    def isF(f: Term, d: Term) = functionalOver(f, successor(d)) /\ ∀(b, (b ∈ d \/ (b === d)) ==> R(f ↾ b, app(f, b)))
 
     val isFFunctionalOver = have(isF(f, d) |- functionalOver(f, successor(d))) by Restate
     val isFFunctional = have(isF(f, d) |- functional(f)) by Cut(isFFunctionalOver, functionalOverIsFunctional of (x := successor(d)))
     val isFDomain = have(isF(f, d) |- dom(f) === successor(d)) by Cut(isFFunctionalOver, functionalOverDomain of (x := successor(d)))
 
-    val isFAppSubset = have((ordinal(b), ordinal(d), isF(f, d), b ⊆ d) |- R(domainRestriction(f, b), app(f, b))) subproof {
-      have(∀(b, (b ∈ d \/ (b === d)) ==> R(domainRestriction(f, b), app(f, b))) |-
-            ∀(b, (b ∈ d \/ (b === d)) ==> R(domainRestriction(f, b), app(f, b)))) by Hypothesis
-      thenHave(isF(f, d) |- ∀(b, (b ∈ d \/ (b === d)) ==> R(domainRestriction(f, b), app(f, b)))) by Weakening
-      thenHave((isF(f, d), b ∈ d \/ (b === d)) |- R(domainRestriction(f, b), app(f, b))) by InstantiateForall(b)
+    val isFAppSubset = have((ordinal(b), ordinal(d), isF(f, d), b ⊆ d) |- R(f ↾ b, app(f, b))) subproof {
+      have(∀(b, (b ∈ d \/ (b === d)) ==> R(f ↾ b, app(f, b))) |-
+            ∀(b, (b ∈ d \/ (b === d)) ==> R(f ↾ b, app(f, b)))) by Hypothesis
+      thenHave(isF(f, d) |- ∀(b, (b ∈ d \/ (b === d)) ==> R(f ↾ b, app(f, b)))) by Weakening
+      thenHave((isF(f, d), b ∈ d \/ (b === d)) |- R(f ↾ b, app(f, b))) by InstantiateForall(b)
       thenHave(thesis) by Substitution.ApplyRules(leqOrdinalIsSubset of (a := b, b := d))
     }
 
-    val isFAppEq = have((isF(f, d), ordinal(d)) |- R(domainRestriction(f, d), app(f, d))) subproof {
+    val isFAppEq = have((isF(f, d), ordinal(d)) |- R(f ↾ d, app(f, d))) subproof {
       have(thesis) by Cut(subsetReflexivity of (x := d), isFAppSubset of (b := d))
     }
 
     val isFSubset = have((classFunction(R), ordinal(d), ordinal(e), isF(f, d), isF(g, e), d ∈ e \/ (d === e)) |- f ⊆ g) subproof {
-      have((functionalOver(f, successor(d)), functionalOver(g, successor(e)), x ⊆ d, d ⊆ successor(d), x ⊆ successor(e), ∀(y, y ∈ x ==> (app(f, y) === app(g, y)))) |- domainRestriction(f, x) === domainRestriction(g, x)) by Cut(subsetTransitivity of (y := d, z := successor(d)), functionRestrictionEqualApp of (a := successor(d), b := successor(e)))
-      have((functionalOver(f, successor(d)), functionalOver(g, successor(e)), x ⊆ d, x ⊆ successor(e), ∀(y, y ∈ x ==> (app(f, y) === app(g, y)))) |- domainRestriction(f, x) === domainRestriction(g, x)) by Cut(subsetSuccessor of (a := d), lastStep)
-      have((functionalOver(f, successor(d)), functionalOver(g, successor(e)), x ⊆ d, x ⊆ e, e ⊆ successor(e), ∀(y, y ∈ x ==> (app(f, y) === app(g, y)))) |- domainRestriction(f, x) === domainRestriction(g, x)) by Cut(subsetTransitivity of (y := e, z := successor(e)), lastStep)
-      val subst = have((functionalOver(f, successor(d)), functionalOver(g, successor(e)), x ⊆ d, x ⊆ e, ∀(y, y ∈ x ==> (app(f, y) === app(g, y)))) |- domainRestriction(f, x) === domainRestriction(g, x)) by Cut(subsetSuccessor of (a := e), lastStep)
+      have((functionalOver(f, successor(d)), functionalOver(g, successor(e)), x ⊆ d, d ⊆ successor(d), x ⊆ successor(e), ∀(y, y ∈ x ==> (app(f, y) === app(g, y)))) |- f ↾ x === g ↾ x) by Cut(subsetTransitivity of (y := d, z := successor(d)), functionRestrictionEqualApp of (a := successor(d), b := successor(e)))
+      have((functionalOver(f, successor(d)), functionalOver(g, successor(e)), x ⊆ d, x ⊆ successor(e), ∀(y, y ∈ x ==> (app(f, y) === app(g, y)))) |- f ↾ x === g ↾ x) by Cut(subsetSuccessor of (a := d), lastStep)
+      have((functionalOver(f, successor(d)), functionalOver(g, successor(e)), x ⊆ d, x ⊆ e, e ⊆ successor(e), ∀(y, y ∈ x ==> (app(f, y) === app(g, y)))) |- f ↾ x === g ↾ x) by Cut(subsetTransitivity of (y := e, z := successor(e)), lastStep)
+      val subst = have((functionalOver(f, successor(d)), functionalOver(g, successor(e)), x ⊆ d, x ⊆ e, ∀(y, y ∈ x ==> (app(f, y) === app(g, y)))) |- f ↾ x === g ↾ x) by Cut(subsetSuccessor of (a := e), lastStep)
 
-      have((ordinal(d), ordinal(x), isF(f, d), functionalOver(f, successor(d)), functionalOver(g, successor(e)), x ⊆ d, x ⊆ e, ∀(y, y ∈ x ==> (app(f, y) === app(g, y)))) |- R(domainRestriction(g, x), app(f, x))) by Substitution.ApplyRules(subst)(isFAppSubset of (b := x))
-      have((classFunction(R), ordinal(d), ordinal(x), isF(f, d), functionalOver(f, successor(d)), functionalOver(g, successor(e)), x ⊆ d, x ⊆ e, ∀(y, y ∈ x ==> (app(f, y) === app(g, y))), R(domainRestriction(g, x), app(g, x))) |- app(f, x) === app(g, x)) by Cut(lastStep, totalClassFunctionUniqueness of (x := domainRestriction(g, x), y := app(g, x), z := app(f, x)))
+      have((ordinal(d), ordinal(x), isF(f, d), functionalOver(f, successor(d)), functionalOver(g, successor(e)), x ⊆ d, x ⊆ e, ∀(y, y ∈ x ==> (app(f, y) === app(g, y)))) |- R(g ↾ x, app(f, x))) by Substitution.ApplyRules(subst)(isFAppSubset of (b := x))
+      have((classFunction(R), ordinal(d), ordinal(x), isF(f, d), functionalOver(f, successor(d)), functionalOver(g, successor(e)), x ⊆ d, x ⊆ e, ∀(y, y ∈ x ==> (app(f, y) === app(g, y))), R(g ↾ x, app(g, x))) |- app(f, x) === app(g, x)) by Cut(lastStep, totalClassFunctionUniqueness of (x := g ↾ x, y := app(g, x), z := app(f, x)))
       have((classFunction(R), ordinal(d), ordinal(e), ordinal(x), isF(f, d), isF(g, e), functionalOver(f, successor(d)), functionalOver(g, successor(e)), x ⊆ d, x ⊆ e, ∀(y, y ∈ x ==> (app(f, y) === app(g, y)))) |- app(f, x) === app(g, x)) by Cut(isFAppSubset of (f := g, d := e, b := x), lastStep)
       have((classFunction(R), ordinal(d), ordinal(e), ordinal(x), isF(f, d), isF(g, e), functionalOver(f, successor(d)), functionalOver(g, successor(e)), x ⊆ d, d ⊆ e, ∀(y, y ∈ x ==> (app(f, y) === app(g, y)))) |- app(f, x) === app(g, x)) by Cut(subsetTransitivity of (y := d, z := e), lastStep)
       have((classFunction(R), ordinal(d), ordinal(e), ordinal(x), isF(f, d), isF(g, e), functionalOver(f, successor(d)), functionalOver(g, successor(e)), x ∈ successor(d), d ⊆ e, ∀(y, y ∈ x ==> (app(f, y) === app(g, y)))) |- app(f, x) === app(g, x)) by Cut(inSuccessorSubset of (b := x, a := d), lastStep)
@@ -202,33 +202,33 @@ object Recursion extends lisa.Main {
 
       val newFFunctional = have((classFunction(R), isFExistsBelow, sDef, ordinal(a)) |- functional(newF)) by Cut(newFFunctionalOver, functionalOverIsFunctional of (f := newF, x := successor(a)))
 
-      val newFApp = have((classFunction(R), sDef, ordinal(a), R(union(s), b), isFExistsBelow) |- ∀(d, (d ∈ a \/ (d === a)) ==> R(domainRestriction(newF, d), app(newF, d)))) subproof {
-        val newFAppEq = have((classFunction(R), isFExistsBelow, sDef, ordinal(a), d === a, R(union(s), b)) |- R(domainRestriction(newF, d), app(newF, d))) subproof {
+      val newFApp = have((classFunction(R), sDef, ordinal(a), R(union(s), b), isFExistsBelow) |- ∀(d, (d ∈ a \/ (d === a)) ==> R(newF ↾ d, app(newF, d)))) subproof {
+        val newFAppEq = have((classFunction(R), isFExistsBelow, sDef, ordinal(a), d === a, R(union(s), b)) |- R(newF ↾ d, app(newF, d))) subproof {
           
-          val newFRestr = have((classFunction(R), isFExistsBelow, sDef, ordinal(a)) |- domainRestriction(newF, a) === union(s)) subproof {
-            have((disjoint(dom(singleton(pair(a, b))), a), functional(union(s)), functional(singleton(pair(a, b)))) |- domainRestriction(newF, a) === domainRestriction(union(s), a) ∪ ∅) by 
+          val newFRestr = have((classFunction(R), isFExistsBelow, sDef, ordinal(a)) |- newF ↾ a === union(s)) subproof {
+            have((disjoint(dom(singleton(pair(a, b))), a), functional(union(s)), functional(singleton(pair(a, b)))) |- newF ↾ a === union(s) ↾ a ∪ ∅) by 
               Substitution.ApplyRules(domainRestrictionDisjoint of (f := singleton(pair(a, b)), x := a))(functionRestrictionSetUnion of (f := union(s), g := singleton(pair(a, b)), x := a))
-            have((disjoint(dom(singleton(pair(a, b))), a), functional(union(s))) |- domainRestriction(newF, a) === domainRestriction(union(s), a) ∪ ∅) by
+            have((disjoint(dom(singleton(pair(a, b))), a), functional(union(s))) |- newF ↾ a === union(s) ↾ a ∪ ∅) by
               Cut(functionalSingleton of (x := a, y := b), lastStep)
-            thenHave((disjoint(singleton(a), a), functional(union(s))) |- domainRestriction(newF, a) === domainRestriction(union(s), a) ∪ ∅) by Substitution.ApplyRules(relationDomainSingleton of (x := a))
-            thenHave((disjoint(a, singleton(a)), functional(union(s))) |- domainRestriction(newF, a) === domainRestriction(union(s), a) ∪ ∅) by Substitution.ApplyRules(disjointSymmetry of (x := singleton(a), y := a))
-            have(functional(union(s)) |- domainRestriction(newF, a) === domainRestriction(union(s), a) ∪ ∅) by Cut(singletonDisjointSelf of (x := a), lastStep)
-            thenHave(functional(union(s)) |- domainRestriction(newF, a) === domainRestriction(union(s), a)) by Substitution.ApplyRules(setUnionRightEmpty of (a := domainRestriction(union(s), a)))
-            thenHave((classFunction(R), isFExistsBelow, sDef, ordinal(a), functional(union(s))) |- domainRestriction(newF, a) === domainRestriction(union(s), dom(union(s)))) by Substitution.ApplyRules(ihDomain)
-            thenHave((classFunction(R), isFExistsBelow, sDef, ordinal(a), functional(union(s))) |- domainRestriction(newF, a) === union(s)) by Substitution.ApplyRules(functionRestrictionOnDomain of (f := union(s), x := a))
+            thenHave((disjoint(singleton(a), a), functional(union(s))) |- newF ↾ a === union(s) ↾ a ∪ ∅) by Substitution.ApplyRules(relationDomainSingleton of (x := a))
+            thenHave((disjoint(a, singleton(a)), functional(union(s))) |- newF ↾ a === union(s) ↾ a ∪ ∅) by Substitution.ApplyRules(disjointSymmetry of (x := singleton(a), y := a))
+            have(functional(union(s)) |- newF ↾ a === union(s) ↾ a ∪ ∅) by Cut(singletonDisjointSelf of (x := a), lastStep)
+            thenHave(functional(union(s)) |- newF ↾ a === union(s) ↾ a) by Substitution.ApplyRules(setUnionRightEmpty of (a := union(s) ↾ a))
+            thenHave((classFunction(R), isFExistsBelow, sDef, ordinal(a), functional(union(s))) |- newF ↾ a === union(s) ↾ dom(union(s))) by Substitution.ApplyRules(ihDomain)
+            thenHave((classFunction(R), isFExistsBelow, sDef, ordinal(a), functional(union(s))) |- newF ↾ a === union(s)) by Substitution.ApplyRules(functionRestrictionOnDomain of (f := union(s), x := a))
             have(thesis) by Cut(ihFunctional, lastStep)
           }
 
           have(R(union(s), b) |- R(union(s), b)) by Hypothesis
-          thenHave((classFunction(R), sDef, isFExistsBelow, ordinal(a), R(union(s), b)) |- R(domainRestriction(newF, a), b)) by Substitution.ApplyRules(newFRestr)
-          thenHave((classFunction(R), sDef, isFExistsBelow, ordinal(a), functional(newF), pair(a, b) ∈ newF, R(union(s), b)) |- R(domainRestriction(newF, a), app(newF, a))) by Substitution.ApplyRules(pairIsAppFunctional of (f := newF))
-          have((classFunction(R), isFExistsBelow, sDef, ordinal(a), pair(a, b) ∈ newF, R(union(s), b)) |- R(domainRestriction(newF, a), app(newF, a))) by Cut(newFFunctional, lastStep)
-          have((classFunction(R), isFExistsBelow, sDef, ordinal(a), pair(a, b) ∈ singleton(pair(a, b)), R(union(s), b)) |- R(domainRestriction(newF, a), app(newF, a))) by Cut(setUnionRightIntro of (z := pair(a, b), x := union(s), y := singleton(pair(a, b))), lastStep)
-          have((classFunction(R), isFExistsBelow, sDef, ordinal(a), R(union(s), b)) |- R(domainRestriction(newF, a), app(newF, a))) by Cut(singletonIntro of (x := pair(a, b)), lastStep)
+          thenHave((classFunction(R), sDef, isFExistsBelow, ordinal(a), R(union(s), b)) |- R(newF ↾ a, b)) by Substitution.ApplyRules(newFRestr)
+          thenHave((classFunction(R), sDef, isFExistsBelow, ordinal(a), functional(newF), pair(a, b) ∈ newF, R(union(s), b)) |- R(newF ↾ a, app(newF, a))) by Substitution.ApplyRules(pairIsAppFunctional of (f := newF))
+          have((classFunction(R), isFExistsBelow, sDef, ordinal(a), pair(a, b) ∈ newF, R(union(s), b)) |- R(newF ↾ a, app(newF, a))) by Cut(newFFunctional, lastStep)
+          have((classFunction(R), isFExistsBelow, sDef, ordinal(a), pair(a, b) ∈ singleton(pair(a, b)), R(union(s), b)) |- R(newF ↾ a, app(newF, a))) by Cut(setUnionRightIntro of (z := pair(a, b), x := union(s), y := singleton(pair(a, b))), lastStep)
+          have((classFunction(R), isFExistsBelow, sDef, ordinal(a), R(union(s), b)) |- R(newF ↾ a, app(newF, a))) by Cut(singletonIntro of (x := pair(a, b)), lastStep)
           thenHave(thesis) by Substitution.ApplyRules(d === a)
         }      
 
-        val newFAppIn = have((classFunction(R), sDef, ordinal(a), d ∈ a, isFExistsBelow) |- R(domainRestriction(newF, d), app(newF, d))) subproof {
+        val newFAppIn = have((classFunction(R), sDef, ordinal(a), d ∈ a, isFExistsBelow) |- R(newF ↾ d, app(newF, d))) subproof {
 
           val appNewF = have((functionalOver(newF, successor(a)), classFunction(R), isFExistsBelow, sDef, ordinal(a), ordinal(d), z ∈ d \/ (z === d), d ∈ a, isF(f, d)) |- app(newF, z) === app(f, z)) subproof {
             have((functional(newF), classFunction(R), isFExistsBelow, sDef, ordinal(a), z ∈ a) |- app(newF, z) === app(union(s), z)) by Substitution.ApplyRules(ihDomain)(appSetUnionRight of (a := z, f := union(s), g := singleton(pair(a, b))))
@@ -241,30 +241,30 @@ object Recursion extends lisa.Main {
             have(thesis) by Cut(functionalOverIsFunctional of (f := newF, x := successor(a)), lastStep)
           }
 
-          val domainRestrNewF = have((functionalOver(newF, successor(a)), classFunction(R), isFExistsBelow, sDef, ordinal(a), ordinal(d), d ∈ a, isF(f, d)) |- domainRestriction(newF, d) === domainRestriction(f, d)) subproof {
+          val domainRestrNewF = have((functionalOver(newF, successor(a)), classFunction(R), isFExistsBelow, sDef, ordinal(a), ordinal(d), d ∈ a, isF(f, d)) |- newF ↾ d === f ↾ d) subproof {
             have((functionalOver(newF, successor(a)), classFunction(R), isFExistsBelow, sDef, ordinal(a), ordinal(d), z ∈ d, d ∈ a, isF(f, d)) |- app(newF, z) === app(f, z)) by Weakening(appNewF)
             thenHave((functionalOver(newF, successor(a)), classFunction(R), isFExistsBelow, sDef, ordinal(a), ordinal(d), d ∈ a, isF(f, d)) |- z ∈ d ==> (app(newF, z) === app(f, z))) by RightImplies
             thenHave((functionalOver(newF, successor(a)), classFunction(R), isFExistsBelow, sDef, ordinal(a), ordinal(d), d ∈ a, isF(f, d)) |- ∀(z, z ∈ d ==> (app(newF, z) === app(f, z)))) by RightForall
-            have((functionalOver(newF, successor(a)), classFunction(R), isFExistsBelow, sDef, ordinal(a), ordinal(d), d ∈ a, d ⊆ successor(a), d ⊆ successor(d), isF(f, d), functionalOver(f, successor(d))) |- domainRestriction(newF, d) === domainRestriction(f, d)) by Cut(lastStep, functionRestrictionEqualApp of (f := newF, a := successor(a), g := f, b := successor(d), x := d))
-            have((functionalOver(newF, successor(a)), classFunction(R), isFExistsBelow, sDef, ordinal(a), ordinal(d), d ∈ a, d ⊆ successor(a), d ⊆ successor(d), isF(f, d)) |- domainRestriction(newF, d) === domainRestriction(f, d)) by Cut(isFFunctionalOver, lastStep)
-            have((functionalOver(newF, successor(a)), classFunction(R), isFExistsBelow, sDef, ordinal(a), ordinal(d), d ∈ a, d ⊆ successor(a), isF(f, d)) |- domainRestriction(newF, d) === domainRestriction(f, d)) by Cut(subsetSuccessor of (a := d), lastStep)
-            have((functionalOver(newF, successor(a)), classFunction(R), isFExistsBelow, sDef, ordinal(a), ordinal(d), ordinal(successor(a)), d ∈ a, d ∈ successor(a), isF(f, d)) |- domainRestriction(newF, d) === domainRestriction(f, d)) by Cut(elementOfOrdinalIsSubset of (a := d, b := successor(a)), lastStep)
-            have((functionalOver(newF, successor(a)), classFunction(R), isFExistsBelow, sDef, ordinal(a), ordinal(d), ordinal(successor(a)), d ∈ a, a ∈ successor(a), isF(f, d)) |- domainRestriction(newF, d) === domainRestriction(f, d)) by Cut(ordinalTransitive of (a := d, b := a, c := successor(a)), lastStep)
-            have((functionalOver(newF, successor(a)), classFunction(R), isFExistsBelow, sDef, ordinal(a), ordinal(d), ordinal(successor(a)), d ∈ a, isF(f, d)) |- domainRestriction(newF, d) === domainRestriction(f, d)) by Cut(inSuccessor, lastStep)
+            have((functionalOver(newF, successor(a)), classFunction(R), isFExistsBelow, sDef, ordinal(a), ordinal(d), d ∈ a, d ⊆ successor(a), d ⊆ successor(d), isF(f, d), functionalOver(f, successor(d))) |- newF ↾ d === f ↾ d) by Cut(lastStep, functionRestrictionEqualApp of (f := newF, a := successor(a), g := f, b := successor(d), x := d))
+            have((functionalOver(newF, successor(a)), classFunction(R), isFExistsBelow, sDef, ordinal(a), ordinal(d), d ∈ a, d ⊆ successor(a), d ⊆ successor(d), isF(f, d)) |- newF ↾ d === f ↾ d) by Cut(isFFunctionalOver, lastStep)
+            have((functionalOver(newF, successor(a)), classFunction(R), isFExistsBelow, sDef, ordinal(a), ordinal(d), d ∈ a, d ⊆ successor(a), isF(f, d)) |- newF ↾ d === f ↾ d) by Cut(subsetSuccessor of (a := d), lastStep)
+            have((functionalOver(newF, successor(a)), classFunction(R), isFExistsBelow, sDef, ordinal(a), ordinal(d), ordinal(successor(a)), d ∈ a, d ∈ successor(a), isF(f, d)) |- newF ↾ d === f ↾ d) by Cut(elementOfOrdinalIsSubset of (a := d, b := successor(a)), lastStep)
+            have((functionalOver(newF, successor(a)), classFunction(R), isFExistsBelow, sDef, ordinal(a), ordinal(d), ordinal(successor(a)), d ∈ a, a ∈ successor(a), isF(f, d)) |- newF ↾ d === f ↾ d) by Cut(ordinalTransitive of (a := d, b := a, c := successor(a)), lastStep)
+            have((functionalOver(newF, successor(a)), classFunction(R), isFExistsBelow, sDef, ordinal(a), ordinal(d), ordinal(successor(a)), d ∈ a, isF(f, d)) |- newF ↾ d === f ↾ d) by Cut(inSuccessor, lastStep)
             have(thesis) by Cut(successorIsOrdinal, lastStep)
           }
 
           have((functionalOver(newF, successor(a)), classFunction(R), isFExistsBelow, sDef, ordinal(a), ordinal(d), d ∈ a, isF(f, d)) |- app(newF, d) === app(f, d)) by Restate.from(appNewF of (z := d))
-          have((functionalOver(newF, successor(a)), classFunction(R), isFExistsBelow, sDef, ordinal(a), ordinal(d), d ∈ a, isF(f, d)) |- R(domainRestriction(f, d), app(newF, d))) by Substitution.ApplyRules(lastStep)(isFAppEq)
-          thenHave((functionalOver(newF, successor(a)), classFunction(R), isFExistsBelow, sDef, ordinal(a), ordinal(d), d ∈ a, isF(f, d)) |- R(domainRestriction(newF, d), app(newF, d))) by Substitution.ApplyRules(domainRestrNewF)
-          have((classFunction(R), isFExistsBelow, sDef, ordinal(a), ordinal(d), d ∈ a, isF(f, d)) |- R(domainRestriction(newF, d), app(newF, d))) by Cut(newFFunctionalOver, lastStep)
-          have((classFunction(R), isFExistsBelow, sDef, ordinal(a), d ∈ a, isF(f, d)) |- R(domainRestriction(newF, d), app(newF, d))) by Cut(elementsOfOrdinalsAreOrdinals of (b := d), lastStep)
-          thenHave((classFunction(R), isFExistsBelow, sDef, ordinal(a), d ∈ a, ∃(f, isF(f, d))) |- R(domainRestriction(newF, d), app(newF, d))) by LeftExists
+          have((functionalOver(newF, successor(a)), classFunction(R), isFExistsBelow, sDef, ordinal(a), ordinal(d), d ∈ a, isF(f, d)) |- R(f ↾ d, app(newF, d))) by Substitution.ApplyRules(lastStep)(isFAppEq)
+          thenHave((functionalOver(newF, successor(a)), classFunction(R), isFExistsBelow, sDef, ordinal(a), ordinal(d), d ∈ a, isF(f, d)) |- R(newF ↾ d, app(newF, d))) by Substitution.ApplyRules(domainRestrNewF)
+          have((classFunction(R), isFExistsBelow, sDef, ordinal(a), ordinal(d), d ∈ a, isF(f, d)) |- R(newF ↾ d, app(newF, d))) by Cut(newFFunctionalOver, lastStep)
+          have((classFunction(R), isFExistsBelow, sDef, ordinal(a), d ∈ a, isF(f, d)) |- R(newF ↾ d, app(newF, d))) by Cut(elementsOfOrdinalsAreOrdinals of (b := d), lastStep)
+          thenHave((classFunction(R), isFExistsBelow, sDef, ordinal(a), d ∈ a, ∃(f, isF(f, d))) |- R(newF ↾ d, app(newF, d))) by LeftExists
           have(thesis) by Cut(isFExistsBelowElim, lastStep)
         }
 
-        have((classFunction(R), sDef, ordinal(a), d ∈ a \/ (d === a), isFExistsBelow, R(union(s), b)) |- R(domainRestriction(newF, d), app(newF, d))) by LeftOr(newFAppIn, newFAppEq)
-        thenHave((classFunction(R), sDef, ordinal(a), isFExistsBelow, R(union(s), b)) |- (d ∈ a \/ (d === a)) ==> R(domainRestriction(newF, d), app(newF, d))) by RightImplies
+        have((classFunction(R), sDef, ordinal(a), d ∈ a \/ (d === a), isFExistsBelow, R(union(s), b)) |- R(newF ↾ d, app(newF, d))) by LeftOr(newFAppIn, newFAppEq)
+        thenHave((classFunction(R), sDef, ordinal(a), isFExistsBelow, R(union(s), b)) |- (d ∈ a \/ (d === a)) ==> R(newF ↾ d, app(newF, d))) by RightImplies
         thenHave(thesis) by RightForall
       }
 

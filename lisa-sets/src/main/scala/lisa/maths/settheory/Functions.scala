@@ -22,6 +22,7 @@ object Functions extends lisa.Main {
   private val b = variable
   private val c = variable
   private val d = variable
+  private val e = variable
   private val A = variable
   private val B = variable
   private val C = variable
@@ -207,6 +208,12 @@ object Functions extends lisa.Main {
     thenHave(thesis) by Substitution.ApplyRules(functionFrom.definition)
   }
 
+  val functionalIsFunctionFrom = Lemma(
+    functional(f) |- functionFrom(f, dom(f), ran(f))
+  ) {
+    have(thesis) by Cut(functionalOverIntro, functionFromIntro of (x := dom(f)))
+  }
+
 
   /**
    * Lemma --- A function between two sets is [[functional]]
@@ -320,10 +327,35 @@ object Functions extends lisa.Main {
     have(thesis) by Weakening(functionalApp of (b := app(f, a)))
   }
 
+    val appIntroFunctionalOver = Lemma(
+    (functionalOver(f, x), a ∈ x) |- pair(a, app(f, a)) ∈ f
+  ) {
+    have((functionalOver(f, x), a ∈ dom(f)) |- pair(a, app(f, a)) ∈ f) by Cut(functionalOverIsFunctional, appIntroFunctional)
+    thenHave(thesis) by Substitution.ApplyRules(functionalOverDomain)
+  }
+
+  val appIntroFunctionFrom = Lemma(
+    (functionFrom(f, x, y), a ∈ x) |- pair(a, app(f, a)) ∈ f
+  ) {
+    have(thesis) by Cut(functionFromIsFunctionalOver, appIntroFunctionalOver)
+  }
+
   val pairIsAppFunctional = Lemma(
     (functional(f), pair(a, b) ∈ f) |- app(f, a) === b
   ) {
     have(thesis) by Weakening(functionalApp)
+  }
+
+  val pairIsAppFunctionalOver = Lemma(
+    (functionalOver(f, x), pair(a, b) ∈ f) |- app(f, a) === b
+  ) {
+    have(thesis) by Cut(functionalOverIsFunctional, pairIsAppFunctional)
+  }
+
+  val pairIsAppFunctionFrom = Lemma(
+    (functionFrom(f, x, y), pair(a, b) ∈ f) |- app(f, a) === b
+  ) {
+    have(thesis) by Cut(functionFromIsFunctional, pairIsAppFunctional)
   }
 
   val pairReconstructionInFunctional = Lemma(
@@ -436,31 +468,6 @@ object Functions extends lisa.Main {
     )(functionalApp)
     have((functionalOver(f, x), dom(f) === x) |- pair(a, b) ∈ f <=> (a ∈ x /\ (app(f, a) === b))) by Cut(functionalOverIsFunctional, lastStep)
     have(thesis) by Cut(functionalOverDomain, lastStep)
-  }
-
-  val appIntroFunctionalOver = Lemma(
-    (functionalOver(f, x), a ∈ x) |- pair(a, app(f, a)) ∈ f
-  ) {
-    have((functionalOver(f, x), a ∈ dom(f)) |- pair(a, app(f, a)) ∈ f) by Cut(functionalOverIsFunctional, appIntroFunctional)
-    thenHave(thesis) by Substitution.ApplyRules(functionalOverDomain)
-  }
-
-  val appIntroFunctionFrom = Lemma(
-    (functionFrom(f, x, y), a ∈ x) |- pair(a, app(f, a)) ∈ f
-  ) {
-    have(thesis) by Cut(functionFromIsFunctionalOver, appIntroFunctionalOver)
-  }
-
-  val pairIsAppFunctionalOver = Lemma(
-    (functionalOver(f, x), pair(a, b) ∈ f) |- app(f, a) === b
-  ) {
-    have(thesis) by Cut(functionalOverIsFunctional, pairIsAppFunctional)
-  }
-
-  val pairIsAppFunctionFrom = Lemma(
-    (functionFrom(f, x, y), pair(a, b) ∈ f) |- app(f, a) === b
-  ) {
-    have(thesis) by Cut(functionFromIsFunctional, pairIsAppFunctional)
   }
 
   val functionalOverSubsetApp = Lemma(
@@ -588,6 +595,12 @@ object Functions extends lisa.Main {
     have(thesis) by Cut(existsElem, lastStep)
   }
 
+  val functionalFromAppInRange = Lemma(
+    (functionFrom(f, x, y), a ∈ x) |- app(f, a) ∈ ran(f)
+  ) {
+    have(thesis) by Cut(functionFromIsFunctionalOver, functionalOverAppInRange)
+  }
+
   val functionFromAppInCodomain = Lemma(
     (functionFrom(f, x, y), a ∈ x) |- app(f, a) ∈ y
   ) {
@@ -596,6 +609,65 @@ object Functions extends lisa.Main {
     have(thesis) by Cut(functionFromRangeSubsetCodomain, lastStep)
   }
 
+  val compositionFunctional = Lemma(
+    (functionFrom(f, x, y), functionFrom(g, y, z)) |- functional(g ∘ f)
+  ) {
+    have((functional(f), functional(g), pair(a, b) ∈ f, pair(a, c) ∈ f, pair(b, d) ∈ g, pair(c, e) ∈ g) |- d === e) by Substitution.ApplyRules(functionalElim of (x := a, y := b, z := c))(functionalElim of (f := g, x := c, y := d, z := e))
+    thenHave((functional(f), functional(g), pair(a, b) ∈ f /\ pair(b, d) ∈ g, pair(a, c) ∈ f /\ pair(c, e) ∈ g) |- d === e) by Restate
+    thenHave((functional(f), functional(g), ∃(b, pair(a, b) ∈ f /\ pair(b, d) ∈ g), pair(a, c) ∈ f /\ pair(c, e) ∈ g) |- d === e) by LeftExists
+    thenHave((functional(f), functional(g), ∃(b, pair(a, b) ∈ f /\ pair(b, d) ∈ g), ∃(c, pair(a, c) ∈ f /\ pair(c, e) ∈ g)) |- d === e) by LeftExists
+    have((functional(f), functional(g), pair(a, d) ∈ (g ∘ f), ∃(c, pair(a, c) ∈ f /\ pair(c, e) ∈ g)) |- d === e) by Cut(compositionElimPair of (x := a, z := d, r1 := f, r2 := g), lastStep)
+    have((functional(f), functional(g), pair(a, d) ∈ (g ∘ f), pair(a, e) ∈ (g ∘ f)) |- d === e) by Cut(compositionElimPair of (x := a, z := e, r1 := f, r2 := g), lastStep)
+    thenHave((functional(f), functional(g)) |- (pair(a, d) ∈ (g ∘ f) /\ pair(a, e) ∈ (g ∘ f)) ==> (d === e)) by Restate
+    thenHave((functional(f), functional(g)) |- ∀(e, (pair(a, d) ∈ (g ∘ f) /\ pair(a, e) ∈ (g ∘ f)) ==> (d === e))) by RightForall
+    thenHave((functional(f), functional(g)) |- ∀(d, ∀(e, (pair(a, d) ∈ (g ∘ f) /\ pair(a, e) ∈ (g ∘ f)) ==> (d === e)))) by RightForall
+    thenHave((functional(f), functional(g)) |- ∀(a, ∀(d, ∀(e, (pair(a, d) ∈ (g ∘ f) /\ pair(a, e) ∈ (g ∘ f)) ==> (d === e))))) by RightForall
+    have((functional(f), functional(g), relation(g ∘ f)) |- functional(g ∘ f)) by Cut(lastStep, functionalIntro of (f := g ∘ f))
+    have((functionFrom(f, x, y), functional(g), relation(g ∘ f)) |- functional(g ∘ f)) by Cut(functionFromIsFunctional, lastStep)
+    have((functionFrom(f, x, y), functionFrom(g, y, z), relation(g ∘ f)) |- functional(g ∘ f)) by Cut(functionFromIsFunctional of (f := g, x := y, y := z), lastStep)
+    have((functionFrom(f, x, y), functionFrom(g, y, z), relationBetween(g ∘ f, x, z)) |- functional(g ∘ f)) by Cut(relationBetweenIsRelation of (r := g ∘ f, a := x, b := z), lastStep)
+    have((functionFrom(f, x, y), functionFrom(g, y, z), relationBetween(f, x, y), relationBetween(g, y, z)) |- functional(g ∘ f)) by Cut(compositionIsRelationBetween of (r1 := f, r2 := g), lastStep)
+    have((functionFrom(f, x, y), functionFrom(g, y, z), relationBetween(g, y, z)) |- functional(g ∘ f)) by Cut(functionFromIsRelationBetween, lastStep)
+    have(thesis) by Cut(functionFromIsRelationBetween of (f := g, x := y, y := z), lastStep)
+  }
+
+  val functionCompositionDomain = Lemma(
+    (functionFrom(f, x, y), functionFrom(g, y, z)) |- dom(g ∘ f) === x
+  ) {
+    have((functionFrom(f, x, y), a ∈ x, pair(app(f, a), app(g, app(f, a))) ∈ g) |- pair(a, app(g, app(f, a))) ∈ (g ∘ f)) by Cut(appIntroFunctionFrom, compositionIntro of (r1 := f, r2 := g, x := a, y := app(f, a), z := app(g, app(f, a))))
+    have((functionFrom(f, x, y), functionFrom(g, y, z), a ∈ x, app(f, a) ∈ y) |- pair(a, app(g, app(f, a))) ∈ (g ∘ f)) by Cut(appIntroFunctionFrom of (f := g, x := y, y := z, a := app(f, a)), lastStep)
+    have((functionFrom(f, x, y), functionFrom(g, y, z), a ∈ x) |- pair(a, app(g, app(f, a))) ∈ (g ∘ f)) by Cut(functionFromAppInCodomain, lastStep)
+    have((functionFrom(f, x, y), functionFrom(g, y, z), a ∈ x) |- a ∈ dom(g ∘ f)) by Cut(lastStep, relationDomainIntroPair of (r := g ∘ f, b := app(g, app(f, a))))
+    thenHave((functionFrom(f, x, y), functionFrom(g, y, z)) |- a ∈ x ==> a ∈ dom(g ∘ f)) by RightImplies
+    thenHave((functionFrom(f, x, y), functionFrom(g, y, z)) |- ∀(a, a ∈ x ==> a ∈ dom(g ∘ f))) by RightForall
+    have((functionFrom(f, x, y), functionFrom(g, y, z)) |- x ⊆ dom(g ∘ f)) by Cut(lastStep, subsetIntro of (y := dom(g ∘ f)))
+    have((functionFrom(f, x, y), functionFrom(g, y, z), dom(g ∘ f) ⊆ x) |- dom(g ∘ f) === x) by Cut(lastStep, subsetAntisymmetry of (x := dom(g ∘ f), y := x))
+    have((functionFrom(f, x, y), functionFrom(g, y, z), relationBetween(g ∘ f, x, z)) |- dom(g ∘ f) === x) by Cut(relationBetweenDomain of (r := g ∘ f, a := x, b := z), lastStep)
+    have((functionFrom(f, x, y), functionFrom(g, y, z), relationBetween(f, x, y), relationBetween(g, y, z)) |- dom(g ∘ f) === x) by Cut(compositionIsRelationBetween of (r1 := f, r2 := g), lastStep)
+    have((functionFrom(f, x, y), functionFrom(g, y, z), relationBetween(g, y, z)) |- dom(g ∘ f) === x) by Cut(functionFromIsRelationBetween, lastStep)
+    have(thesis) by Cut(functionFromIsRelationBetween of (f := g, x := y, y := z), lastStep)
+  }
+
+  val compositionFunctionFrom = Lemma(
+    (functionFrom(f, x, y), functionFrom(g, y, z)) |- functionFrom(g ∘ f, x, z)
+  ) {
+    have((functionFrom(f, x, y), functionFrom(g, y, z)) |- functionalOver(g ∘ f, dom(g ∘ f))) by Cut(compositionFunctional, functionalOverIntro of (f := g ∘ f))
+    thenHave((functionFrom(f, x, y), functionFrom(g, y, z)) |- functionalOver(g ∘ f, x)) by Substitution.ApplyRules(functionCompositionDomain)
+    have((functionFrom(f, x, y), functionFrom(g, y, z), relationBetween(g ∘ f, x, z)) |- functionFrom(g ∘ f, x, z)) by Cut(lastStep, functionFromIntroAlt of (f := g ∘ f, y := z))
+    have((functionFrom(f, x, y), functionFrom(g, y, z), relationBetween(f, x, y), relationBetween(g, y, z)) |- functionFrom(g ∘ f, x, z)) by Cut(compositionIsRelationBetween of (r1 := f, r2 := g), lastStep)
+    have((functionFrom(f, x, y), functionFrom(g, y, z), relationBetween(g, y, z)) |- functionFrom(g ∘ f, x, z)) by Cut(functionFromIsRelationBetween, lastStep)
+    have(thesis) by Cut(functionFromIsRelationBetween of (f := g, x := y, y := z), lastStep)
+  }
+
+  val functionCompositionApp = Lemma(
+    (functionFrom(f, x, y), functionFrom(g, y, z), a ∈ x) |- app(g ∘ f, a) === app(g, app(f, a))
+  ) {
+    have((functionFrom(f, x, y), a ∈ x, pair(app(f, a), app(g, app(f, a))) ∈ g) |- pair(a, app(g, app(f, a))) ∈ (g ∘ f)) by Cut(appIntroFunctionFrom, compositionIntro of (r1 := f, r2 := g, x := a, y := app(f, a), z := app(g, app(f, a))))
+    have((functionFrom(f, x, y), functionFrom(g, y, z), a ∈ x, app(f, a) ∈ y) |- pair(a, app(g, app(f, a))) ∈ (g ∘ f)) by Cut(appIntroFunctionFrom of (f := g, x := y, y := z, a := app(f, a)), lastStep)
+    have((functionFrom(f, x, y), functionFrom(g, y, z), a ∈ x) |- pair(a, app(g, app(f, a))) ∈ (g ∘ f)) by Cut(functionFromAppInCodomain, lastStep)
+    have((functionFrom(f, x, y), functionFrom(g, y, z), a ∈ x, functionFrom(g ∘ f, x, z)) |- app(g ∘ f, a) === app(g, app(f, a))) by Cut(lastStep, pairIsAppFunctionFrom of (f := g ∘ f, b := app(g, app(f, a)), y := z))
+    have(thesis) by Cut(compositionFunctionFrom, lastStep)
+  }
   /**
    * Surjective (function) --- a function `f: x → y` is surjective iff it
    * maps to every `b ∈ y` from atleast one `a ∈ x`.
@@ -674,6 +746,33 @@ object Functions extends lisa.Main {
     have(thesis) by Substitution.ApplyRules(inverseRelationDomain)(surjectiveElim)
   }
 
+  val functionCompositionSurjective = Lemma(
+    (surjective(f, x, y), surjective(g, y, z)) |- surjective(g ∘ f, x, z)
+  ) {
+    have((functionFrom(f, x, y), functionFrom(g, y, z), a ∈ x) |- app(g ∘ f, a) ∈ ran(g ∘ f)) by Cut(compositionFunctionFrom, functionalFromAppInRange of (f := g ∘ f, y := z))
+    thenHave((functionFrom(f, x, y), functionFrom(g, y, z), a ∈ x) |- app(g, app(f, a)) ∈ ran(g ∘ f)) by Substitution.ApplyRules(functionCompositionApp)
+    thenHave((functionFrom(f, x, y), functionFrom(g, y, z), a ∈ x, app(f, a) === b) |- app(g, b) ∈ ran(g ∘ f)) by Substitution.ApplyRules(app(f, a) === b)
+    thenHave((functionFrom(f, x, y), functionFrom(g, y, z), a ∈ x, app(g, b) === c, app(f, a) === b) |- c ∈ ran(g ∘ f)) by Substitution.ApplyRules(app(g, b) === c)
+    thenHave((functionFrom(f, x, y), functionFrom(g, y, z), a ∈ x /\ (app(f, a) === b), app(g, b) === c) |- c ∈ ran(g ∘ f)) by LeftAnd
+    thenHave((functionFrom(f, x, y), functionFrom(g, y, z), ∃(a, a ∈ x /\ (app(f, a) === b)), app(g, b) === c) |- c ∈ ran(g ∘ f)) by LeftExists
+    thenHave((functionFrom(f, x, y), functionFrom(g, y, z), surjective(f, x, y), b ∈ y, app(g, b) === c) |- c ∈ ran(g ∘ f)) by Substitution.ApplyRules(surjectiveRangeMembership)
+    thenHave((functionFrom(f, x, y), functionFrom(g, y, z), surjective(f, x, y), b ∈ y /\ (app(g, b) === c)) |- c ∈ ran(g ∘ f)) by LeftAnd
+    thenHave((functionFrom(f, x, y), functionFrom(g, y, z), surjective(f, x, y), ∃(b, b ∈ y /\ (app(g, b) === c))) |- c ∈ ran(g ∘ f)) by LeftExists
+    thenHave((functionFrom(f, x, y), functionFrom(g, y, z), surjective(f, x, y), surjective(g, y, z), c ∈ z) |- c ∈ ran(g ∘ f)) by Substitution.ApplyRules(surjectiveRangeMembership of (f := g, x := y, y := z, b := c))
+    thenHave((functionFrom(f, x, y), functionFrom(g, y, z), surjective(f, x, y), surjective(g, y, z)) |- c ∈ z ==> c ∈ ran(g ∘ f)) by RightImplies
+    thenHave((functionFrom(f, x, y), functionFrom(g, y, z), surjective(f, x, y), surjective(g, y, z)) |- ∀(c, c ∈ z ==> c ∈ ran(g ∘ f))) by RightForall
+    have((functionFrom(f, x, y), functionFrom(g, y, z), surjective(f, x, y), surjective(g, y, z)) |- z ⊆ ran(g ∘ f)) by Cut(lastStep, subsetIntro of (x := z, y := ran(g ∘ f)))
+    have((functionFrom(f, x, y), functionFrom(g, y, z), surjective(f, x, y), surjective(g, y, z), ran(g ∘ f) ⊆ z) |- ran(g ∘ f) === z) by Cut(lastStep, subsetAntisymmetry of (x := ran(g ∘ f), y := z))
+    have((functionFrom(f, x, y), functionFrom(g, y, z), surjective(f, x, y), surjective(g, y, z), relationBetween(g ∘ f, x, z)) |- ran(g ∘ f) === z) by Cut(relationBetweenRange of (r := g ∘ f, a := x, b := z), lastStep)
+    have((functionFrom(f, x, y), functionFrom(g, y, z), surjective(f, x, y), surjective(g, y, z), relationBetween(f, x, y), relationBetween(g, y, z)) |- ran(g ∘ f) === z) by Cut(compositionIsRelationBetween of (r1 := f, r2 := g), lastStep)
+    have((functionFrom(f, x, y), functionFrom(g, y, z), surjective(f, x, y), surjective(g, y, z), relationBetween(g, y, z)) |- ran(g ∘ f) === z) by Cut(functionFromIsRelationBetween, lastStep)
+    have((functionFrom(f, x, y), functionFrom(g, y, z), surjective(f, x, y), surjective(g, y, z)) |- ran(g ∘ f) === z) by Cut(functionFromIsRelationBetween of (f := g, x := y, y := z), lastStep)
+    have((functionFrom(f, x, y), functionFrom(g, y, z), surjective(f, x, y), surjective(g, y, z)) |- (ran(g ∘ f) === z) /\ functionFrom(g ∘ f, x, z)) by RightAnd(lastStep, compositionFunctionFrom)
+    thenHave((functionFrom(f, x, y), functionFrom(g, y, z), surjective(f, x, y), surjective(g, y, z)) |- surjective(g ∘ f, x, z)) by Substitution.ApplyRules(surjective.definition of (f := g ∘ f, y := z))
+    have((functionFrom(f, x, y), surjective(f, x, y), surjective(g, y, z)) |- surjective(g ∘ f, x, z)) by Cut(surjectiveIsFunctionFrom of (f := g, x := y, y := z), lastStep)
+    have(thesis) by Cut(surjectiveIsFunctionFrom, lastStep)
+  }
+
   /**
    * Injective (function) --- a function `f: x → y` is injective iff it maps
    * to every `b ∈ y` from atmost one `a ∈ x`.
@@ -703,6 +802,21 @@ object Functions extends lisa.Main {
     (functionFrom(f, x, y), ∀(a, ∀(b, (a ∈ x /\ b ∈ x /\ (app(f, a) === app(f, b))) ==> (a === b)))) |- injective(f, x, y)
   ) {
     have(thesis) by Weakening(injective.definition)
+  }
+
+  val injectiveIntroAlt = Lemma(
+    (functionFrom(f, x, y), ∀(a, ∀(b, ∀(c, (pair(a, c) ∈ f /\ pair(b, c) ∈ f) ==> (a === b))))) |- injective(f, x, y)
+  ) {
+    val injectivityCondition = ∀(a, ∀(b, ∀(c, (pair(a, c) ∈ f /\ pair(b, c) ∈ f) ==> (a === b))))
+    have(injectivityCondition |- injectivityCondition) by Hypothesis
+    thenHave((injectivityCondition, pair(a, app(f, a)) ∈ f, pair(b, app(f, a)) ∈ f) |- a === b) by InstantiateForall(a, b, app(f, a))
+    thenHave((injectivityCondition, functionFrom(f, x, y), pair(a, app(f, a)) ∈ f, pair(b, app(f, b)) ∈ f, app(f, a) === app(f, b)) |- a === b) by Substitution.ApplyRules(app(f, a) === app(f, b))
+    have((injectivityCondition, functionFrom(f, x, y), pair(a, app(f, a)) ∈ f, b ∈ x, app(f, a) === app(f, b)) |- a === b) by Cut(appIntroFunctionFrom of (a := b), lastStep)
+    have((injectivityCondition, functionFrom(f, x, y), a ∈ x, b ∈ x, app(f, a) === app(f, b)) |- a === b) by Cut(appIntroFunctionFrom, lastStep)
+    thenHave((injectivityCondition, functionFrom(f, x, y)) |- (a ∈ x /\ b ∈ x /\ (app(f, a) === app(f, b))) ==> (a === b)) by Restate
+    thenHave((injectivityCondition, functionFrom(f, x, y)) |- ∀(b, (a ∈ x /\ b ∈ x /\ (app(f, a) === app(f, b))) ==> (a === b))) by RightForall
+    thenHave((injectivityCondition, functionFrom(f, x, y)) |- ∀(a, ∀(b, (a ∈ x /\ b ∈ x /\ (app(f, a) === app(f, b))) ==> (a === b)))) by RightForall
+    have(thesis) by Cut(lastStep, injectiveIntro)
   }
 
   val injectiveElim = Lemma(
@@ -735,16 +849,49 @@ object Functions extends lisa.Main {
     }
 
     val backward = have(functionFrom(f, x, y) |- functional(inverseRelation(f)) ==> injective(f, x, y)) subproof {
-      have((functional(inverseRelation(f)), pair(app(f, a), a) ∈ inverseRelation(f), pair(b, app(f, a)) ∈ f) |- a === b) by Substitution.ApplyRules(inverseRelationMembershipPair)(functionalElim of (f := inverseRelation(f), x := app(f, a), y := a, z := b))
-      thenHave((functional(inverseRelation(f)), app(f, a) === app(f, b), pair(a, app(f, a)) ∈ f, pair(b, app(f, b)) ∈ f) |- a === b) by Substitution.ApplyRules(inverseRelationMembershipPair, app(f, a) === app(f, b))
-      have((functionFrom(f, x, y), functional(inverseRelation(f)), app(f, a) === app(f, b), a ∈ x, pair(b, app(f, b)) ∈ f) |- a === b) by Cut(appIntroFunctionFrom, lastStep)
-      have((functionFrom(f, x, y), functional(inverseRelation(f)), app(f, a) === app(f, b), a ∈ x, b ∈ x) |- a === b) by Cut(appIntroFunctionFrom of (a := b), lastStep)
-      thenHave((functionFrom(f, x, y), functional(inverseRelation(f))) |- (a ∈ x /\ b ∈ x /\ (app(f, a) === app(f, b))) ==> (a === b)) by Restate
-      thenHave((functionFrom(f, x, y), functional(inverseRelation(f))) |- ∀(b, (a ∈ x /\ b ∈ x /\ (app(f, a) === app(f, b))) ==> (a === b))) by RightForall
-      thenHave((functionFrom(f, x, y), functional(inverseRelation(f))) |- ∀(a, ∀(b, (a ∈ x /\ b ∈ x /\ (app(f, a) === app(f, b))) ==> (a === b)))) by RightForall
-      have((functionFrom(f, x, y), functional(inverseRelation(f))) |- injective(f, x, y)) by Cut(lastStep, injectiveIntro)
+      have((functional(inverseRelation(f)), pair(c, a) ∈ inverseRelation(f), pair(b, c) ∈ f) |- a === b) by Substitution.ApplyRules(inverseRelationMembershipPair)(functionalElim of (f := inverseRelation(f), x := c, y := a, z := b))
+      thenHave((functional(inverseRelation(f)), pair(a, c) ∈ f, pair(b, c) ∈ f) |- a === b) by Substitution.ApplyRules(inverseRelationMembershipPair, app(f, a) === app(f, b))
+      thenHave(functional(inverseRelation(f)) |- (pair(a, c) ∈ f /\ pair(b, c) ∈ f) ==> (a === b)) by Restate
+      thenHave(functional(inverseRelation(f)) |- ∀(c, (pair(a, c) ∈ f /\ pair(b, c) ∈ f) ==> (a === b))) by RightForall
+      thenHave(functional(inverseRelation(f)) |- ∀(b, ∀(c, (pair(a, c) ∈ f /\ pair(b, c) ∈ f) ==> (a === b)))) by RightForall
+      thenHave(functional(inverseRelation(f)) |- ∀(a, ∀(b, ∀(c, (pair(a, c) ∈ f /\ pair(b, c) ∈ f) ==> (a === b))))) by RightForall
+      have((functionFrom(f, x, y), functional(inverseRelation(f))) |- injective(f, x, y)) by Cut(lastStep, injectiveIntroAlt)
     }
     have(thesis) by RightIff(forward, backward)
+  }
+
+  val injectiveIndependentFromCodomain = Lemma(
+    (injective(f, x, y), functionFrom(f, x, z)) |- injective(f, x, z)
+  ) {
+    have(injective(f, x, y) |- (a ∈ x /\ b ∈ x /\ (app(f, a) === app(f, b))) ==> (a === b)) by Restate.from(injectiveElim)
+    thenHave(injective(f, x, y) |- ∀(b, (a ∈ x /\ b ∈ x /\ (app(f, a) === app(f, b))) ==> (a === b))) by RightForall
+    thenHave(injective(f, x, y) |- ∀(a, ∀(b, (a ∈ x /\ b ∈ x /\ (app(f, a) === app(f, b))) ==> (a === b)))) by RightForall
+    have(thesis) by Cut(lastStep, injectiveIntro of (y := z))
+  }
+
+  val injectiveOverRange = Lemma(
+    injective(f, x, y) |- injective(f, x, ran(f))
+  ) {
+    have((injective(f, x, y), functionalOver(f, x)) |- injective(f, x, ran(f))) by Cut(functionFromIntro, injectiveIndependentFromCodomain of (z := ran(f)))
+    have((injective(f, x, y), functionFrom(f, x, y)) |- injective(f, x, ran(f))) by Cut(functionFromIsFunctionalOver, lastStep)
+    have(thesis) by Cut(injectiveIsFunctionFrom, lastStep)
+  }
+
+  val functionCompositionInjective = Lemma(
+    (injective(f, x, y), injective(g, y, z)) |- injective(g ∘ f, x, z)
+  ) {
+    have((injective(f, x, y), injective(g, y, z), a ∈ x, b ∈ x, app(f, a) ∈ y, app(f, b) ∈ y, app(g, app(f, a)) === app(g, app(f, b))) |- a === b) by Cut(injectiveElim of (f := g, a := app(f, a), b := app(f, b), x := y, y := z), injectiveElim)
+    thenHave((injective(f, x, y), injective(g, y, z), functionFrom(f, x, y), functionFrom(g, y, z), a ∈ x, b ∈ x, app(f, a) ∈ y, app(f, b) ∈ y, app(g ∘ f, a) === app(g ∘ f, b)) |- a === b) by Substitution.ApplyRules(functionCompositionApp)
+    thenHave((injective(f, x, y), injective(g, y, z), functionFrom(f, x, y), functionFrom(g, y, z), a ∈ x, b ∈ x, app(f, a) ∈ y, app(f, b) ∈ y, app(g ∘ f, a) === app(g ∘ f, b)) |- a === b) by Substitution.ApplyRules(functionCompositionApp)
+    have((injective(f, x, y), injective(g, y, z), functionFrom(f, x, y), functionFrom(g, y, z), a ∈ x, b ∈ x, app(f, b) ∈ y, app(g ∘ f, a) === app(g ∘ f, b)) |- a === b) by Cut(functionFromAppInCodomain, lastStep)
+    have((injective(f, x, y), injective(g, y, z), functionFrom(f, x, y), functionFrom(g, y, z), a ∈ x, b ∈ x,app(g ∘ f, a) === app(g ∘ f, b)) |- a === b) by Cut(functionFromAppInCodomain of (a := b), lastStep)
+    thenHave((injective(f, x, y), injective(g, y, z), functionFrom(f, x, y), functionFrom(g, y, z)) |- (a ∈ x /\ b ∈ x /\ (app(g ∘ f, a) === app(g ∘ f, b))) ==> (a === b)) by Restate
+    thenHave((injective(f, x, y), injective(g, y, z), functionFrom(f, x, y), functionFrom(g, y, z)) |- ∀(b, (a ∈ x /\ b ∈ x /\ (app(g ∘ f, a) === app(g ∘ f, b))) ==> (a === b))) by RightForall
+    thenHave((injective(f, x, y), injective(g, y, z), functionFrom(f, x, y), functionFrom(g, y, z)) |- ∀(a, ∀(b, (a ∈ x /\ b ∈ x /\ (app(g ∘ f, a) === app(g ∘ f, b))) ==> (a === b)))) by RightForall
+    have((injective(f, x, y), injective(g, y, z), functionFrom(f, x, y), functionFrom(g, y, z), functionFrom(g ∘ f, x, z)) |- injective(g ∘ f, x, z)) by Cut(lastStep, injectiveIntro of (f := g ∘ f, y := z))
+    have((injective(f, x, y), injective(g, y, z), functionFrom(f, x, y), functionFrom(g, y, z)) |- injective(g ∘ f, x, z)) by Cut(compositionFunctionFrom, lastStep)
+    have((injective(f, x, y), injective(g, y, z), functionFrom(g, y, z)) |- injective(g ∘ f, x, z)) by Cut(injectiveIsFunctionFrom, lastStep)
+    have((injective(f, x, y), injective(g, y, z)) |- injective(g ∘ f, x, z)) by Cut(injectiveIsFunctionFrom of (f := g, x := y, y := z), lastStep)
   }
 
   /**
@@ -815,6 +962,17 @@ object Functions extends lisa.Main {
     have(thesis) by RightIff(forward, backward)
   }
 
+  val functionCompositionBijective = Lemma(
+    (bijective(f, x, y), bijective(g, y, z)) |- bijective(g ∘ f, x, z)
+  ) {
+    have((bijective(f, x, y), injective(g, y, z)) |- injective(g ∘ f, x, z)) by Cut(bijectiveInjective, functionCompositionInjective)
+    have((bijective(f, x, y), bijective(g, y, z)) |- injective(g ∘ f, x, z)) by Cut(bijectiveInjective of (f := g, x := y, y := z), lastStep)
+    have((bijective(f, x, y), bijective(g, y, z), surjective(g ∘ f, x, z)) |- bijective(g ∘ f, x, z)) by Cut(lastStep, bijectiveIntro of (f := g ∘ f, y := z))
+    have((bijective(f, x, y), bijective(g, y, z), surjective(f, x, y), surjective(g, y, z)) |- bijective(g ∘ f, x, z)) by Cut(functionCompositionSurjective, lastStep) 
+    have((bijective(f, x, y), bijective(g, y, z), surjective(g, y, z)) |- bijective(g ∘ f, x, z)) by Cut(bijectiveSurjective, lastStep)
+    have(thesis) by Cut(bijectiveSurjective of (f := g, x := y, y := z), lastStep)
+  }
+
   val inverseRelationLeftCancel = Lemma((bijective(f, x, y), a ∈ x) |- app(inverseRelation(f), app(f, a)) === a) {
     have((functionFrom(f, x, y), a ∈ x) |- pair(app(f, a), a) ∈ inverseRelation(f)) by Substitution.ApplyRules(inverseRelationMembershipPair)(appIntroFunctionFrom)
     have((functionFrom(f, x, y), functionFrom(inverseRelation(f), y, x), a ∈ x) |- app(inverseRelation(f), app(f, a)) === a) by Cut(lastStep, pairIsAppFunctionFrom of (f := inverseRelation(f), a := app(f, a), b := a, x := y, y := x))
@@ -839,68 +997,99 @@ object Functions extends lisa.Main {
   }
 
   val functionRestrictionOnDomain = Lemma(
-    functional(f) |- domainRestriction(f, dom(f)) === f
+    functional(f) |- f ↾ dom(f) === f
   ) {
     have(thesis) by Cut(functionalIsRelation, domainRestrictionOnDomain)
   }
 
   val domainRestrictionFunctional = Lemma(
-    functional(f) |- functional(domainRestriction(f, x))
+    functional(f) |- functional(f ↾ x)
   ) {
-    have(thesis) by Cut(domainRestrictionSubset, functionalSubset of (f := domainRestriction(f, x), g := f))
+    have(thesis) by Cut(domainRestrictionSubset, functionalSubset of (f := f ↾ x, g := f))
   }
 
   val functionRestrictionSetUnion = Lemma(
-    (functional(f), functional(g)) |- domainRestriction(f ∪ g, x) === domainRestriction(f, x) ∪ domainRestriction(g, x)
+    (functional(f), functional(g)) |- f ∪ g ↾ x === (f ↾ x) ∪ (g ↾ x)
   ) {
-    have((functional(f), relation(g)) |- domainRestriction(f ∪ g, x) === domainRestriction(f, x) ∪ domainRestriction(g, x)) by Cut(functionalIsRelation, domainRestrictionSetUnion)
+    have((functional(f), relation(g)) |- f ∪ g ↾ x === (f ↾ x) ∪ (g ↾ x)) by Cut(functionalIsRelation, domainRestrictionSetUnion)
     have(thesis) by Cut(functionalIsRelation of (f := g), lastStep)
   }
 
   val functionRestrictionFunctionalOver = Lemma(
-    functionalOver(f, a) |- functionalOver(domainRestriction(f, x), a ∩ x)
+    functionalOver(f, a) |- functionalOver(f ↾ x, a ∩ x)
   ) {
-    have(functional(f) |- functionalOver(domainRestriction(f, x), dom(domainRestriction(f, x)))) by Cut(domainRestrictionFunctional, functionalOverIntro of (f := domainRestriction(f, x)))
-    have(functionalOver(f, a) |- functionalOver(domainRestriction(f, x), dom(domainRestriction(f, x)))) by Cut(functionalOverIsFunctional of (x := a), lastStep)
-    thenHave(functionalOver(f, a) |- functionalOver(domainRestriction(f, x), dom(f) ∩ x)) by Substitution.ApplyRules(domainRestrictionDomain)
+    have(functional(f) |- functionalOver(f ↾ x, dom(f ↾ x))) by Cut(domainRestrictionFunctional, functionalOverIntro of (f := f ↾ x))
+    have(functionalOver(f, a) |- functionalOver(f ↾ x, dom(f ↾ x))) by Cut(functionalOverIsFunctional of (x := a), lastStep)
+    thenHave(functionalOver(f, a) |- functionalOver(f ↾ x, dom(f) ∩ x)) by Substitution.ApplyRules(domainRestrictionDomain)
     thenHave(thesis) by Substitution.ApplyRules(functionalOverDomain of (x := a))
   }
 
+  val functionRestrictionFunctionFrom = Lemma(
+    functionFrom(f, a, b) |- functionFrom(f ↾ x, a ∩ x, b)
+  ) {
+    have((functionalOver(f, a), relationBetween(f ↾ x, a ∩ x, b)) |- functionFrom(f ↾ x, a ∩ x, b)) by Cut(functionRestrictionFunctionalOver, functionFromIntroAlt of (f := f ↾ x, x := a ∩ x, y := b))
+    have((functionalOver(f, a), relationBetween(f, a, b)) |- functionFrom(f ↾ x, a ∩ x, b)) by Cut(domainRestrictionRelationBetween of (z := x, x := a, y := b), lastStep)
+    have((functionFrom(f, a, b), relationBetween(f, a, b)) |- functionFrom(f ↾ x, a ∩ x, b)) by Cut(functionFromIsFunctionalOver of (x := a, y := b), lastStep)
+    have(thesis) by Cut(functionFromIsRelationBetween of (x := a, y := b), lastStep)
+  }
+
   val functionRestrictionFunctionalOverSubset = Lemma(
-    (functionalOver(f, a), x ⊆ a) |- functionalOver(domainRestriction(f, x), x)
+    (functionalOver(f, a), x ⊆ a) |- functionalOver(f ↾ x, x)
   ) {
     have(thesis) by Substitution.ApplyRules(setIntersectionOfSubsetBackward)(functionRestrictionFunctionalOver)
   }
 
   val restrictedFunctionApplication = Lemma(
-    (functional(f), a ∈ x, a ∈ dom(f)) |- app(f, a) === app(domainRestriction(f, x), a)
+    (functional(f), a ∈ x, a ∈ dom(f)) |- app(f, a) === app(f ↾ x, a)
   ) {
-    have((functional(f), pair(a, app(f, a)) ∈ domainRestriction(f, x)) |- app(f, a) === app(domainRestriction(f, x), a)) by Cut(domainRestrictionFunctional, pairIsAppFunctional of (f := domainRestriction(f, x), b := app(f, a)))
-    have((functional(f), a ∈ x, pair(a, app(f, a)) ∈ f) |- app(f, a) === app(domainRestriction(f, x), a)) by Cut(domainRestrictionIntro of (b := app(f, a)), lastStep)
-    have((functional(f), a ∈ x, a ∈ dom(f)) |- app(f, a) === app(domainRestriction(f, x), a)) by Cut(appIntroFunctional, lastStep)
+    have((functional(f), pair(a, app(f, a)) ∈ (f ↾ x)) |- app(f, a) === app(f ↾ x, a)) by Cut(domainRestrictionFunctional, pairIsAppFunctional of (f := f ↾ x, b := app(f, a)))
+    have((functional(f), a ∈ x, pair(a, app(f, a)) ∈ f) |- app(f, a) === app(f ↾ x, a)) by Cut(domainRestrictionIntro of (b := app(f, a)), lastStep)
+    have((functional(f), a ∈ x, a ∈ dom(f)) |- app(f, a) === app(f ↾ x, a)) by Cut(appIntroFunctional, lastStep)
   }
 
   val restrictedFunctionApplicationWithDomain = Lemma(
-    (functionalOver(f, y), a ∈ x, a ∈ y) |- app(f, a) === app(domainRestriction(f, x), a)
+    (functionalOver(f, y), a ∈ x, a ∈ y) |- app(f, a) === app(f ↾ x, a)
   ) {
-    have((functionalOver(f, y), a ∈ x, a ∈ dom(f)) |- app(f, a) === app(domainRestriction(f, x), a)) by Cut(functionalOverIsFunctional of (x := y), restrictedFunctionApplication)
+    have((functionalOver(f, y), a ∈ x, a ∈ dom(f)) |- app(f, a) === app(f ↾ x, a)) by Cut(functionalOverIsFunctional of (x := y), restrictedFunctionApplication)
     thenHave(thesis) by Substitution.ApplyRules(functionalOverDomain)
   }
 
+  val restrictedFunctionApplicationWithDomainAndRange = Lemma(
+    (functionFrom(f, y, z), a ∈ x, a ∈ y) |- app(f, a) === app(f ↾ x, a)
+  ) {
+    have(thesis) by Cut(functionFromIsFunctionalOver of (x := y, y := z), restrictedFunctionApplicationWithDomain)
+  }
+
   val functionRestrictionEqualApp = Lemma(
-    (functionalOver(f, a), functionalOver(g, b), x ⊆ a, x ⊆ b, ∀(z, z ∈ x ==> (app(f, z) === app(g, z)))) |- domainRestriction(f, x) === domainRestriction(g, x)
+    (functionalOver(f, a), functionalOver(g, b), x ⊆ a, x ⊆ b, ∀(z, z ∈ x ==> (app(f, z) === app(g, z)))) |- f ↾ x === g ↾ x
   ) {
     have(∀(z, z ∈ x ==> (app(f, z) === app(g, z))) |- ∀(z, z ∈ x ==> (app(f, z) === app(g, z)))) by Hypothesis
     thenHave((∀(z, z ∈ x ==> (app(f, z) === app(g, z))), z ∈ x) |- app(f, z) === app(g, z)) by InstantiateForall(z)
-    thenHave((∀(z, z ∈ x ==> (app(f, z) === app(g, z))), functionalOver(f, a), z ∈ x, z ∈ a) |- app(domainRestriction(f, x), z) === app(g, z)) by Substitution.ApplyRules(restrictedFunctionApplicationWithDomain of (a := z, y := a))
-    thenHave((∀(z, z ∈ x ==> (app(f, z) === app(g, z))), functionalOver(f, a), functionalOver(g, b), z ∈ x, z ∈ a, z ∈ b) |- app(domainRestriction(f, x), z) === app(domainRestriction(g, x), z)) by Substitution.ApplyRules(restrictedFunctionApplicationWithDomain of (a := z, y := b, f := g))
-    have((∀(z, z ∈ x ==> (app(f, z) === app(g, z))), functionalOver(f, a), functionalOver(g, b), z ∈ x, x ⊆ a, z ∈ b) |- app(domainRestriction(f, x), z) === app(domainRestriction(g, x), z)) by Cut(subsetElim of (y := a), lastStep)
-    have((∀(z, z ∈ x ==> (app(f, z) === app(g, z))), functionalOver(f, a), functionalOver(g, b), z ∈ x, x ⊆ a, x ⊆ b) |- app(domainRestriction(f, x), z) === app(domainRestriction(g, x), z)) by Cut(subsetElim of (y := b), lastStep)
-    thenHave((∀(z, z ∈ x ==> (app(f, z) === app(g, z))), functionalOver(f, a), functionalOver(g, b), x ⊆ a, x ⊆ b) |- z ∈ x ==> (app(domainRestriction(f, x), z) === app(domainRestriction(g, x), z))) by RightImplies
-    thenHave((∀(z, z ∈ x ==> (app(f, z) === app(g, z))), functionalOver(f, a), functionalOver(g, b), x ⊆ a, x ⊆ b) |- ∀(z, z ∈ x ==> (app(domainRestriction(f, x), z) === app(domainRestriction(g, x), z)))) by RightForall
-    have((∀(z, z ∈ x ==> (app(f, z) === app(g, z))), functionalOver(f, a), functionalOver(g, b), x ⊆ a, x ⊆ b, functionalOver(domainRestriction(f, x), x), functionalOver(domainRestriction(g, x), x)) |- domainRestriction(f, x) === domainRestriction(g, x)) by Cut(lastStep, functionalOverEqualApp of (f := domainRestriction(f, x), g := domainRestriction(g, x)))
-    have((∀(z, z ∈ x ==> (app(f, z) === app(g, z))), functionalOver(f, a), functionalOver(g, b), x ⊆ a, x ⊆ b, functionalOver(domainRestriction(g, x), x)) |- domainRestriction(f, x) === domainRestriction(g, x)) by Cut(functionRestrictionFunctionalOverSubset, lastStep)
+    thenHave((∀(z, z ∈ x ==> (app(f, z) === app(g, z))), functionalOver(f, a), z ∈ x, z ∈ a) |- app(f ↾ x, z) === app(g, z)) by Substitution.ApplyRules(restrictedFunctionApplicationWithDomain of (a := z, y := a))
+    thenHave((∀(z, z ∈ x ==> (app(f, z) === app(g, z))), functionalOver(f, a), functionalOver(g, b), z ∈ x, z ∈ a, z ∈ b) |- app(f ↾ x, z) === app(g ↾ x, z)) by Substitution.ApplyRules(restrictedFunctionApplicationWithDomain of (a := z, y := b, f := g))
+    have((∀(z, z ∈ x ==> (app(f, z) === app(g, z))), functionalOver(f, a), functionalOver(g, b), z ∈ x, x ⊆ a, z ∈ b) |- app(f ↾ x, z) === app(g ↾ x, z)) by Cut(subsetElim of (y := a), lastStep)
+    have((∀(z, z ∈ x ==> (app(f, z) === app(g, z))), functionalOver(f, a), functionalOver(g, b), z ∈ x, x ⊆ a, x ⊆ b) |- app(f ↾ x, z) === app(g ↾ x, z)) by Cut(subsetElim of (y := b), lastStep)
+    thenHave((∀(z, z ∈ x ==> (app(f, z) === app(g, z))), functionalOver(f, a), functionalOver(g, b), x ⊆ a, x ⊆ b) |- z ∈ x ==> (app(f ↾ x, z) === app(g ↾ x, z))) by RightImplies
+    thenHave((∀(z, z ∈ x ==> (app(f, z) === app(g, z))), functionalOver(f, a), functionalOver(g, b), x ⊆ a, x ⊆ b) |- ∀(z, z ∈ x ==> (app(f ↾ x, z) === app(g ↾ x, z)))) by RightForall
+    have((∀(z, z ∈ x ==> (app(f, z) === app(g, z))), functionalOver(f, a), functionalOver(g, b), x ⊆ a, x ⊆ b, functionalOver(f ↾ x, x), functionalOver(g ↾ x, x)) |- f ↾ x === g ↾ x) by Cut(lastStep, functionalOverEqualApp of (f := f ↾ x, g := g ↾ x))
+    have((∀(z, z ∈ x ==> (app(f, z) === app(g, z))), functionalOver(f, a), functionalOver(g, b), x ⊆ a, x ⊆ b, functionalOver(g ↾ x, x)) |- f ↾ x === g ↾ x) by Cut(functionRestrictionFunctionalOverSubset, lastStep)
     have(thesis) by Cut(functionRestrictionFunctionalOverSubset of (f := g, a := b), lastStep)
+  }
+
+  val domainRestrictionInjective = Lemma(
+    injective(f, x, y) |- injective(f ↾ z, x ∩ z, y)
+  ) {
+    have((injective(f, x, y), a ∈ x, b ∈ x, app(f, a) === app(f, b)) |- a === b) by Restate.from(injectiveElim)
+    thenHave((injective(f, x, y), functionFrom(f, x, y), a ∈ x, b ∈ x, a ∈ z, b ∈ z, app(f ↾ z, a) === app(f ↾ z, b)) |- a === b) by Substitution.ApplyRules(restrictedFunctionApplicationWithDomainAndRange of (x := z, y := x, z := y),restrictedFunctionApplicationWithDomainAndRange of (x := z, y := x, z := y, a := b))
+    thenHave((injective(f, x, y), functionFrom(f, x, y), a ∈ x /\ a ∈ z, b ∈ x /\ b ∈ z, app(f ↾ z, a) === app(f ↾ z, b)) |- a === b) by Restate
+    have((injective(f, x, y), functionFrom(f, x, y), a ∈ (x ∩ z), b ∈ x /\ b ∈ z, app(f ↾ z, a) === app(f ↾ z, b)) |- a === b) by Cut(setIntersectionElim of (z := a, y := z), lastStep)
+    have((injective(f, x, y), functionFrom(f, x, y), a ∈ (x ∩ z), b ∈ (x ∩ z), app(f ↾ z, a) === app(f ↾ z, b)) |- a === b) by Cut(setIntersectionElim of (z := b, y := z), lastStep)
+    thenHave((injective(f, x, y), functionFrom(f, x, y)) |- (a ∈ (x ∩ z) /\ b ∈ (x ∩ z) /\ (app(f ↾ z, a) === app(f ↾ z, b))) ==> (a === b)) by Restate
+    thenHave((injective(f, x, y), functionFrom(f, x, y)) |- ∀(b, (a ∈ (x ∩ z) /\ b ∈ (x ∩ z) /\ (app(f ↾ z, a) === app(f ↾ z, b))) ==> (a === b))) by RightForall
+    thenHave((injective(f, x, y), functionFrom(f, x, y)) |- ∀(a, ∀(b, (a ∈ (x ∩ z) /\ b ∈ (x ∩ z) /\ (app(f ↾ z, a) === app(f ↾ z, b))) ==> (a === b)))) by RightForall
+    have((injective(f, x, y), functionFrom(f, x, y), functionFrom(f ↾ z, x ∩ z, y)) |- injective(f ↾ z, x ∩ z, y)) by Cut(lastStep, injectiveIntro of (x := x ∩ z, f := f ↾ z))
+    have((injective(f, x, y), functionFrom(f, x, y)) |- injective(f ↾ z, x ∩ z, y)) by Cut(functionRestrictionFunctionFrom of (a := x, b := y, x := z), lastStep)
+    have(thesis) by Cut(injectiveIsFunctionFrom, lastStep)
   }
 
 
@@ -917,7 +1106,7 @@ object Functions extends lisa.Main {
    *
    * TODO: explain
    */
-  val Sigma = DEF(x, f) --> union(domainRestriction(f, x))
+  val Sigma = DEF(x, f) --> union(f ↾ x)
 
   val piUniqueness = Lemma(
     ∃!(z, ∀(g, g ∈ z <=> (g ∈ 𝓟(Sigma(x, f)) /\ x ⊆ dom(g) /\ functional(g))))

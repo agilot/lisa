@@ -1170,6 +1170,23 @@ object SetTheory extends lisa.Main {
     have(thesis) by Substitution.ApplyRules(setIntersectionCommutativity)(setIntersectionOfSubsetForward of (x := y, y := x))
   }
 
+  val setIntersectionIdempotence = Lemma(
+    x ∩ x === x
+  ) {
+    have(thesis) by Cut(subsetReflexivity, setIntersectionOfSubsetForward of (y := x))
+  }
+
+  val setIntersectionLeftMonotonicity = Lemma(
+    x ⊆ y |- (x ∩ z) ⊆ (y ∩ z)
+  ) {
+    have((x ⊆ y, w ∈ x, w ∈ z) |- w ∈ (y ∩ z)) by Cut(subsetElim of (z := w), setIntersectionIntro of (x := y, y := z, z := w))
+    thenHave((x ⊆ y, w ∈ x /\ w ∈ z) |- w ∈ (y ∩ z)) by LeftAnd
+    have((x ⊆ y, w ∈ (x ∩ z)) |- w ∈ (y ∩ z)) by Cut(setIntersectionElim of (z := w, y := z), lastStep)
+    thenHave(x ⊆ y |- w ∈ (x ∩ z) ==> w ∈ (y ∩ z)) by RightImplies
+    thenHave(x ⊆ y |- ∀(w, w ∈ (x ∩ z) ==> w ∈ (y ∩ z))) by RightForall
+    have(thesis) by Cut(lastStep, subsetIntro of (x := x ∩ z, y := y ∩ z))
+  }
+
   /**
    * Definition --- Disjoint Sets
    * 
@@ -2005,7 +2022,7 @@ object SetTheory extends lisa.Main {
   }
 
   val swapCartesianProduct = Lemma(
-    p ∈ (x × y) <=> swap(p) ∈ (y  × x)
+    p ∈ (x × y) <=> swap(p) ∈ (y × x)
   ) {
     val forward = have(p ∈ (x × y) ==> swap(p) ∈ (y  × x)) subproof {
       have(b ∈ y /\ a ∈ x |- pair(b, a) ∈ (y  × x)) by LeftAnd(cartesianProductIntro of (a := b, b := a, x := y, y := x))

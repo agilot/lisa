@@ -888,9 +888,42 @@ object Relations extends lisa.Main {
   }
 
   val relationRestrictionPairInRelation = Lemma(
-    (pair(a, b) ∈ relationRestriction(r, x, y)) |- pair(a, b) ∈ r
+    p ∈ relationRestriction(r, x, y) |- p ∈ r
   ) {
-    have(thesis) by Weakening(relationRestrictionElemPair)
+    have(thesis) by Weakening(relationRestrictionElem)
+  }
+
+  val relationRestrictionLeftEmpty = Lemma(
+    relationRestriction(r, ∅, y) === ∅
+  ) {
+    have(fst(p) ∉ ∅ |- p ∉ relationRestriction(r, ∅, y)) by Weakening(relationRestrictionInRestrictedDomains of (x := ∅))
+    have(p ∉ relationRestriction(r, ∅, y)) by Cut(emptySetAxiom of (x := fst(p)), lastStep)
+    thenHave(∀(p, p ∉ relationRestriction(r, ∅, y))) by RightForall
+    have(thesis) by Cut(lastStep, setWithNoElementsIsEmpty of (x := relationRestriction(r, ∅, y)))
+  }
+
+  val relationRestrictionRightEmpty = Lemma(
+    relationRestriction(r, x, ∅) === ∅
+  ) {
+    have(snd(p) ∉ ∅ |- p ∉ relationRestriction(r, x, ∅)) by Weakening(relationRestrictionInRestrictedDomains of (y := ∅))
+    have(p ∉ relationRestriction(r, x, ∅)) by Cut(emptySetAxiom of (x := snd(p)), lastStep)
+    thenHave(∀(p, p ∉ relationRestriction(r, x, ∅))) by RightForall
+    have(thesis) by Cut(lastStep, setWithNoElementsIsEmpty of (x := relationRestriction(r, x, ∅)))
+  }
+
+  val relationRestrictionEmptyDomains = Lemma(
+    relationRestriction(r, ∅, ∅) === ∅
+  ) {
+    have(thesis) by Restate.from(relationRestrictionRightEmpty of (x := ∅))
+  }
+
+  val relationRestrictionEmpty = Lemma(
+    relationRestriction(∅, x, y) === ∅
+  ) {
+    have(p ∉ ∅ |- p ∉ relationRestriction(∅, x, y)) by Weakening(relationRestrictionPairInRelation of (r := ∅))
+    have(p ∉ relationRestriction(∅, x, y)) by Cut(emptySetAxiom of (x := p), lastStep)
+    thenHave(∀(p, p ∉ relationRestriction(∅, x, y))) by RightForall
+    have(thesis) by Cut(lastStep, setWithNoElementsIsEmpty of (x := relationRestriction(∅, x, y)))
   }
 
   val relationRestrictionSubset = Lemma(
@@ -918,7 +951,7 @@ object Relations extends lisa.Main {
       setIntersectionIntro of (z := a, x := dom(r), y := x)
     )
     have((pair(a, b) ∈ relationRestriction(r, x, y), pair(a, b) ∈ r) |- a ∈ (dom(r) ∩ x)) by Cut(relationDomainIntroPair, lastStep)
-    have(pair(a, b) ∈ relationRestriction(r, x, y) |- a ∈ (dom(r) ∩ x)) by Cut(relationRestrictionPairInRelation, lastStep)
+    have(pair(a, b) ∈ relationRestriction(r, x, y) |- a ∈ (dom(r) ∩ x)) by Cut(relationRestrictionPairInRelation of (p := pair(a, b)), lastStep)
     thenHave(∃(b, pair(a, b) ∈ relationRestriction(r, x, y)) |- a ∈ (dom(r) ∩ x)) by LeftExists
     have(a ∈ dom(relationRestriction(r, x, y)) |- a ∈ (dom(r) ∩ x)) by Cut(relationDomainElim of (r := relationRestriction(r, x, y)), lastStep)
     thenHave(a ∈ dom(relationRestriction(r, x, y)) ==> a ∈ (dom(r) ∩ x)) by RightImplies
@@ -935,7 +968,7 @@ object Relations extends lisa.Main {
       setIntersectionIntro of (z := b, x := ran(r))
     )
     have((pair(a, b) ∈ relationRestriction(r, x, y), pair(a, b) ∈ r) |- b ∈ (ran(r) ∩ y)) by Cut(relationRangeIntroPair, lastStep)
-    have(pair(a, b) ∈ relationRestriction(r, x, y) |- b ∈ (ran(r) ∩ y)) by Cut(relationRestrictionPairInRelation, lastStep)
+    have(pair(a, b) ∈ relationRestriction(r, x, y) |- b ∈ (ran(r) ∩ y)) by Cut(relationRestrictionPairInRelation of (p := pair(a, b)), lastStep)
     thenHave(∃(a, pair(a, b) ∈ relationRestriction(r, x, y)) |- b ∈ (ran(r) ∩ y)) by LeftExists
     have(b ∈ ran(relationRestriction(r, x, y)) |- b ∈ (ran(r) ∩ y)) by Cut(relationRangeElim of (r := relationRestriction(r, x, y)), lastStep)
     thenHave(b ∈ ran(relationRestriction(r, x, y)) ==> b ∈ (ran(r) ∩ y)) by RightImplies
@@ -1057,31 +1090,82 @@ object Relations extends lisa.Main {
     have(thesis) by Cut(lastStep, equalityIntro of (x := relationRestriction(r, x ∪ y, z), y := relationRestriction(r, x, z) ∪ relationRestriction(r, y, z)))
   }
 
+  val relationRestrictionTwice = Lemma(
+    relation(r) |- relationRestriction(relationRestriction(r, w, x), y, z) === relationRestriction(r, w ∩ y, x ∩ z)
+  ) {
+    val forward = have(relation(r) |- p ∈ relationRestriction(relationRestriction(r, w, x), y, z) ==> p ∈ relationRestriction(r, w ∩ y, x ∩ z)) subproof {
+      have((relation(r), p ∈ r, fst(p) ∈ w, fst(p) ∈ y, snd(p) ∈ (x ∩ z)) |- p ∈ relationRestriction(r, w ∩ y, x ∩ z)) by Cut(setIntersectionIntro of (z := fst(p), x := w), relationRestrictionIntro of (x := w ∩ y, y := x ∩ z))
+      have((relation(r), p ∈ r, fst(p) ∈ w, fst(p) ∈ y, snd(p) ∈ x, snd(p) ∈ z) |- p ∈ relationRestriction(r, w ∩ y, x ∩ z)) by Cut(setIntersectionIntro of (z := snd(p), y := z), lastStep)
+      thenHave((relation(r), p ∈ r, fst(p) ∈ w /\ snd(p) ∈ x, fst(p) ∈ y /\ snd(p) ∈ z) |- p ∈ relationRestriction(r, w ∩ y, x ∩ z)) by Restate
+      have((relation(r), p ∈ r, p ∈ relationRestriction(r, w, x), fst(p) ∈ y /\ snd(p) ∈ z) |- p ∈ relationRestriction(r, w ∩ y, x ∩ z)) by Cut(relationRestrictionInRestrictedDomains of (x := w, y := x), lastStep)
+      have((relation(r), p ∈ relationRestriction(r, w, x), fst(p) ∈ y /\ snd(p) ∈ z) |- p ∈ relationRestriction(r, w ∩ y, x ∩ z)) by Cut(relationRestrictionInRelation of (x := w, y := x), lastStep)
+      have((relation(r), p ∈ relationRestriction(relationRestriction(r, w, x), y, z), p ∈ relationRestriction(r, w, x)) |- p ∈ relationRestriction(r, w ∩ y, x ∩ z)) by Cut(relationRestrictionInRestrictedDomains of (r := relationRestriction(r, w, x), x := y, y := z), lastStep)
+      have((relation(r), p ∈ relationRestriction(relationRestriction(r, w, x), y, z)) |- p ∈ relationRestriction(r, w ∩ y, x ∩ z)) by Cut(relationRestrictionInRelation of (r := relationRestriction(r, w, x), x := y, y := z), lastStep)
+    }
+    val backward = have(relation(r) |- p ∈ relationRestriction(r, w ∩ y, x ∩ z) ==> p ∈ relationRestriction(relationRestriction(r, w, x), y, z)) subproof {
+      have((p ∈ relationRestriction(r, w, x), fst(p) ∈ y, snd(p) ∈ z) |- p ∈ relationRestriction(relationRestriction(r, w, x), y, z)) by Cut(relationRestrictionIsRelation of (x := w, y := x), relationRestrictionIntro of (r := relationRestriction(r, w, x), x := y, y := z))
+      thenHave((p ∈ relationRestriction(r, w, x), fst(p) ∈ y /\ snd(p) ∈ z) |- p ∈ relationRestriction(relationRestriction(r, w, x), y, z)) by LeftAnd
+      have((p ∈ relationRestriction(r, w, x), p ∈ relationRestriction(r, y, z)) |- p ∈ relationRestriction(relationRestriction(r, w, x), y, z)) by Cut(relationRestrictionInRestrictedDomains of (x := y, y := z), lastStep)
+
+      sorry
+    }
+    have(relation(r) |- p ∈ relationRestriction(relationRestriction(r, w, x), y, z) <=> p ∈ relationRestriction(r, w ∩ y, x ∩ z)) by RightIff(forward, backward)
+    thenHave(relation(r) |- ∀(p, p ∈ relationRestriction(relationRestriction(r, w, x), y, z) <=> p ∈ relationRestriction(r, w ∩ y, x ∩ z))) by RightForall
+    have(thesis) by Cut(lastStep, equalityIntro of (x := relationRestriction(relationRestriction(r, w, x), y, z), y := relationRestriction(r, w ∩ y, x ∩ z)))
+  }
+
+  val relationRestrictionTwiceSubsetInner = Lemma(
+    (relation(r), w ⊆ y, x ⊆ z) |- relationRestriction(relationRestriction(r, w, x), y, z) === relationRestriction(r, w, x)
+  ) {
+    have(thesis) by Substitution.ApplyRules(setIntersectionOfSubsetForward)(relationRestrictionTwice)
+  }
+
+  val relationRestrictionTwiceSubsetOuter = Lemma(
+    (relation(r), y ⊆ w, z ⊆ x) |- relationRestriction(relationRestriction(r, w, x), y, z) === relationRestriction(r, y, z)
+  ) {
+    have(thesis) by Substitution.ApplyRules(setIntersectionOfSubsetBackward)(relationRestrictionTwice)
+  }
+
+  val relationRestrictionIdempotence = Lemma(
+    relation(r) |- relationRestriction(relationRestriction(r, x, y), x, y) === relationRestriction(r, x, y)
+  ) {
+    have(thesis) by Substitution.ApplyRules(setIntersectionIdempotence)(relationRestrictionTwice of (w := x, x := y, y := x, z := y))
+  }
+
   val domainRestriction = DEF(f, x) --> relationRestriction(f, x, ran(f))
 
+  extension (f: Term) 
+    def ↾ (x: Term) = domainRestriction(f, x)
+
   val domainRestrictionIntro = Lemma(
-    (pair(a, b) ∈ f, a ∈ x) |- pair(a, b) ∈ domainRestriction(f, x)
+    (pair(a, b) ∈ f, a ∈ x) |- pair(a, b) ∈ (f ↾ x)
   ) {
-    have((pair(a, b) ∈ f, a ∈ x, b ∈ ran(f)) |- pair(a, b) ∈ domainRestriction(f, x)) by Substitution.ApplyRules(domainRestriction.shortDefinition)(
+    have((pair(a, b) ∈ f, a ∈ x, b ∈ ran(f)) |- pair(a, b) ∈ (f ↾ x)) by Substitution.ApplyRules(domainRestriction.shortDefinition)(
       relationRestrictionIntroPair of (r := f, y := ran(f))
     )
     have(thesis) by Cut(relationRangeIntroPair of (r := f), lastStep)
   }
 
   val domainRestrictionPairInRelation = Lemma(
-    (pair(a, b) ∈ domainRestriction(f, x)) |- pair(a, b) ∈ f
+    (pair(a, b) ∈ (f ↾ x)) |- pair(a, b) ∈ f
   ) {
-    have(thesis) by Substitution.ApplyRules(domainRestriction.shortDefinition)(relationRestrictionPairInRelation of (r := f, y := ran(f)))
+    have(thesis) by Substitution.ApplyRules(domainRestriction.shortDefinition)(relationRestrictionPairInRelation of (r := f, y := ran(f), p := pair(a, b)))
+  }
+
+  val domainRestrictionEmpty = Lemma(
+    f ↾ ∅ === ∅
+  ) {
+    have(thesis) by Substitution.ApplyRules(domainRestriction.shortDefinition)(relationRestrictionLeftEmpty of (r := f, y := ran(f)))
   }
 
   val domainRestrictionSubset = Lemma(
-    domainRestriction(f, x) ⊆ f
+    (f ↾ x) ⊆ f
   ) {
     have(thesis) by Substitution.ApplyRules(domainRestriction.shortDefinition)(relationRestrictionSubset of (r := f, y := ran(f)))
   }
 
   val domainRestrictionIsRelation = Lemma(
-    relation(domainRestriction(f, x))
+    relation(f ↾ x)
   ) {
     have(thesis) by Substitution.ApplyRules(domainRestriction.shortDefinition)(relationRestrictionIsRelation of (r := f, x := x, y := ran(f)))
   }
@@ -1092,77 +1176,102 @@ object Relations extends lisa.Main {
     *    `Dom(f|x) = Dom(f) ∩ x`
     */
   val domainRestrictionDomain = Lemma(
-    dom(domainRestriction(f, x)) === dom(f) ∩ x
+    dom(f ↾ x) === dom(f) ∩ x
   ) {
-    val forward = have(dom(domainRestriction(f, x)) ⊆ (dom(f) ∩ x)) by Substitution.ApplyRules(domainRestriction.shortDefinition)(
+    val forward = have(dom(f ↾ x) ⊆ (dom(f) ∩ x)) by Substitution.ApplyRules(domainRestriction.shortDefinition)(
       relationRestrictionDomain of (r := f, y := ran(f))
     )
-    val backward = have((dom(f) ∩ x) ⊆ dom(domainRestriction(f, x))) subproof {
-      have((pair(a, b) ∈ f, a ∈ x) |- a ∈ dom(domainRestriction(f, x))) by Cut(domainRestrictionIntro, relationDomainIntroPair of (r := domainRestriction(f, x)))
-      thenHave((∃(b, pair(a, b) ∈ f), a ∈ x) |- a ∈ dom(domainRestriction(f, x))) by LeftExists
-      have((a ∈ dom(f), a ∈ x) |- a ∈ dom(domainRestriction(f, x))) by Cut(relationDomainElim of (r := f), lastStep)
-      thenHave(a ∈ dom(f) /\ a ∈ x |- a ∈ dom(domainRestriction(f, x))) by LeftAnd
-      have(a ∈ (dom(f) ∩ x) |- a ∈ dom(domainRestriction(f, x))) by Cut(setIntersectionElim of (z := a, x := dom(f), y := x), lastStep)
-      thenHave(a ∈ (dom(f) ∩ x) ==> a ∈ dom(domainRestriction(f, x))) by RightImplies
-      thenHave(∀(a, a ∈ (dom(f) ∩ x) ==> a ∈ dom(domainRestriction(f, x)))) by RightForall
-      have(thesis) by Cut(lastStep, subsetIntro of (x := dom(f) ∩ x, y := dom(domainRestriction(f, x))))
+    val backward = have((dom(f) ∩ x) ⊆ dom(f ↾ x)) subproof {
+      have((pair(a, b) ∈ f, a ∈ x) |- a ∈ dom(f ↾ x)) by Cut(domainRestrictionIntro, relationDomainIntroPair of (r := f ↾ x))
+      thenHave((∃(b, pair(a, b) ∈ f), a ∈ x) |- a ∈ dom(f ↾ x)) by LeftExists
+      have((a ∈ dom(f), a ∈ x) |- a ∈ dom(f ↾ x)) by Cut(relationDomainElim of (r := f), lastStep)
+      thenHave(a ∈ dom(f) /\ a ∈ x |- a ∈ dom(f ↾ x)) by LeftAnd
+      have(a ∈ (dom(f) ∩ x) |- a ∈ dom(f ↾ x)) by Cut(setIntersectionElim of (z := a, x := dom(f), y := x), lastStep)
+      thenHave(a ∈ (dom(f) ∩ x) ==> a ∈ dom(f ↾ x)) by RightImplies
+      thenHave(∀(a, a ∈ (dom(f) ∩ x) ==> a ∈ dom(f ↾ x))) by RightForall
+      have(thesis) by Cut(lastStep, subsetIntro of (x := dom(f) ∩ x, y := dom(f ↾ x)))
     }
-    have((dom(f) ∩ x) ⊆ dom(domainRestriction(f, x)) |- dom(domainRestriction(f, x)) === dom(f) ∩ x) by 
-      Cut(forward, subsetAntisymmetry of (x := dom(domainRestriction(f, x)), y := dom(f) ∩ x))
+    have((dom(f) ∩ x) ⊆ dom(f ↾ x) |- dom(f ↾ x) === dom(f) ∩ x) by 
+      Cut(forward, subsetAntisymmetry of (x := dom(f ↾ x), y := dom(f) ∩ x))
     have(thesis) by Cut(backward, lastStep)
   }
 
+  val domainRestrictionRange = Lemma(
+    ran(f ↾ x) ⊆ ran(f)
+  ) {
+    have(thesis) by Substitution.ApplyRules(domainRestriction.shortDefinition , setIntersectionIdempotence)(relationRestrictionRange of (r := f, y := ran(f)))
+  }
+
+  val domainRestrictionRelationFrom = Lemma(
+    relationFrom(f ↾ x, dom(f) ∩ x)
+  ) {
+    have(relationFrom(f ↾ x, dom(f ↾ x))) by Cut (domainRestrictionIsRelation, relationIsRelationFrom of (r := f ↾ x))
+    thenHave(thesis) by Substitution.ApplyRules(domainRestrictionDomain)
+  }
+
+  val domainRestrictionRelationBetween = Lemma(
+    relationBetween(f, x, y) |- relationBetween(f ↾ z, x ∩ z, y)
+  ) {
+    have(relationBetween(f ↾ z, dom(f) ∩ z, ran(f ↾ z))) by Cut(domainRestrictionRelationFrom of (x := z), relationFromToRange of (r := f ↾ z, a := dom(f) ∩ z))
+    have(((dom(f) ∩ z) ⊆ (x ∩ z), ran(f ↾ z) ⊆ ran(f)) |-  relationBetween(f ↾ z, x ∩ z, ran(f))) by Cut(lastStep, relationBetweenSubsetDomains of (r := f ↾ z, a := dom(f) ∩ z, b := ran(f ↾ z), c := x ∩ z, d := ran(f)))
+    have((dom(f) ∩ z) ⊆ (x ∩ z) |- relationBetween(f ↾ z, x ∩ z, ran(f))) by Cut(domainRestrictionRange of (x := z), lastStep)
+    have(dom(f) ⊆ x |- relationBetween(f ↾ z, x ∩ z, ran(f))) by Cut(setIntersectionLeftMonotonicity of (x := dom(f), y := x), lastStep)
+    have(relationBetween(f, x, y) |- relationBetween(f ↾ z, x ∩ z, ran(f))) by Cut(relationBetweenDomain of (r := f, a := x, b := y), lastStep)
+    have((relationBetween(f, x, y), ran(f) ⊆ y) |- relationBetween(f ↾ z, x ∩ z, y)) by Cut(lastStep, relationBetweenSubsetRightDomain of (r := f ↾ z, a := x ∩ z, b := ran(f), d := y))
+    have(thesis) by Cut(relationBetweenRange of (r := f, a := x, b := y), lastStep)
+  }
+
   val domainRestrictionOnDomain = Lemma(
-    relation(f) |- domainRestriction(f, dom(f)) === f
+    relation(f) |- f ↾ dom(f) === f
   ) {
     have(thesis) by Substitution.ApplyRules(domainRestriction.shortDefinition)(relationRestrictionOnDomainRange of (r := f))
   }
 
   val domainRestrictionDisjoint = Lemma(
-    disjoint(dom(f), x) |- domainRestriction(f, x) === ∅
+    disjoint(dom(f), x) |- f ↾ x === ∅
   ) {
-    have(disjoint(dom(f), x) |- dom(domainRestriction(f, x)) === ∅) by 
+    have(disjoint(dom(f), x) |- dom(f ↾ x) === ∅) by 
       Substitution.ApplyRules(disjointUnfold of (x := dom(f), y := x))(domainRestrictionDomain)
-    have((relation(domainRestriction(f, x)), disjoint(dom(f), x)) |- domainRestriction(f, x) === ∅) by Cut(lastStep, relationDomainEmpty of (r := domainRestriction(f, x)))
+    have((relation(f ↾ x), disjoint(dom(f), x)) |- f ↾ x === ∅) by Cut(lastStep, relationDomainEmpty of (r := f ↾ x))
     have(thesis) by Cut(domainRestrictionIsRelation of (r := f), lastStep)
   }
 
   val domainRestrictionSetUnion = Lemma(
-    (relation(f), relation(g)) |- domainRestriction(f ∪ g, x) === domainRestriction(f, x) ∪ domainRestriction(g, x)
+    (relation(f), relation(g)) |- f ∪ g ↾ x === (f ↾ x) ∪ (g ↾ x)
   ) {
-    have(domainRestriction(f ∪ g, x) === relationRestriction(f, x, ran(f ∪ g)) ∪ relationRestriction(g, x, ran(f ∪ g))) by
+    have(f ∪ g ↾ x === relationRestriction(f, x, ran(f ∪ g)) ∪ relationRestriction(g, x, ran(f ∪ g))) by
       Substitution.ApplyRules(domainRestriction.shortDefinition of (f := f ∪ g))(relationRestrictionSetUnion of (r1 := f, r2 := g, y := ran(f ∪ g)))
     thenHave(
       (relation(f), ran(f) ⊆ ran(f ∪ g)) |-
-        domainRestriction(f ∪ g, x) === relationRestriction(f, x, ran(f)) ∪ relationRestriction(g, x, ran(f ∪ g))
+        f ∪ g ↾ x === relationRestriction(f, x, ran(f)) ∪ relationRestriction(g, x, ran(f ∪ g))
     ) by
       Substitution.ApplyRules(relationRestrictionSupersetRange of (r := f, y := ran(f ∪ g)))
     have(
-      (relation(f), f ⊆ (f ∪ g)) |- domainRestriction(f ∪ g, x) === 
+      (relation(f), f ⊆ (f ∪ g)) |- f ∪ g ↾ x === 
         relationRestriction(f, x, ran(f)) ∪ relationRestriction(g, x, ran(f ∪ g))
     ) by
       Cut(relationRangeSubset of (r1 := f, r2 := f ∪ g), lastStep)
-    have(relation(f) |- domainRestriction(f ∪ g, x) === relationRestriction(f, x, ran(f)) ∪ relationRestriction(g, x, ran(f ∪ g))) by
+    have(relation(f) |- f ∪ g ↾ x === relationRestriction(f, x, ran(f)) ∪ relationRestriction(g, x, ran(f ∪ g))) by
       Cut(setUnionLeftSubset of (a := f, b := g), lastStep)
     thenHave(
       (relation(f), relation(g), ran(g) ⊆ ran(f ∪ g)) |-
-        domainRestriction(f ∪ g, x) === relationRestriction(f, x, ran(f)) ∪ relationRestriction(g, x, ran(g))
+        f ∪ g ↾ x === relationRestriction(f, x, ran(f)) ∪ relationRestriction(g, x, ran(g))
     ) by
       Substitution.ApplyRules(relationRestrictionSupersetRange of (r := g, y := ran(f ∪ g)))
     have(
-      (relation(f), relation(g), g ⊆ (f ∪ g)) |- domainRestriction(f ∪ g, x) === 
+      (relation(f), relation(g), g ⊆ (f ∪ g)) |- f ∪ g ↾ x === 
         relationRestriction(f, x, ran(f)) ∪ relationRestriction(g, x, ran(g))
     ) by
       Cut(relationRangeSubset of (r1 := g, r2 := f ∪ g), lastStep)
-    have((relation(f), relation(g)) |- domainRestriction(f ∪ g, x) === relationRestriction(f, x, ran(f)) ∪ relationRestriction(g, x, ran(g))) by
+    have((relation(f), relation(g)) |- (f ∪ g) ↾ x === relationRestriction(f, x, ran(f)) ∪ relationRestriction(g, x, ran(g))) by
       Cut(setUnionRightSubset of (a := f, b := g), lastStep)
-    thenHave(thesis) by Substitution.ApplyRules(domainRestriction.shortDefinition, domainRestriction.shortDefinition of (x := g))
+    thenHave(thesis) by Substitution.ApplyRules(domainRestriction.shortDefinition)
   }
 
   val domainRestrictionSetUnionDomain = Lemma(
-    domainRestriction(f, x ∪ y) === domainRestriction(f, x) ∪ domainRestriction(f, y)
+    f ↾ (x ∪ y) === (f ↾ x) ∪ (f ↾ y)
   ) {
-    have(thesis) by Substitution.ApplyRules(domainRestriction.shortDefinition, domainRestriction.shortDefinition of (x := y), domainRestriction.shortDefinition of (x := x ∪ y))(
+    have(thesis) by Substitution.ApplyRules(domainRestriction.shortDefinition)(
       relationRestrictionSetUnionDomain of (r := f, z := ran(f))
     )
   }
@@ -1177,25 +1286,66 @@ object Relations extends lisa.Main {
     have(thesis) by UniqueComprehension(dom(r1) × ran(r2), lambda(p, ∃(y, pair(fst(p), y) ∈ r1 /\ pair(y, snd(p)) ∈ r2)))
   }
 
-  val composition = DEF(r1, r2) --> The(z, ∀(p, p ∈ z <=> (p ∈ (dom(r1) × ran(r2))) /\ ∃(y, pair(fst(p), y) ∈ r1 /\ pair(y, snd(p)) ∈ r2)))(compositionUniqueness)
+  val composition = DEF(r2, r1) --> The(z, ∀(p, p ∈ z <=> (p ∈ (dom(r1) × ran(r2))) /\ ∃(y, pair(fst(p), y) ∈ r1 /\ pair(y, snd(p)) ∈ r2)))(compositionUniqueness)
 
-  extension (r1: Term) {
-    infix def ∘(r2: Term) = composition(r1, r2)
-  }
+  extension (r2: Term) {
+    infix def ∘(r1: Term) = composition(r2, r1)
+  } 
 
   val compositionMembership = Lemma(
-    p ∈ (r1 ∘ r2) <=> (p ∈ (dom(r1) × ran(r2)) /\ ∃(y, pair(fst(p), y) ∈ r1 /\ pair(y, snd(p)) ∈ r2))
+    p ∈ (r2 ∘ r1) <=> (p ∈ (dom(r1) × ran(r2)) /\ ∃(y, pair(fst(p), y) ∈ r1 /\ pair(y, snd(p)) ∈ r2))
   ) {
-    have(∀(p, p ∈ (r1 ∘ r2) <=> (p ∈ (dom(r1) × ran(r2)) /\ ∃(y, pair(fst(p), y) ∈ r1 /\ pair(y, snd(p)) ∈ r2)))) by InstantiateForall(r1 ∘ r2)(composition.definition)
+    have(∀(p, p ∈ (r2 ∘ r1) <=> (p ∈ (dom(r1) × ran(r2)) /\ ∃(y, pair(fst(p), y) ∈ r1 /\ pair(y, snd(p)) ∈ r2)))) by InstantiateForall(r2 ∘ r1)(composition.definition)
     thenHave(thesis) by InstantiateForall(p)
   }
 
-  // val compositionMembershipPair = Lemma(
-  //   in(pair(x, z), (r1 ∘ r2)) <=> ∃(y, in(pair(x, y), r1) /\ in(pair(y, z), r2))
-  // ) {
-  //   have() by Cut(cartesianProductIntro)
-  //   have((in(pair(x, y), r1), in(pair(y, z), r2)) |- in())
-  // }
+  val compositionIsRelationBetween = Lemma(
+    (relationBetween(r1, x, y), relationBetween(r2, y, z)) |- relationBetween(r2 ∘ r1, x, z)
+  ) {
+    have(p ∈ (r2 ∘ r1) ==> p ∈ (dom(r1) × ran(r2))) by Weakening(compositionMembership)
+    thenHave(∀(p, p ∈ (r2 ∘ r1) ==> p ∈ (dom(r1) × ran(r2)))) by RightForall
+    have(subset(r2 ∘ r1, dom(r1) × ran(r2))) by Cut(lastStep, subsetIntro of (y := dom(r1) × ran(r2), x := r2 ∘ r1))
+    have(relationBetween(r2 ∘ r1, dom(r1), ran(r2))) by Cut(lastStep, relationBetweenIntro of (r := r2 ∘ r1, a := dom(r1), b := ran(r2)))
+    have((subset(dom(r1), x), subset(ran(r2), z)) |- relationBetween(r2 ∘ r1, x, z)) by Cut(lastStep, relationBetweenSubsetDomains of (r := r2 ∘ r1, a := dom(r1), b := ran(r2), c := x, d := z))
+    have((relationBetween(r1, x, y), subset(ran(r2), z)) |- relationBetween(r2 ∘ r1, x, z)) by Cut(relationBetweenDomain of (r := r1, a := x, b := y), lastStep)
+    have(thesis) by Cut(relationBetweenRange of (r := r2, a := y, b := z), lastStep)
+  }
+
+  val compositionMembershipPair = Lemma(
+    pair(x, z) ∈ (r2 ∘ r1) <=> ∃(y, pair(x, y) ∈ r1 /\ pair(y, z) ∈ r2)
+  ) {
+    have((pair(x, y) ∈ r1, z ∈ ran(r2)) |- pair(x, z) ∈ (dom(r1) × ran(r2))) by Cut(relationDomainIntroPair of (a := x, b := y, r := r1), cartesianProductIntro of (a := x, b := z, x := dom(r1), y := ran(r2)))
+    have((pair(x, y) ∈ r1, pair(y, z) ∈ r2) |- pair(x, z) ∈ (dom(r1) × ran(r2))) by Cut(relationRangeIntroPair of (a := y, b := z, r := r2), lastStep)
+    thenHave(pair(x, y) ∈ r1 /\ pair(y, z) ∈ r2 |- pair(x, z) ∈ (dom(r1) × ran(r2))) by LeftAnd
+    thenHave(∃(y, pair(x, y) ∈ r1 /\ pair(y, z) ∈ r2) |- pair(x, z) ∈ (dom(r1) × ran(r2))) by LeftExists
+    val redundancy = thenHave(∃(y, pair(x, y) ∈ r1 /\ pair(y, z) ∈ r2) ==> pair(x, z) ∈ (dom(r1) × ran(r2))) by RightImplies
+
+    have(pair(x, z) ∈ (r2 ∘ r1) <=> (pair(x, z) ∈ (dom(r1) × ran(r2)) /\ ∃(y, pair(x, y) ∈ r1 /\ pair(y, z) ∈ r2))) by Substitution.ApplyRules(firstInPairReduction, secondInPairReduction)(compositionMembership of (p := pair(x, z)))
+    thenHave(∃(y, pair(x, y) ∈ r1 /\ pair(y, z) ∈ r2) ==> pair(x, z) ∈ (dom(r1) × ran(r2)) |- pair(x, z) ∈ (r2 ∘ r1) <=> ∃(y, pair(x, y) ∈ r1 /\ pair(y, z) ∈ r2)) by Tautology
+    have(thesis) by Cut(redundancy, lastStep)
+  }
+
+  val compositionElimPair = Lemma(
+    pair(x, z) ∈ (r2 ∘ r1) |- ∃(y, pair(x, y) ∈ r1 /\ pair(y, z) ∈ r2)
+  ) {
+    have(thesis) by Weakening(compositionMembershipPair)
+  }
+
+  val compositionElim = Lemma(
+    (relationBetween(r1, x, y), relationBetween(r2, y, z), p ∈ (r2 ∘ r1)) |- ∃(y, pair(fst(p), y) ∈ r1 /\ pair(y, snd(p)) ∈ r2)
+  ) {
+    have((relationBetween(r2 ∘ r1, x, z), p ∈ (r2 ∘ r1)) |- ∃(y, pair(fst(p), y) ∈ r1 /\ pair(y, snd(p)) ∈ r2)) by Substitution.ApplyRules(pairReconstructionInRelationBetween of (r := r2 ∘ r1, a := x, b := z))(compositionElimPair of (x := fst(p), z := snd(p)))
+    have(thesis) by Cut(compositionIsRelationBetween, lastStep)
+  }
+
+  val compositionIntro = Lemma(
+    (pair(x, y) ∈ r1, pair(y, z) ∈ r2) |- pair(x, z) ∈ (r2 ∘ r1)
+  ) {
+    have((pair(x, y) ∈ r1, pair(y, z) ∈ r2) |- pair(x, y) ∈ r1 /\ pair(y, z) ∈ r2) by Restate
+    thenHave((pair(x, y) ∈ r1, pair(y, z) ∈ r2) |- ∃(y, pair(x, y) ∈ r1 /\ pair(y, z) ∈ r2)) by RightExists
+    thenHave(thesis) by Substitution.ApplyRules(compositionMembershipPair)
+  }
+
   /**
    * Properties of relations
    */
@@ -1331,9 +1481,9 @@ object Relations extends lisa.Main {
     have((transitive(r, x), pair(a, b) ∈ r, pair(b, c) ∈ r, a ∈ y, c ∈ y) |- pair(a, c) ∈ relationRestriction(r, y, y)) by
       Cut(transitiveElim of (w := a, y := b, z := c), relationRestrictionIntroPair of (b := c, x := y))
     have((transitive(r, x), pair(a, b) ∈ relationRestriction(r, y, y), pair(b, c) ∈ r, a ∈ y, c ∈ y) |- pair(a, c) ∈ relationRestriction(r, y, y)) by
-      Cut(relationRestrictionPairInRelation of (x := y), lastStep)
+      Cut(relationRestrictionPairInRelation of (x := y, p := pair(a, b)), lastStep)
     have((transitive(r, x), pair(a, b) ∈ relationRestriction(r, y, y), pair(b, c) ∈ relationRestriction(r, y, y), a ∈ y, c ∈ y) |- pair(a, c) ∈ relationRestriction(r, y, y)) by
-      Cut(relationRestrictionPairInRelation of (x := y, a := b, b := c), lastStep)
+      Cut(relationRestrictionPairInRelation of (x := y, p := pair(b, c)), lastStep)
     thenHave(
       (transitive(r, x), pair(a, b) ∈ relationRestriction(r, y, y), pair(b, c) ∈ relationRestriction(r, y, y), a ∈ y /\ b ∈ y, b ∈ y /\ c ∈ y) |- pair(a, c) ∈ relationRestriction(r, y, y)
     ) by Weakening

@@ -110,7 +110,7 @@ object Ordinals extends lisa.Main {
       thenHave(∀(z, ∀(y, (z ∈ y /\ y ∈ x) ==> z ∈ x)) |- ∀(y, (z ∈ y /\ y ∈ x) ==> z ∈ x)) by InstantiateForall(z)
       thenHave(∀(z, ∀(y, (z ∈ y /\ y ∈ x) ==> z ∈ x)) /\ y ∈ x |- (z ∈ y) ==> z ∈ x) by InstantiateForall(y)
       thenHave(∀(z, ∀(y, (z ∈ y /\ y ∈ x) ==> z ∈ x)) /\ y ∈ x |- ∀(z, z ∈ y ==> z ∈ x)) by RightForall
-      have(∀(z, ∀(y, (z ∈ y /\ y ∈ x) ==> z ∈ x)) /\ y ∈ x |- y ⊆ x) by Cut(lastStep, subsetIntro of (x -> y, y -> x))
+      have(∀(z, ∀(y, (z ∈ y /\ y ∈ x) ==> z ∈ x)) /\ y ∈ x |- y ⊆ x) by Cut(lastStep, subsetIntro of (x := y, y := x))
       thenHave(∀(z, ∀(y, (z ∈ y /\ y ∈ x) ==> z ∈ x)) |- y ∈ x ==> y ⊆ x) by Restate
       thenHave(∀(z, ∀(y, (z ∈ y /\ y ∈ x) ==> z ∈ x)) |- ∀(y, y ∈ x ==> y ⊆ x)) by RightForall
     }
@@ -146,7 +146,7 @@ object Ordinals extends lisa.Main {
    *   `transitiveSet(∅)`
    */
   val emptySetTransitive = Lemma(transitiveSet(∅)) {
-    have(y ∈ ∅ ==> y ⊆ ∅) by Weakening(emptySetAxiom of (x -> y))
+    have(y ∈ ∅ ==> y ⊆ ∅) by Weakening(emptySetAxiom of (x := y))
     thenHave(∀(y, y ∈ ∅ ==> y ⊆ ∅)) by RightForall
     have(thesis) by Cut(lastStep, transitiveSetIntro of (x := ∅))
   }
@@ -268,8 +268,8 @@ object Ordinals extends lisa.Main {
     thenHave((connected(membershipRelation(x), x), transitiveSet(x), y ∈ x) |- (a ∈ y /\ b ∈ y) ==> (pair(a, b) ∈ membershipRelation(y) \/ (pair(b, a) ∈ membershipRelation(y)) \/ (a === b))) by Restate
     thenHave((connected(membershipRelation(x), x), transitiveSet(x), y ∈ x) |- ∀(b, (a ∈ y /\ b ∈ y) ==> (pair(a, b) ∈ membershipRelation(y) \/ (pair(b, a) ∈ membershipRelation(y)) \/ (a === b)))) by RightForall
     thenHave((connected(membershipRelation(x), x), transitiveSet(x), y ∈ x) |- ∀(a, ∀(b, (a ∈ y /\ b ∈ y) ==> (pair(a, b) ∈ membershipRelation(y) \/ (pair(b, a) ∈ membershipRelation(y)) \/ (a === b))))) by RightForall
-    have((connected(membershipRelation(x), x), transitiveSet(x), y ∈ x, relationBetween(membershipRelation(y), y, y)) |- connected(membershipRelation(y), y)) by Cut(lastStep, connectedIntro of (r -> membershipRelation(y), x -> y)) 
-    have(thesis) by Cut(membershipRelationIsARelation of (x -> y), lastStep)
+    have((connected(membershipRelation(x), x), transitiveSet(x), y ∈ x, relationBetween(membershipRelation(y), y, y)) |- connected(membershipRelation(y), y)) by Cut(lastStep, connectedIntro of (r := membershipRelation(y), x := y)) 
+    have(thesis) by Cut(membershipRelationIsARelation of (x := y), lastStep)
   }
 
   /**
@@ -435,10 +435,10 @@ object Ordinals extends lisa.Main {
   /**
     * Theorem --- Two isomorphic ordinals are equal
     * 
-    *   `(a, ∈_a) ≅ (b, ∈_b) |- a = b`
+    *   `(a, ∈_a) ≃ (b, ∈_b) |- a = b`
     */
   val isomorphicOrdinalsAreEqual = Lemma(
-    (ordinal(a), ordinal(b), relationIsomorphism(f, membershipRelation(a), a, membershipRelation(b), b)) |- a === b
+    (ordinal(a), ordinal(b), (membershipRelation(a), a) ≃ (membershipRelation(b), b)) |- a === b
   ) {
 
     val ordIsomorphism = relationIsomorphism(f, membershipRelation(a), a, membershipRelation(b), b)
@@ -485,41 +485,39 @@ object Ordinals extends lisa.Main {
     have((ordIsomorphism, ordinal(a), ordinal(b)) |-  nonIdentitySet(f, a) === ∅) by Cut(ordinalStrictWellOrder, lastStep)
     have((ordIsomorphism, ordinal(a), ordinal(b), surjective(f, a, b)) |- a === b) by Cut(lastStep, nonIdentitySetEmpty of (x := a, y := b))
     have((ordIsomorphism, ordinal(a), ordinal(b), bijective(f, a, b)) |- a === b) by Cut(bijectiveSurjective of (x := a, y := b), lastStep)
-    have(thesis) by Cut(relationIsomorphismBijective of (r1 := membershipRelation(a), x := a, r2 := membershipRelation(b), y := b), lastStep)
+    have((ordIsomorphism, ordinal(a), ordinal(b)) |- a === b) by Cut(relationIsomorphismBijective of (r1 := membershipRelation(a), x := a, r2 := membershipRelation(b), y := b), lastStep)
+    thenHave((∃(f, ordIsomorphism), ordinal(a), ordinal(b)) |- a === b) by LeftExists
+    have(thesis) by Cut(isomorphicElim of (r1 := membershipRelation(a), x := a, r2 := membershipRelation(b), y := b), lastStep)
   }
 
   val ordinalCases = Lemma(
     (ordinal(a), ordinal(b)) |- (a ∈ b, b ∈ a, (a === b))
   ) {
-    val middle = have((ordinal(a), ordinal(b), relationIsomorphism(f, membershipRelation(a), a, membershipRelation(b), b)) |- (a ∈ b, b ∈ a, a === b)) by Weakening(isomorphicOrdinalsAreEqual)
+    val middle = have((ordinal(a), ordinal(b), (membershipRelation(a), a) ≃ (membershipRelation(b), b)) |- (a ∈ b, b ∈ a, a === b)) by Weakening(isomorphicOrdinalsAreEqual)
 
     have(c ∈ a |- c ∈ a) by Hypothesis
-    thenHave((ordinal(c), ordinal(b), c ∈ a, relationIsomorphism(f, membershipRelation(c), c, membershipRelation(b), b)) |- b ∈ a) by Substitution.ApplyRules(isomorphicOrdinalsAreEqual of (a := c))
-    thenHave((ordinal(c), ordinal(b), ordinal(a), c ∈ a, relationIsomorphism(f, membershipRelation(initialSegment(c, membershipRelation(a), a)), initialSegment(c, membershipRelation(a), a), membershipRelation(b), b)) |- b ∈ a) by Substitution.ApplyRules(elementOfOrdinalIsInitialSegment of (b := c))
-    thenHave((ordinal(c), ordinal(b), ordinal(a), c ∈ a, relationIsomorphism(f, initialSegmentOrder(c, membershipRelation(a), a), initialSegment(c, membershipRelation(a), a), membershipRelation(b), b)) |- b ∈ a) by Substitution.ApplyRules(membershipRelationInitialSegment of (b := c))
-    have((ordinal(b), ordinal(a), c ∈ a, relationIsomorphism(f, initialSegmentOrder(c, membershipRelation(a), a), initialSegment(c, membershipRelation(a), a), membershipRelation(b), b)) |- b ∈ a) by Cut(elementsOfOrdinalsAreOrdinals of (b := c), lastStep)
-    thenHave((ordinal(b), ordinal(a), c ∈ a /\ relationIsomorphism(f, initialSegmentOrder(c, membershipRelation(a), a), initialSegment(c, membershipRelation(a), a), membershipRelation(b), b)) |- (a ∈ b, b ∈ a, a === b)) by Weakening
-    val right = thenHave((ordinal(b), ordinal(a), ∃(c, c ∈ a /\ relationIsomorphism(f, initialSegmentOrder(c, membershipRelation(a), a), initialSegment(c, membershipRelation(a), a), membershipRelation(b), b))) |- (a ∈ b, b ∈ a, a === b)) by LeftExists
+    thenHave((ordinal(c), ordinal(b), c ∈ a, (membershipRelation(c), c) ≃ (membershipRelation(b), b)) |- b ∈ a) by Substitution.ApplyRules(isomorphicOrdinalsAreEqual of (a := c))
+    thenHave((ordinal(c), ordinal(b), ordinal(a), c ∈ a, (membershipRelation(initialSegment(c, membershipRelation(a), a)), initialSegment(c, membershipRelation(a), a)) ≃ (membershipRelation(b), b)) |- b ∈ a) by Substitution.ApplyRules(elementOfOrdinalIsInitialSegment of (b := c))
+    thenHave((ordinal(c), ordinal(b), ordinal(a), c ∈ a, (initialSegmentOrder(c, membershipRelation(a), a), initialSegment(c, membershipRelation(a), a)) ≃ (membershipRelation(b), b)) |- b ∈ a) by Substitution.ApplyRules(membershipRelationInitialSegment of (b := c))
+    have((ordinal(b), ordinal(a), c ∈ a, (initialSegmentOrder(c, membershipRelation(a), a), initialSegment(c, membershipRelation(a), a)) ≃ (membershipRelation(b), b)) |- b ∈ a) by Cut(elementsOfOrdinalsAreOrdinals of (b := c), lastStep)
+    thenHave((ordinal(b), ordinal(a), c ∈ a /\ (initialSegmentOrder(c, membershipRelation(a), a), initialSegment(c, membershipRelation(a), a)) ≃ (membershipRelation(b), b)) |- (a ∈ b, b ∈ a, a === b)) by Weakening
+    val right = thenHave((ordinal(b), ordinal(a), ∃(c, c ∈ a /\ (initialSegmentOrder(c, membershipRelation(a), a), initialSegment(c, membershipRelation(a), a)) ≃ (membershipRelation(b), b))) |- (a ∈ b, b ∈ a, a === b)) by LeftExists
 
     have(c ∈ b |- c ∈ b) by Hypothesis
-    thenHave((ordinal(a), ordinal(c), c ∈ b, relationIsomorphism(f, membershipRelation(a), a, membershipRelation(c), c)) |- a ∈ b) by Substitution.ApplyRules(isomorphicOrdinalsAreEqual of (b := c))
-    thenHave((ordinal(c), ordinal(b), ordinal(a), c ∈ b, relationIsomorphism(f, membershipRelation(a), a, membershipRelation(initialSegment(c, membershipRelation(b), b)), initialSegment(c, membershipRelation(b), b))) |- a ∈ b) by Substitution.ApplyRules(elementOfOrdinalIsInitialSegment of (a := b, b := c))
-    thenHave((ordinal(c), ordinal(b), ordinal(a), c ∈ b, relationIsomorphism(f, membershipRelation(a), a, initialSegmentOrder(c, membershipRelation(b), b), initialSegment(c, membershipRelation(b), b))) |- a ∈ b) by Substitution.ApplyRules(membershipRelationInitialSegment of (b := c, a := b))
-    have((ordinal(b), ordinal(a), c ∈ b, relationIsomorphism(f, membershipRelation(a), a, initialSegmentOrder(c, membershipRelation(b), b), initialSegment(c, membershipRelation(b), b))) |- a ∈ b) by Cut(elementsOfOrdinalsAreOrdinals of (a := b, b := c), lastStep)
-    thenHave((ordinal(b), ordinal(a), c ∈ b /\ relationIsomorphism(f, membershipRelation(a), a, initialSegmentOrder(c, membershipRelation(b), b), initialSegment(c, membershipRelation(b), b))) |- (a ∈ b, b ∈ a, a === b)) by Weakening
-    val left = thenHave((ordinal(b), ordinal(a), ∃(c, c ∈ b /\ relationIsomorphism(f, membershipRelation(a), a, initialSegmentOrder(c, membershipRelation(b), b), initialSegment(c, membershipRelation(b), b)))) |- (a ∈ b, b ∈ a, a === b)) by LeftExists
+    thenHave((ordinal(a), ordinal(c), c ∈ b, (membershipRelation(a), a) ≃ (membershipRelation(c), c)) |- a ∈ b) by Substitution.ApplyRules(isomorphicOrdinalsAreEqual of (b := c))
+    thenHave((ordinal(c), ordinal(b), ordinal(a), c ∈ b, (membershipRelation(a), a) ≃ (membershipRelation(initialSegment(c, membershipRelation(b), b)), initialSegment(c, membershipRelation(b), b))) |- a ∈ b) by Substitution.ApplyRules(elementOfOrdinalIsInitialSegment of (a := b, b := c))
+    thenHave((ordinal(c), ordinal(b), ordinal(a), c ∈ b, (membershipRelation(a), a) ≃ (initialSegmentOrder(c, membershipRelation(b), b), initialSegment(c, membershipRelation(b), b))) |- a ∈ b) by Substitution.ApplyRules(membershipRelationInitialSegment of (b := c, a := b))
+    have((ordinal(b), ordinal(a), c ∈ b, (membershipRelation(a), a) ≃ (initialSegmentOrder(c, membershipRelation(b), b), initialSegment(c, membershipRelation(b), b))) |- a ∈ b) by Cut(elementsOfOrdinalsAreOrdinals of (a := b, b := c), lastStep)
+    thenHave((ordinal(b), ordinal(a), c ∈ b /\ (membershipRelation(a), a) ≃ (initialSegmentOrder(c, membershipRelation(b), b), initialSegment(c, membershipRelation(b), b))) |- (a ∈ b, b ∈ a, a === b)) by Weakening
+    val left = thenHave((ordinal(b), ordinal(a), ∃(c, c ∈ b /\ (membershipRelation(a), a) ≃ (initialSegmentOrder(c, membershipRelation(b), b), initialSegment(c, membershipRelation(b), b)))) |- (a ∈ b, b ∈ a, a === b)) by LeftExists
 
     have((ordinal(a), ordinal(b), 
-      ∃(c, c ∈ b /\ relationIsomorphism(f, membershipRelation(a), a, initialSegmentOrder(c, membershipRelation(b), b), initialSegment(c, membershipRelation(b), b))) \/
-      ∃(c, c ∈ a /\ relationIsomorphism(f, initialSegmentOrder(c, membershipRelation(a), a), initialSegment(c, membershipRelation(a), a), membershipRelation(b), b))) |- (a ∈ b, b ∈ a, a === b)) by LeftOr(left, right)
+      ∃(c, c ∈ b /\ (membershipRelation(a), a) ≃ (initialSegmentOrder(c, membershipRelation(b), b), initialSegment(c, membershipRelation(b), b))) \/
+      ∃(c, c ∈ a /\ (initialSegmentOrder(c, membershipRelation(a), a), initialSegment(c, membershipRelation(a), a)) ≃ (membershipRelation(b), b))) |- (a ∈ b, b ∈ a, a === b)) by LeftOr(left, right)
     have((ordinal(a), ordinal(b), 
-      relationIsomorphism(f, membershipRelation(a), a, membershipRelation(b), b) \/
-      ∃(c, c ∈ b /\ relationIsomorphism(f, membershipRelation(a), a, initialSegmentOrder(c, membershipRelation(b), b), initialSegment(c, membershipRelation(b), b))) \/
-      ∃(c, c ∈ a /\ relationIsomorphism(f, initialSegmentOrder(c, membershipRelation(a), a), initialSegment(c, membershipRelation(a), a), membershipRelation(b), b))) |- (a ∈ b, b ∈ a, a === b)) by LeftOr(middle, lastStep)
-    thenHave((ordinal(a), ordinal(b), 
-      ∃(f, relationIsomorphism(f, membershipRelation(a), a, membershipRelation(b), b) \/
-      ∃(c, c ∈ b /\ relationIsomorphism(f, membershipRelation(a), a, initialSegmentOrder(c, membershipRelation(b), b), initialSegment(c, membershipRelation(b), b))) \/
-      ∃(c, c ∈ a /\ relationIsomorphism(f, initialSegmentOrder(c, membershipRelation(a), a), initialSegment(c, membershipRelation(a), a), membershipRelation(b), b)))) |- (a ∈ b, b ∈ a, (a === b))) by LeftExists
+      (membershipRelation(a), a) ≃ (membershipRelation(b), b) \/
+      ∃(c, c ∈ b /\ (membershipRelation(a), a) ≃ (initialSegmentOrder(c, membershipRelation(b), b), initialSegment(c, membershipRelation(b), b))) \/
+      ∃(c, c ∈ a /\ (initialSegmentOrder(c, membershipRelation(a), a), initialSegment(c, membershipRelation(a), a)) ≃ (membershipRelation(b), b))) |- (a ∈ b, b ∈ a, a === b)) by LeftOr(middle, lastStep)
     have((ordinal(a), ordinal(b), strictWellOrder(membershipRelation(a), a), strictWellOrder(membershipRelation(b), b)) |- (a ∈ b, b ∈ a, (a === b))) by Cut(initialSegmentIsomorphicCases of (r1 := membershipRelation(a), x := a, r2 := membershipRelation(b), y := b), lastStep)
     have((ordinal(a), ordinal(b), strictWellOrder(membershipRelation(b), b)) |- (a ∈ b, b ∈ a, (a === b))) by Cut(ordinalStrictWellOrder, lastStep)
     have(thesis) by Cut(ordinalStrictWellOrder of (a := b), lastStep)
