@@ -135,12 +135,12 @@ object ADTExample extends lisa.Main {
     have(thesis) by Induction() {
       Case(zero) subproof {
         have(zero :: nat) by TypeChecker.prove
-        have(!(zero === succ * zero)) by (Apply(nat.injectivity(zero, succ) of (y0 := zero)) on lastStep)
+        have(zero =/= succ * zero) by (Apply(nat.injectivity(zero, succ) of (y0 := zero)) on lastStep)
       }
       
       Case(succ, n) subproof {
         have((n :: nat) |- succ * n :: nat) by TypeChecker.prove
-        have((!(n === succ * n), n :: nat) |- !(succ * n === succ * (succ * n))) by 
+        have((n =/= succ * n, n :: nat) |- !(succ * n === succ * (succ * n))) by 
           Tautology.from(succ.injectivity of (x0 := n, y0 := succ * n), lastStep)
       }
     }

@@ -42,10 +42,10 @@ object QuantifiersIntro extends lisa.prooflib.ProofTacticLib.ProofTactic {
             val f = s.head
             val fWithoutQuant = (fact.statement.left -- diffRest).head
             f match
-              case BinderFormula(Forall, _, _) => 
+              case BinderFormula(∀, _, _) => 
                 vars.foldRight[(sp.Fact, Formula)](fact, fWithoutQuant)( (v, acc) => 
                   val (accFact, accFormula) = acc
-                  val newFormula = forall(v, accFormula)
+                  val newFormula = ∀(v, accFormula)
                   (lib.have(diffRest + newFormula |- bot.right) by LeftForall(accFact), newFormula)
                 )
               case BinderFormula(Exists, _, _) => 
@@ -60,10 +60,10 @@ object QuantifiersIntro extends lisa.prooflib.ProofTacticLib.ProofTactic {
             val f = s.head
             val fWithoutQuant = (fact.statement.right -- diffRest).head
             f match
-              case BinderFormula(Forall, _, _) => 
+              case BinderFormula(∀, _, _) => 
                 vars.foldRight[(sp.Fact, Formula)](fact, fWithoutQuant)( (v, acc) => 
                   val (accFact, accFormula) = acc
-                  val newFormula = forall(v, accFormula)
+                  val newFormula = ∀(v, accFormula)
                   (lib.have(bot.left |- diffRest + newFormula) by RightForall(accFact), newFormula)
                 )
               case BinderFormula(Exists, _, _) => 
@@ -199,7 +199,7 @@ private [adt] object Helpers {
    * @return the quantified formula
    */
   def forallSeq(vars: Seq[Variable], f: Formula): Formula =
-    vars.foldRight(f)(forall(_, _))
+    vars.foldRight(f)(∀(_, _))
 
   /**
    * Simplifies a formula by removing True and False constants.
@@ -219,7 +219,7 @@ private [adt] object Helpers {
       case Iff(True, phi) => simplify(phi)
       case Iff(phi, True) => simplify(phi)
       case Iff(phi, psi) => Iff(simplify(phi), simplify(psi))
-      case Forall(v, phi) => Forall(v, simplify(phi))
+      case ∀(v, phi) => ∀(v, simplify(phi))
       case Exists(v, phi) => Exists(v, simplify(phi))
       case _ => f
 
@@ -254,6 +254,7 @@ private[adt] object ADTDefinitions extends lisa.Main {
 
   import lisa.maths.settheory.SetTheory.*
   import lisa.maths.settheory.Relations.*
+  import lisa.maths.settheory.Functions.*
   import lisa.maths.settheory.types.TypeSystem.*
   import lisa.maths.settheory.types.TypeLib.{|=>}
   import Helpers.*
@@ -320,16 +321,16 @@ private[adt] object ADTDefinitions extends lisa.Main {
     val wellTypedDomains = wellTypedFormula(signature)
     
 
-    val monotonicity: THM = Lemma(y ⊆ z |- subset(getOrElse(y), getOrElse(z))) {
+    val monotonicity: THM = Lemma(y ⊆ z |- getOrElse(y) ⊆ getOrElse(z)) {
       to match
         case Self => 
-          have(thesis) by Restate.from(ADTHelperTheorems.functionSpaceRightMonotonic of (x := from))
+          have(thesis) by Restate.from(setOfFunctionsRightMonotonic of (x := from))
         case GroundType(t) =>
           have(thesis) by Restate.from(subsetReflexivity of (x := getOrElse(y)))
         case f: FunctionType =>
           have(thesis) by Cut(
             f.monotonicity,
-            ADTHelperTheorems.functionSpaceRightMonotonic of (x := from, y := f.getOrElse(y), z := f.getOrElse(z))
+            setOfFunctionsRightMonotonic of (x := from, y := f.getOrElse(y), z := f.getOrElse(z))
           )
       
     }
@@ -503,8 +504,10 @@ private [adt] object ADTHelperTheorems extends lisa.Main {
   // *************
 
 
-  val inRestrictedFunctionRange = Lemma((functional(f), in(x, dom(f) ∩ d)) |- in(app(f, x), ran(f ↾ d))) {
-    sorry
+  val inRestrictedFunctionRange = Lemma((functional(f), x ∈ d, x ∈ dom(f)) |- app(f, x) ∈ ran(f ↾ d)) {
+    have((functional(f), functional(f ↾ d), x ∈ d, x ∈ dom(f), x ∈ (dom(f) ∩ d)) |- app(f, x) ∈ ran(f ↾ d)) by Substitution.ApplyRules(functionRestrictionApp, domainRestrictionDomain)(functionalRangeIntro of (f := f ↾ d, a := x))
+    have((functional(f), x ∈ d, x ∈ dom(f), x ∈ (dom(f) ∩ d)) |- app(f, x) ∈ ran(f ↾ d)) by Cut(domainRestrictionFunctional of (x := d), lastStep)
+    thenHave((functional(f), x ∈ d, x ∈ dom(f), x ∈ dom(f) /\ x ∈ d) |- app(f, x) ∈ ran(f ↾ d)) by Substitution.ApplyRules(setIntersectionMembership of (z := x, x := dom(f), y := d))
   }
 
   /**
@@ -548,7 +551,7 @@ private [adt] object ADTHelperTheorems extends lisa.Main {
     have(∃(y, ∃(m, m ∈ dom(h) /\ (app(h, m) === y) /\ z ∈ y)) <=> ∃(m, ∃(y, m ∈ dom(h) /\ z ∈ y /\ (app(h, m) === y)))) subproof {
 
       have(m ∈ dom(h) /\ (app(h, m) === y) /\ z ∈ y <=> m ∈ dom(h) /\ z ∈ y /\ (app(h, m) === y)) by Restate
-      thenHave(forall(y, m ∈ dom(h) /\ (app(h, m) === y) /\ z ∈ y <=> m ∈ dom(h) /\ z ∈ y /\ (app(h, m) === y))) by RightForall
+      thenHave(∀(y, m ∈ dom(h) /\ (app(h, m) === y) /\ z ∈ y <=> m ∈ dom(h) /\ z ∈ y /\ (app(h, m) === y))) by RightForall
       have(∃(y, m ∈ dom(h) /\ (app(h, m) === y) /\ z ∈ y) <=> ∃(y, m ∈ dom(h) /\ z ∈ y /\ (app(h, m) === y))) by Cut(
         lastStep,
         existentialEquivalenceDistribution of (
@@ -556,7 +559,7 @@ private [adt] object ADTHelperTheorems extends lisa.Main {
           Q := lambda(y, m ∈ dom(h) /\ z ∈ y /\ (app(h, m) === y))
         )
       )
-      thenHave(forall(m, ∃(y, m ∈ dom(h) /\ (app(h, m) === y) /\ z ∈ y) <=> ∃(y, m ∈ dom(h) /\ z ∈ y /\ (app(h, m) === y)))) by RightForall
+      thenHave(∀(m, ∃(y, m ∈ dom(h) /\ (app(h, m) === y) /\ z ∈ y) <=> ∃(y, m ∈ dom(h) /\ z ∈ y /\ (app(h, m) === y)))) by RightForall
       have(∃(m, ∃(y, m ∈ dom(h) /\ (app(h, m) === y) /\ z ∈ y)) <=> ∃(m, ∃(y, m ∈ dom(h) /\ z ∈ y /\ (app(h, m) === y)))) by Cut(
         lastStep,
         existentialEquivalenceDistribution of (
@@ -616,15 +619,6 @@ private [adt] object ADTHelperTheorems extends lisa.Main {
   // * MONOTONICITY *
   // ****************
 
-  /**
-   * Lemma --- Function spaces are monotonic on the right.
-   *
-   *     `y ⊆ z |- x |=> y ⊆ x |=> z`
-   */
-  val functionSpaceRightMonotonic = Lemma(y ⊆ z |- (x |=> y) ⊆ (x |=> z)) {
-    sorry
-  }
-
 
   /**
    * Lemma --- The union of the range is a monotonic operation with respect to set inclusion.
@@ -653,21 +647,12 @@ private [adt] object ADTHelperTheorems extends lisa.Main {
    *      `s ⊆ t, F(s) ⊆ F(t) |- F(s) ∪ s ⊆ F(t) ∪ t`
    */
   val unionPreimageMonotonic = Lemma((s ⊆ t, P(s) ==> P(t)) |- (P(s) \/ (x ∈ s)) ==> (P(t) \/ (x ∈ t))) {
-    have(s ⊆ t |- forall(z, in(z, s) ==> in(z, t))) by Cut(
+    have(s ⊆ t |- ∀(z, in(z, s) ==> in(z, t))) by Cut(
       subsetAxiom of (x := s, y := t),
-      equivalenceApply of (p1 := s ⊆ t, p2 := forall(z, in(z, s) ==> in(z, t)))
+      equivalenceApply of (p1 := s ⊆ t, p2 := ∀(z, in(z, s) ==> in(z, t)))
     )
     thenHave(s ⊆ t |- in(x, s) ==> in(x, t)) by InstantiateForall(x)
     have(thesis) by Cut(lastStep, disjunctionsImplies of (p1 := in(x, s), p2 := in(x, t), q1 := P(s), q2 := P(t)))
-  }
-
-  /**
-   * Lemma --- Resticting a function to a smaller domain yields a subset of the original function.
-   *
-   *     `x ⊆ y |- f|x ⊆ f|y`
-   */
-  val restrictedFunctionDomainMonotonic = Lemma(x ⊆ y |- subset(f ↾ x, f ↾ y)) {
-    sorry
   }
 
   // *******************
@@ -681,21 +666,21 @@ private [adt] object ADTHelperTheorems extends lisa.Main {
    *     `monotonic(h) and Dom(h) = N |- ∪ Im(h|n + 1) = h(n)`
    */
   val unionRangeCumulativeRestrictedFunction =
-    Lemma((functional(h), ordinal(dom(h)), in(successor(n), dom(h)), ∀(m, in(m, dom(h)) ==> (m ⊆ n ==> subset(app(h, m), app(h, n))))) |- uran(h ↾ successor(n)) === app(h, n)) {
+    Lemma((functional(h), ordinal(dom(h)), in(successor(n), dom(h)), ∀(m, m ∈ dom(h) ==> (m ⊆ n ==> app(h, m) ⊆ app(h, n)))) |- uran(h ↾ successor(n)) === app(h, n)) {
       sorry
     }
 
   def fixpointClassFunction(h: Term)(c: PredicateLabel[2]) =
     functional(h) /\ ordinal(dom(h)) /\ 
-    forall(n, n ∈ dom(h) ==> 
-      forall(x, x ∈ app(h, n) <=> 
+    ∀(n, n ∈ dom(h) ==> 
+      ∀(x, x ∈ app(h, n) <=> 
         ((successorOrdinal(n) ==> c(x, uran(h ↾ n))) /\
         (!successorOrdinal(n) ==> in(x, uran(h ↾ n))))
       )
     )
 
-  def classFunctionCumulative(c: PredicateLabel[2]) = forall(n, forall(x, in(x, n) ==> c(x, n)))
-  def classFunctionMonotonic(c: PredicateLabel[2]) = forall(m, forall(n, m ⊆ n ==> forall(x, c(x, m) ==> c(x, n))))
+  def classFunctionCumulative(c: PredicateLabel[2]) = ∀(n, ∀(x, in(x, n) ==> c(x, n)))
+  def classFunctionMonotonic(c: PredicateLabel[2]) = ∀(m, ∀(n, m ⊆ n ==> ∀(x, c(x, m) ==> c(x, n))))
 
   val inFixpointFunctionDomain = Lemma((fixpointClassFunction(h)(P2), n ∈ dom(h)) |- ordinal(n)) {
     have(fixpointClassFunction(h)(P2) |- ordinal(dom(h))) by Restate
@@ -718,11 +703,11 @@ private [adt] object ADTHelperTheorems extends lisa.Main {
       ((successorOrdinal(n) ==> P2(x, uran(h ↾ n))) /\
       (!successorOrdinal(n) ==> in(x, uran(h ↾ n))))
     val funBodySucc = funBody(successor(n))
-    val funApplicationDef = forall(n, n ∈ dom(h) ==> forall(x, funBody(n)))
+    val funApplicationDef = ∀(n, n ∈ dom(h) ==> ∀(x, funBody(n)))
 
     // Nothing fancy, just instantiations and restates
     have(funApplicationDef |- funApplicationDef) by Hypothesis 
-    thenHave((funApplicationDef, in(successor(n), dom(h))) |- forall(x, funBodySucc)) by InstantiateForall(successor(n))
+    thenHave((funApplicationDef, in(successor(n), dom(h))) |- ∀(x, funBodySucc)) by InstantiateForall(successor(n))
     thenHave((funApplicationDef, in(successor(n), dom(h))) |- funBodySucc) by InstantiateForall(x)
     thenHave((fixpointClassFunction(h)(P2), in(successor(n), dom(h)), successorOrdinal(successor(n))) |- in(x, app(h, successor(n))) <=> P2(x, uran(h ↾ successor(n)))) by Tautology
     have((fixpointClassFunction(h)(P2), in(successor(n), dom(h)), ordinal(n)) |- in(x, app(h, successor(n))) <=> P2(x, uran(h ↾ successor(n)))) by Cut(successorIsSuccessorOrdinal of (a := n), lastStep)
@@ -736,15 +721,15 @@ private [adt] object ADTHelperTheorems extends lisa.Main {
     def funBody = x ∈ app(h, n) <=> 
       ((successorOrdinal(n) ==> P2(x, uran(h ↾ n))) /\
       (!successorOrdinal(n) ==> in(x, uran(h ↾ n))))
-    val funApplicationDef = forall(n, n ∈ dom(h) ==> forall(x, funBody))
+    val funApplicationDef = ∀(n, n ∈ dom(h) ==> ∀(x, funBody))
 
     // Nothing fancy, just instantiations and restates
     have(funApplicationDef |- funApplicationDef) by Hypothesis
-    thenHave((funApplicationDef, n ∈ dom(h)) |- forall(x, funBody)) by InstantiateForall(n)
+    thenHave((funApplicationDef, n ∈ dom(h)) |- ∀(x, funBody)) by InstantiateForall(n)
     thenHave((funApplicationDef, n ∈ dom(h)) |- funBody) by InstantiateForall(x)
     thenHave((fixpointClassFunction(h)(P2), n ∈ dom(h), !successorOrdinal(n)) |- x ∈ app(h, n) <=> in(x, uran(h ↾ n))) by Tautology
     have((fixpointClassFunction(h)(P2), n ∈ dom(h), nonsuccessorOrdinal(n)) |- x ∈ app(h, n) <=> in(x, uran(h ↾ n))) by Cut(nonsuccessorOrdinalIsNotSuccessorOrdinal, lastStep)
-    thenHave((fixpointClassFunction(h)(P2), n ∈ dom(h), nonsuccessorOrdinal(n)) |- forall(x, x ∈ app(h, n) <=> in(x, uran(h ↾ n)))) by RightForall
+    thenHave((fixpointClassFunction(h)(P2), n ∈ dom(h), nonsuccessorOrdinal(n)) |- ∀(x, x ∈ app(h, n) <=> in(x, uran(h ↾ n)))) by RightForall
     have(thesis) by Cut(lastStep, equalityIntro of (x := app(h, n), y := uran(h ↾ n)))
   }
   
@@ -752,8 +737,8 @@ private [adt] object ADTHelperTheorems extends lisa.Main {
 
     val succCase = have((classFunctionMonotonic(P2), classFunctionCumulative(P2), fixpointClassFunction(h)(P2), n ∈ dom(h), m ⊆ n, successorOrdinal(n)) |- subset(app(h, m), app(h, n))) subproof {
 
-      val unionRangeRestrMon = have(m ⊆ n |- subset(uran(h ↾ m), uran(h ↾ n))) by Cut(
-          restrictedFunctionDomainMonotonic of (x := m, y := n, f := h), 
+      val unionRangeRestrMon = have((functional(h), m ⊆ n) |- uran(h ↾ m) ⊆ uran(h ↾ n)) by Cut(
+          functionRestrictionSubsetDomain of (x := m, y := n, f := h), 
           unionRangeMonotonic of (f := h ↾ m, g := h ↾ n)
         )
 
@@ -761,13 +746,13 @@ private [adt] object ADTHelperTheorems extends lisa.Main {
 
         have(classFunctionMonotonic(P2) |- classFunctionMonotonic(P2)) by Hypothesis
         
-        thenHave(classFunctionMonotonic(P2) |- forall(n, subset(uran(h ↾ successor(a)), n) ==> forall(x, P2(x, uran(h ↾ successor(a))) ==> P2(x, n)))) by InstantiateForall(uran(h ↾ successor(a)))
+        thenHave(classFunctionMonotonic(P2) |- ∀(n, subset(uran(h ↾ successor(a)), n) ==> ∀(x, P2(x, uran(h ↾ successor(a))) ==> P2(x, n)))) by InstantiateForall(uran(h ↾ successor(a)))
         
-        thenHave(classFunctionMonotonic(P2) |- subset(uran(h ↾ successor(a)), uran(h ↾ successor(b))) ==> forall(x, P2(x, uran(h ↾ successor(a))) ==> P2(x, uran(h ↾ successor(b))))) by InstantiateForall(uran(h ↾ successor(b)))
+        thenHave(classFunctionMonotonic(P2) |- subset(uran(h ↾ successor(a)), uran(h ↾ successor(b))) ==> ∀(x, P2(x, uran(h ↾ successor(a))) ==> P2(x, uran(h ↾ successor(b))))) by InstantiateForall(uran(h ↾ successor(b)))
 
-        thenHave((classFunctionMonotonic(P2), subset(uran(h ↾ successor(a)), uran(h ↾ successor(b)))) |- forall(x, P2(x, uran(h ↾ successor(a))) ==> P2(x, uran(h ↾ successor(b))))) by Restate
+        thenHave((classFunctionMonotonic(P2), subset(uran(h ↾ successor(a)), uran(h ↾ successor(b)))) |- ∀(x, P2(x, uran(h ↾ successor(a))) ==> P2(x, uran(h ↾ successor(b))))) by Restate
 
-        have((classFunctionMonotonic(P2), successor(a) ⊆ successor(b)) |- forall(x, P2(x, uran(h ↾ successor(a))) ==> P2(x, uran(h ↾ successor(b))))) by Cut(unionRangeRestrMon of (m := successor(a), n := successor(b)), lastStep)
+        have((classFunctionMonotonic(P2), successor(a) ⊆ successor(b)) |- ∀(x, P2(x, uran(h ↾ successor(a))) ==> P2(x, uran(h ↾ successor(b))))) by Cut(unionRangeRestrMon of (m := successor(a), n := successor(b)), lastStep)
 
         thenHave((classFunctionMonotonic(P2), successor(a) ⊆ successor(b)) |- P2(x, uran(h ↾ successor(a))) ==> P2(x, uran(h ↾ successor(b)))) by InstantiateForall(x)
 
@@ -787,7 +772,7 @@ private [adt] object ADTHelperTheorems extends lisa.Main {
         have((classFunctionMonotonic(P2), fixpointClassFunction(h)(P2), in(successor(a), dom(h)), in(successor(b), dom(h)), successor(a) ⊆ successor(b)) |- x ∈ app(h, successor(a)) ==> in(x, app(h, successor(b)))) by 
         Cut(fixpointFunctionSuccessorUnfold of (n := b), lastStep) 
 
-        thenHave((classFunctionMonotonic(P2), fixpointClassFunction(h)(P2), in(successor(a), dom(h)), in(successor(b), dom(h)), successor(a) ⊆ successor(b)) |- forall(x, x ∈ app(h, successor(a)) ==> in(x, app(h, successor(b))))) by RightForall
+        thenHave((classFunctionMonotonic(P2), fixpointClassFunction(h)(P2), in(successor(a), dom(h)), in(successor(b), dom(h)), successor(a) ⊆ successor(b)) |- ∀(x, x ∈ app(h, successor(a)) ==> in(x, app(h, successor(b))))) by RightForall
 
         have((classFunctionMonotonic(P2), fixpointClassFunction(h)(P2), in(successor(a), dom(h)), in(successor(b), dom(h)), successor(a) ⊆ successor(b)) |- subset(app(h, successor(a)), app(h, successor(b)))) by Cut(lastStep, subsetIntro of (x := app(h, successor(a)), y := app(h, successor(b))))
 
@@ -819,7 +804,7 @@ private [adt] object ADTHelperTheorems extends lisa.Main {
       val succNonSuccCase = have((classFunctionCumulative(P2), fixpointClassFunction(h)(P2), in(successor(b), dom(h)), m ⊆ successor(b), nonsuccessorOrdinal(m)) |- app(h, m) ⊆ app(h, successor(b))) subproof {
 
         have(classFunctionCumulative(P2) |- classFunctionCumulative(P2)) by Hypothesis
-        thenHave(classFunctionCumulative(P2) |- forall(x, in(x, uran(h ↾ successor(b))) ==> P2(x, uran(h ↾ successor(b))))) by InstantiateForall(uran(h ↾ successor(b)))
+        thenHave(classFunctionCumulative(P2) |- ∀(x, in(x, uran(h ↾ successor(b))) ==> P2(x, uran(h ↾ successor(b))))) by InstantiateForall(uran(h ↾ successor(b)))
         thenHave((classFunctionCumulative(P2), in(x, uran(h ↾ successor(b)))) |- P2(x, uran(h ↾ successor(b)))) by InstantiateForall(x)
         thenHave((classFunctionCumulative(P2), fixpointClassFunction(h)(P2), in(successor(b), dom(h)), in(x, uran(h ↾ successor(b)))) |- in(x, app(h, successor(b)))) by Substitution.ApplyRules(fixpointFunctionSuccessorUnfold of (n := b))
         have((classFunctionCumulative(P2), fixpointClassFunction(h)(P2), in(successor(b), dom(h)), subset(uran(h ↾ m), uran(h ↾ successor(b))), in(x, uran(h ↾ m))) |- in(x, app(h, successor(b)))) by Cut(
@@ -828,7 +813,7 @@ private [adt] object ADTHelperTheorems extends lisa.Main {
         )
         have((classFunctionCumulative(P2), fixpointClassFunction(h)(P2), in(successor(b), dom(h)), m ⊆ successor(b), in(x, uran(h ↾ m))) |- in(x, app(h, successor(b)))) by Cut(unionRangeRestrMon of (n := successor(b)), lastStep)
         thenHave((classFunctionCumulative(P2), fixpointClassFunction(h)(P2), in(successor(b), dom(h)), m ⊆ successor(b)) |- in(x, uran(h ↾ m)) ==> in(x, app(h, successor(b)))) by RightImplies
-        thenHave((classFunctionCumulative(P2), fixpointClassFunction(h)(P2), in(successor(b), dom(h)), m ⊆ successor(b)) |- forall(x, in(x, uran(h ↾ m)) ==> in(x, app(h, successor(b))))) by RightForall
+        thenHave((classFunctionCumulative(P2), fixpointClassFunction(h)(P2), in(successor(b), dom(h)), m ⊆ successor(b)) |- ∀(x, in(x, uran(h ↾ m)) ==> in(x, app(h, successor(b))))) by RightForall
         have((classFunctionCumulative(P2), fixpointClassFunction(h)(P2), in(successor(b), dom(h)), m ⊆ successor(b)) |- subset(uran(h ↾ m), app(h, successor(b)))) by Cut(lastStep, subsetIntro of (x := uran(h ↾ m), y := app(h, successor(b))))
         thenHave((classFunctionCumulative(P2), fixpointClassFunction(h)(P2), in(successor(b), dom(h)), m ⊆ successor(b), nonsuccessorOrdinal(m), in(m, dom(h))) |- app(h, m) ⊆ app(h, successor(b))) by Substitution.ApplyRules(fixpointFunctionNonsuccessorUnfold of (n := m))
         have((classFunctionCumulative(P2), fixpointClassFunction(h)(P2), in(successor(b), dom(h)), m ⊆ successor(b), nonsuccessorOrdinal(m)) |- app(h, m) ⊆ app(h, successor(b))) by Cut(subsetElemFixpointFunctionDomain of (n := successor(b)), lastStep)
@@ -888,7 +873,7 @@ private [adt] object ADTHelperTheorems extends lisa.Main {
         List((m, n)),
         lambda(s, subset(app(h, m), app(h, s)))
       )(subsetReflexivity of (x := app(h, m)))
-      have((ordinal(m), ordinal(n), m ⊆ n) |- (in(m, n), subset(app(h, m), app(h, n)))) by Cut(ordinalSubsetImpliesLeq of (a := m, b := n), lastStep)
+      thenHave((ordinal(m), ordinal(n), m ⊆ n) |- (in(m, n), subset(app(h, m), app(h, n)))) by Substitution.ApplyRules(leqOrdinalIsSubset)
       have((fixpointClassFunction(h)(P2), n ∈ dom(h), ordinal(m), ordinal(n), m ⊆ n, nonsuccessorOrdinal(n)) |- subset(app(h, m), app(h, n))) by Cut(lastStep, nonSuccCaseIn)
       have((fixpointClassFunction(h)(P2), ordinal(m), m ⊆ n, n ∈ dom(h), nonsuccessorOrdinal(n)) |- subset(app(h, m), app(h, n))) by Cut(nonsuccessorOrdinalIsOrdinal of (a := n), lastStep)
       have(thesis) by Cut(inFixpointFunctionDomain of (n := m), lastStep)
@@ -906,8 +891,8 @@ private [adt] object ADTHelperTheorems extends lisa.Main {
     
     have(((classFunctionMonotonic(P2), classFunctionCumulative(P2), fixpointClassFunction(h)(P2), in(m, dom(h)), n ∈ dom(h)) |- m ⊆ n ==> subset(app(h, m), app(h, n)))) by RightImplies(fixpointFunctionMonotonicity)
     thenHave(((classFunctionMonotonic(P2), classFunctionCumulative(P2), fixpointClassFunction(h)(P2), n ∈ dom(h)) |- in(m, dom(h)) ==> (m ⊆ n ==> subset(app(h, m), app(h, n))))) by RightImplies
-    thenHave(((classFunctionMonotonic(P2), classFunctionCumulative(P2), fixpointClassFunction(h)(P2), n ∈ dom(h)) |- forall(m, in(m, dom(h)) ==> (m ⊆ n ==> subset(app(h, m), app(h, n)))))) by RightForall
-    have(((classFunctionMonotonic(P2), classFunctionCumulative(P2), fixpointClassFunction(h)(P2), in(successor(n), dom(h))) |- forall(m, in(m, dom(h)) ==> (m ⊆ n ==> subset(app(h, m), app(h, n)))))) by Cut(successorElemFixpointFunctionDomain, lastStep)
+    thenHave(((classFunctionMonotonic(P2), classFunctionCumulative(P2), fixpointClassFunction(h)(P2), n ∈ dom(h)) |- ∀(m, in(m, dom(h)) ==> (m ⊆ n ==> subset(app(h, m), app(h, n)))))) by RightForall
+    have(((classFunctionMonotonic(P2), classFunctionCumulative(P2), fixpointClassFunction(h)(P2), in(successor(n), dom(h))) |- ∀(m, in(m, dom(h)) ==> (m ⊆ n ==> subset(app(h, m), app(h, n)))))) by Cut(successorElemFixpointFunctionDomain, lastStep)
     have((functional(h), ordinal(dom(h)), classFunctionMonotonic(P2), classFunctionCumulative(P2), fixpointClassFunction(h)(P2), in(successor(n), dom(h))) |- uran(h ↾ successor(n)) === app(h, n)) by Cut(lastStep, unionRangeCumulativeRestrictedFunction)
     val unionRangeSucc = thenHave((classFunctionMonotonic(P2), classFunctionCumulative(P2), fixpointClassFunction(h)(P2), in(successor(n), dom(h))) |- uran(h ↾ successor(n)) === app(h, n)) by Restate
     
@@ -943,11 +928,11 @@ private [adt] object ADTHelperTheorems extends lisa.Main {
     have(thesis) by Cut(fixpointClassFunctionWithDomainOrdinal, lastStep)
   }
 
-  def fixpointDescription(c: PredicateLabel[2])(d: Term)(fix: Term) = forall(t, in(t, fix) <=> forall(h, fixpointClassFunctionWithDomain(h)(c)(d) ==> in(t, uran(h))))
+  def fixpointDescription(c: PredicateLabel[2])(d: Term)(fix: Term) = ∀(t, in(t, fix) <=> ∀(h, fixpointClassFunctionWithDomain(h)(c)(d) ==> in(t, uran(h))))
 
   val fixpointUniqueness = Lemma(ordinal(d) |- existsOne(z, fixpointDescription(P2)(d)(z))) {
     // STEP 0: Caching
-        val fixpointDefinitionRight = forall(h, fixpointClassFunctionWithDomain(h)(P2)(d) ==> in(t, uran(h)))
+        val fixpointDefinitionRight = ∀(h, fixpointClassFunctionWithDomain(h)(P2)(d) ==> in(t, uran(h)))
         val inUnionRangeF = in(t, uran(f))
 
         // STEP 1: Prove that there exists a term satisfying the definition of this ADT.
@@ -972,10 +957,10 @@ private [adt] object ADTHelperTheorems extends lisa.Main {
 
           // STEP 1.3: Use the existence of the height function to prove the existence of this ADT
           have(fixpointClassFunctionWithDomain(f)(P2)(d) |- inUnionRangeF <=> fixpointDefinitionRight) by RightIff(forward, backward)
-          thenHave(fixpointClassFunctionWithDomain(f)(P2)(d) |- forall(t, inUnionRangeF <=> fixpointDefinitionRight)) by RightForall
+          thenHave(fixpointClassFunctionWithDomain(f)(P2)(d) |- ∀(t, inUnionRangeF <=> fixpointDefinitionRight)) by RightForall
 
-          thenHave(fixpointClassFunctionWithDomain(f)(P2)(d) |- ∃(z, forall(t, t ∈ z <=> fixpointDefinitionRight))) by RightExists
-          thenHave(∃(f, fixpointClassFunctionWithDomain(f)(P2)(d)) |- ∃(z, forall(t, t ∈ z <=> fixpointDefinitionRight))) by LeftExists
+          thenHave(fixpointClassFunctionWithDomain(f)(P2)(d) |- ∃(z, ∀(t, t ∈ z <=> fixpointDefinitionRight))) by RightExists
+          thenHave(∃(f, fixpointClassFunctionWithDomain(f)(P2)(d)) |- ∃(z, ∀(t, t ∈ z <=> fixpointDefinitionRight))) by LeftExists
           have(thesis) by Cut(fixpointClassFunctionWithDomainExistence, lastStep)
         }
 

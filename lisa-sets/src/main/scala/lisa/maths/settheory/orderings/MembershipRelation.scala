@@ -36,12 +36,12 @@ object MembershipRelation extends lisa.Main {
   /**
     * Theorem --- Uniqueness of the membership relation
     * 
-    *     `∃!r. ∀t. t ∈ r ⇔ (t ∈ x × x ∧ ∃a. ∃b. a ∈ b ∧ t = (a, b))`
+    *     `∃!r. ∀p. p ∈ r ⇔ (p ∈ x × x ∧ fst(p) ∈ snd(p))`
     */
   val membershipRelationUniqueness = Lemma(
-    ∃!(z, ∀(t, t ∈ z <=> (t ∈ (x × x) /\ ∃(a, ∃(b, a ∈ b /\ (t === pair(a, b)))))))
+    ∃!(z, ∀(p, p ∈ z <=> (p ∈ (x × x) /\ fst(p) ∈ snd(p))))
   ) {
-    have(thesis) by UniqueComprehension(x × x, lambda(t, ∃(a, ∃(b, a ∈ b /\ (t === pair(a, b))))))
+    have(thesis) by UniqueComprehension(x × x, lambda(p, fst(p) ∈ snd(p)))
   }
 
   /**
@@ -49,21 +49,32 @@ object MembershipRelation extends lisa.Main {
    *
    *    `∈_x = {(a, b) ∈ x * x | a ∈ b}`
    */
-  val membershipRelation = DEF(x) --> The(z, ∀(t, t ∈ z <=> (t ∈ (x × x) /\ ∃(a, ∃(b, a ∈ b /\ (t === pair(a, b)))))))(membershipRelationUniqueness)
+  val membershipRelation = DEF(x) --> The(z, ∀(p, p ∈ z <=> (p ∈ (x × x) /\ fst(p) ∈ snd(p))))(membershipRelationUniqueness)
+
+  val membershipRelationElem = Lemma(
+    p ∈ membershipRelation(x) <=> (p ∈ (x × x) /\ fst(p) ∈ snd(p))
+  ) {
+    have(∀(p, p ∈ membershipRelation(x) <=> (p ∈ (x × x) /\ fst(p) ∈ snd(p)))) by InstantiateForall(membershipRelation(x))(membershipRelation.definition)
+    thenHave(thesis) by InstantiateForall(p)
+  }
 
   /**
    * Theorem --- The membership relation is a relation.
    * 
    *   `∈_x ⊆ x × x`
    */
-  val membershipRelationIsARelation = Lemma(relationBetween(membershipRelation(x), x, x)) {
-    have(∀(t, t ∈ membershipRelation(x) <=> (t ∈ (x × x) /\ ∃(y, ∃(x, y ∈ x /\ (t === pair(y, x))))))) by InstantiateForall(membershipRelation(x))(membershipRelation.definition)
-    thenHave(t ∈ membershipRelation(x) <=> (t ∈ (x × x) /\ ∃(y, ∃(x, y ∈ x /\ (t === pair(y, x)))))) by InstantiateForall(t)
-    thenHave(t ∈ membershipRelation(x) ==> t ∈ (x × x)) by Weakening
-    thenHave(∀(t, t ∈ membershipRelation(x) ==> t ∈ (x × x))) by RightForall
+  val membershipRelationRelationBetween = Lemma(relationBetween(membershipRelation(x), x, x)) {
+    have(p ∈ membershipRelation(x) ==> p ∈ (x × x)) by Weakening(membershipRelationElem)
+    thenHave(∀(p, p ∈ membershipRelation(x) ==> p ∈ (x × x))) by RightForall
     have(membershipRelation(x) ⊆ (x × x)) by Cut(lastStep, subsetIntro of (x := membershipRelation(x), y := x × x))
-    thenHave(thesis) by Substitution.ApplyRules(relationBetween.definition of (r := membershipRelation(x), a := x, b := x))
+    have(thesis) by Cut(lastStep, relationBetweenIntro of (r := membershipRelation(x), a := x, b := x))
   }
+
+  val membershipRelationRelation = Lemma(relation(membershipRelation(x))) {
+    have(thesis) by Cut(membershipRelationRelationBetween, relationBetweenIsRelation of (r := membershipRelation(x), a := x, b := x))
+  }
+
+  
 
   /**
    * Theorem --- Definition of elements of the membership relation
@@ -73,29 +84,7 @@ object MembershipRelation extends lisa.Main {
   val membershipRelationElemPair = Lemma(
     pair(a, b) ∈ membershipRelation(x) <=> (a ∈ x /\ b ∈ x /\ a ∈ b)
   ) {
-    val pairExists = have(a ∈ b <=> ∃(y, ∃(z, y ∈ z /\ (pair(a, b) === pair(y, z))))) subproof {
-      val forward = have(a ∈ b ==> ∃(y, ∃(z, y ∈ z /\ (pair(a, b) === pair(y, z))))) subproof {
-        have(a ∈ b |- a ∈ b /\ (pair(a, b) === pair(a, b))) by Restate
-        thenHave(a ∈ b |- ∃(z, a ∈ z /\ (pair(a, b) === pair(a, z)))) by RightExists
-        thenHave(a ∈ b |- ∃(y, ∃(z, y ∈ z /\ (pair(a, b) === pair(y, z))))) by RightExists
-      }
-      val backward = have(∃(y, ∃(z, y ∈ z /\ (pair(a, b) === pair(y, z)))) ==> a ∈ b) subproof {
-        have(y ∈ z |- y ∈ z) by Hypothesis
-        thenHave((y ∈ z, a === y, b === z) |- a ∈ b) by RightSubstEq.withParametersSimple(List((y, a), (z, b)), lambda((y, z), y ∈ z))
-        thenHave((y ∈ z, (a === y) /\ (b === z)) |- a ∈ b) by LeftAnd
-        thenHave((y ∈ z, pair(a, b) === pair(y, z)) |- a ∈ b) by Substitution.ApplyRules(pairExtensionality of (c := y, d := x))
-        thenHave(y ∈ z /\ (pair(a, b) === pair(y, z)) |- a ∈ b) by LeftAnd
-        thenHave(∃(z, y ∈ z /\ (pair(a, b) === pair(y, z))) |- a ∈ b) by LeftExists
-        thenHave(∃(y, ∃(z, y ∈ z /\ (pair(a, b) === pair(y, z)))) |- a ∈ b) by LeftExists
-      }
-
-      have(thesis) by RightIff(forward, backward)
-    }
-
-    have(∀(t, t ∈ membershipRelation(x) <=> (t ∈ (x × x) /\ ∃(y, ∃(z, y ∈ z /\ (t === pair(y, z))))))) by InstantiateForall(membershipRelation(x))(membershipRelation.definition)
-    thenHave(pair(a, b) ∈ membershipRelation(x) <=> (pair(a, b) ∈ (x × x) /\ ∃(y, ∃(z, y ∈ z /\ (pair(a, b) === pair(y, z)))))) by InstantiateForall(pair(a, b))
-    thenHave(pair(a, b) ∈ membershipRelation(x) <=> (pair(a, b) ∈ (x × x)) /\ a ∈ b) by Substitution.ApplyRules(pairExists)
-    thenHave(thesis) by Substitution.ApplyRules(cartesianProductMembershipPair of (y := x))
+    have(thesis) by Substitution.ApplyRules(firstInPairReduction, secondInPairReduction, cartesianProductMembershipPair)(membershipRelationElem of (p := pair(a, b)))
   }
 
   /**
@@ -140,7 +129,7 @@ object MembershipRelation extends lisa.Main {
     *   `p ∈ ∈_x ⊢ p._1 ∈ p._2 /\ p._1 ∈ x /\ p._2 ∈ x`
     */
   val membershipRelationElim = Lemma(p ∈ membershipRelation(x) |- fst(p) ∈ snd(p) /\ fst(p) ∈ x /\ snd(p) ∈ x){
-    have(p ∈ membershipRelation(x) |- p === pair(fst(p), snd(p))) by Cut(membershipRelationIsARelation, pairReconstructionInRelationBetween of (r := membershipRelation(x), a := x, b := x))
+    have(p ∈ membershipRelation(x) |- p === pair(fst(p), snd(p))) by Cut(membershipRelationRelationBetween, pairReconstructionInRelationBetween of (r := membershipRelation(x), a := x, b := x))
     have(thesis) by Substitution.ApplyRules(lastStep)(membershipRelationElimPair of (a := fst(p), b := snd(p)))
   }
 
@@ -173,7 +162,7 @@ object MembershipRelation extends lisa.Main {
     thenHave(pair(y, y) ∉ membershipRelation(x)) by RightNot
     thenHave(∀(y, pair(y, y) ∉ membershipRelation(x))) by RightForall
     have(relationBetween(membershipRelation(x), x, x) |- antiReflexive(membershipRelation(x), x)) by Cut(lastStep, antiReflexiveIntro of (r := membershipRelation(x)))
-    have(thesis) by Cut(membershipRelationIsARelation, lastStep)
+    have(thesis) by Cut(membershipRelationRelationBetween, lastStep)
   }
 
 
@@ -188,5 +177,38 @@ object MembershipRelation extends lisa.Main {
     thenHave(p ∉ membershipRelation(∅)) by Restate
     thenHave(∀(p, p ∉ membershipRelation(∅))) by RightForall
     have(thesis) by Cut(lastStep, setWithNoElementsIsEmpty of (x := membershipRelation(∅)))
+  }
+
+  val membershipRelationSubset = Lemma(y ⊆ x |- membershipRelation(y) ⊆ membershipRelation(x)) {
+    have((p ∈ (x × x), fst(p) ∈ snd(p)) |- p ∈ membershipRelation(x)) by Weakening(membershipRelationElem)
+    have(((y × y) ⊆ (x × x), p ∈ (y × y), fst(p) ∈ snd(p)) |- p ∈ membershipRelation(x)) by Cut(subsetElim of (z := p, x := (y × y), y := (x × x)), lastStep)
+    have((y ⊆ x, p ∈ (y × y), fst(p) ∈ snd(p)) |- p ∈ membershipRelation(x)) by Cut(cartesianProductSubset of (w := y, x := y, y := x, z := x), lastStep)
+    thenHave((y ⊆ x, p ∈ (y × y) /\ fst(p) ∈ snd(p)) |- p ∈ membershipRelation(x)) by LeftAnd
+    thenHave((y ⊆ x, p ∈ membershipRelation(y)) |- p ∈ membershipRelation(x)) by Substitution.ApplyRules(membershipRelationElem)
+    thenHave(y ⊆ x |- p ∈ membershipRelation(y) ==> p ∈ membershipRelation(x)) by RightImplies
+    thenHave(y ⊆ x |- ∀(p, p ∈ membershipRelation(y) ==> p ∈ membershipRelation(x))) by RightForall
+    have(thesis) by Cut(lastStep, subsetIntro of (x := membershipRelation(y), y := membershipRelation(x)))
+  }
+
+  val membershipRelationRestriction = Lemma(y ⊆ x |- membershipRelation(y) === relationRestriction(membershipRelation(x), y, y)) {
+    val forward = have(y ⊆ x |- p ∈ membershipRelation(y) ==> p ∈ relationRestriction(membershipRelation(x), y, y)) subproof {
+      have((relation(membershipRelation(x)), p ∈ membershipRelation(y), fst(p) ∈ y, snd(p) ∈ y, membershipRelation(y) ⊆ membershipRelation(x)) |- p ∈ relationRestriction(membershipRelation(x), y, y)) by Cut(subsetElim of (z := p, x := membershipRelation(y), y := membershipRelation(x)), relationRestrictionIntro of (r := membershipRelation(x), x := y))
+      have((y ⊆ x, relation(membershipRelation(x)), p ∈ membershipRelation(y), fst(p) ∈ y, snd(p) ∈ y) |- p ∈ relationRestriction(membershipRelation(x), y, y)) by Cut(membershipRelationSubset, lastStep)
+      have((y ⊆ x, p ∈ membershipRelation(y), fst(p) ∈ y, snd(p) ∈ y) |- p ∈ relationRestriction(membershipRelation(x), y, y)) by Cut(membershipRelationRelation, lastStep)
+      thenHave((y ⊆ x, p ∈ membershipRelation(y), fst(p) ∈ y /\ snd(p) ∈ y) |- p ∈ relationRestriction(membershipRelation(x), y, y)) by LeftAnd
+      have((y ⊆ x, p ∈ membershipRelation(y)) |- p ∈ relationRestriction(membershipRelation(x), y, y)) by Cut(membershipRelationInDomain of (x := y), lastStep)
+    }
+
+    val backward = have(p ∈ relationRestriction(membershipRelation(x), y, y) ==> p ∈ membershipRelation(y)) subproof {
+      have((fst(p) ∈ y, snd(p) ∈ y, pair(fst(p), snd(p)) ∈ membershipRelation(x)) |- pair(fst(p), snd(p)) ∈ membershipRelation(y)) by Cut(membershipRelationIsMembershipPair of (a := fst(p), b := snd(p)), membershipRelationIntro of (x := y, a := fst(p), b := snd(p)))
+      thenHave((fst(p) ∈ y /\ snd(p) ∈ y, pair(fst(p), snd(p)) ∈ membershipRelation(x)) |- pair(fst(p), snd(p)) ∈ membershipRelation(y)) by LeftAnd
+      have(((pair(fst(p), snd(p)) ∈ relationRestriction(membershipRelation(x), y, y)), pair(fst(p), snd(p)) ∈ membershipRelation(x)) |- pair(fst(p), snd(p)) ∈ membershipRelation(y)) by Cut(relationRestrictionPairInRestrictedDomains of (x := y, r := membershipRelation(x), a := fst(p), b := snd(p)), lastStep)
+      have((pair(fst(p), snd(p)) ∈ relationRestriction(membershipRelation(x), y, y)) |- pair(fst(p), snd(p)) ∈ membershipRelation(y)) by Cut(relationRestrictionInRelation of (p := pair(fst(p), snd(p)), r := membershipRelation(x), x := y), lastStep)
+      thenHave((relation(relationRestriction(membershipRelation(x), y, y)), p ∈ relationRestriction(membershipRelation(x), y, y)) |- p ∈ membershipRelation(y)) by Substitution.ApplyRules(pairReconstructionInRelation of (r := relationRestriction(membershipRelation(x), y, y)))
+      have(p ∈ relationRestriction(membershipRelation(x), y, y) |- p ∈ membershipRelation(y)) by Cut(relationRestrictionIsRelation of (r := membershipRelation(x), x := y, y := y), lastStep)
+    }
+    have(y ⊆ x |- p ∈ membershipRelation(y) <=> p ∈ relationRestriction(membershipRelation(x), y, y)) by RightIff(forward, backward)
+    thenHave(y ⊆ x |- ∀(p, p ∈ membershipRelation(y) <=> p ∈ relationRestriction(membershipRelation(x), y, y))) by RightForall
+    have(thesis) by Cut(lastStep, equalityIntro of (x := membershipRelation(y), y := relationRestriction(membershipRelation(x), y, y)))
   }
 }

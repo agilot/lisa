@@ -269,7 +269,7 @@ private class SyntacticADT[N <: Arity](using line: sourcecode.Line, file: source
           have(tagTerm1 === tagTerm2 |- midMaxTag === midMinTag) by Cut(fact, successorInjectivity of (a := midMaxTag, b := midMinTag))
         )
 
-        val chainInjectivity = thenHave(!(toTerm(maxTag - minTag) === ∅) |- tagTerm1 =/= tagTerm2) by Restate
+        val chainInjectivity = thenHave(toTerm(maxTag - minTag) =/= ∅ |- tagTerm1 =/= tagTerm2) by Restate
 
         // STEP 1.3: Conclude using the fact that 0 is not the successor of any number
         have(toTerm(maxTag - minTag) =/= ∅) by Exact(successorNonEmpty)
@@ -1662,9 +1662,7 @@ private class SemanticConstructor[N <: Arity](using line: sourcecode.Line, file:
           have(thesis) by Cut(s0, lastStep)
         }
 
-        have(!(c1.structuralTerm1 === c2.structuralTerm2)) by Restate.from(underlying.injectivity(c1.underlying, c2.underlying))
-        thenHave(c1.structuralTerm1 === c2.structuralTerm2 |- ()) by Restate
-
+        have(c1.structuralTerm1 === c2.structuralTerm2 |- ()) by Restate.from(underlying.injectivity(c1.underlying, c2.underlying))
         have((vars1WellTyped ++ vars2WellTyped) + (c1.appliedTerm1 === c2.appliedTerm2) |- ()) by Cut(defUnfolding, lastStep)
       }
 
@@ -1815,7 +1813,7 @@ private class SemanticConstructor[N <: Arity](using line: sourcecode.Line, file:
 
                     ty match
                       case Self =>
-                        thenHave(!(x === v) /\ left |- right) by Weakening
+                        thenHave((x =/= v) /\ left |- right) by Weakening
                       case _ => ()
 
                     val weakr = thenHave(in(v, ty.getOrElse(term)) /\ left |- right) by Weakening

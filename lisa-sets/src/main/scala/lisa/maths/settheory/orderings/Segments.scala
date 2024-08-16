@@ -152,13 +152,28 @@ object Segments extends lisa.Main {
     thenHave(thesis) by Substitution.ApplyRules(initialSegment.shortDefinition)
   }
 
+  val initialSegmentBoundInDomain = Lemma(
+    (strictWellOrder(r, x), a ∈ initialSegment(b, r, x)) |- b ∈ x
+  ) {
+    have((relationBetween(r, x, x), strictWellOrder(r, x), a ∈ initialSegment(b, r, x)) |- a ∈ x /\ b ∈ x) by Cut(initialSegmentElim, relationBetweenElimPair of (a := x, b := x, x := a, y := b))
+    have((strictWellOrder(r, x), a ∈ initialSegment(b, r, x)) |- a ∈ x /\ b ∈ x) by Cut(strictWellOrderIsRelationBetween, lastStep)
+    thenHave(thesis) by Weakening
+  }
+
+  val initialSegmentElementInDomain = Lemma(
+    (strictWellOrder(r, x), a ∈ initialSegment(b, r, x)) |- a ∈ x
+  ) {
+    have((relationBetween(r, x, x), strictWellOrder(r, x), a ∈ initialSegment(b, r, x)) |- a ∈ x /\ b ∈ x) by Cut(initialSegmentElim, relationBetweenElimPair of (a := x, b := x, x := a, y := b))
+    have((strictWellOrder(r, x), a ∈ initialSegment(b, r, x)) |- a ∈ x /\ b ∈ x) by Cut(strictWellOrderIsRelationBetween, lastStep)
+    thenHave(thesis) by Weakening
+  }
+
 
   val predecessorInInitialSegment = Lemma(
-    isPredecessor(a, b, r, x) |- a ∈ initialSegment(b, r, x)
+    (strictWellOrder(r, x), isPredecessor(a, b, r, x)) |- a ∈ initialSegment(b, r, x)
   ) {
     have((relationBetween(r, x, x), isPredecessor(a, b, r, x)) |- a ∈ elementPreimage(b, r, x)) by Cut(isPredecessorBelow, elementPreimageIntro)
-    have((strictTotalOrder(r, x), isPredecessor(a, b, r, x)) |- a ∈ elementPreimage(b, r, x)) by Cut(strictTotalOrderIsRelation, lastStep)
-    have(isPredecessor(a, b, r, x) |- a ∈ elementPreimage(b, r, x)) by Cut(isPredecessorInStrictTotalOrder, lastStep)
+    have((strictWellOrder(r, x), isPredecessor(a, b, r, x)) |- a ∈ elementPreimage(b, r, x)) by Cut(strictWellOrderIsRelationBetween, lastStep)
     thenHave(thesis) by Substitution.ApplyRules(initialSegment.shortDefinition)
   }
 
@@ -184,8 +199,7 @@ object Segments extends lisa.Main {
     strictWellOrder(r, x) |- b ∉ initialSegment(b, r, x)
   ) {
     have(strictPartialOrder(r, x) |- b ∉ elementPreimage(b, r, x)) by Cut(strictPartialOrderIrreflexive, irreflexiveRelationElementPreimage)
-    have(strictTotalOrder(r, x) |- b ∉ elementPreimage(b, r, x)) by Cut(strictTotalOrderIsPartial, lastStep)
-    have(strictWellOrder(r, x) |- b ∉ elementPreimage(b, r, x)) by Cut(strictWellOrderTotal, lastStep)
+    have(strictWellOrder(r, x) |- b ∉ elementPreimage(b, r, x)) by Cut(strictWellOrderPartial, lastStep)
     thenHave(thesis) by Substitution.ApplyRules(initialSegment.shortDefinition)
   }
 
@@ -203,6 +217,17 @@ object Segments extends lisa.Main {
     have((strictWellOrder(r, x), a ∈ initialSegment(b, r, x), transitive(r, x),  pair(t, a) ∈ r) |- pair(t, b) ∈ r) by Cut(initialSegmentElim, transitiveElim of (w := t, y := a, z := b))
     have((strictWellOrder(r, x), a ∈ initialSegment(b, r, x), pair(t, a) ∈ r) |- pair(t, b) ∈ r) by Cut(strictWellOrderTransitive, lastStep)  
     have(thesis) by Cut(lastStep, initialSegmentIntro of (a := t))
+  }
+
+  val leastElementInitialSegment = Lemma(
+    (strictWellOrder(r, x), isLeastElement(b, x, r, x)) |- initialSegment(b, r, x) === ∅
+  ) {
+    have((isLeastElement(b, x, r, x), strictPartialOrder(r, x), pair(a, b) ∈ r, a ∈ x) |- ()) by Restate.from(belowLeastElement of (a := b, b := a, y := x))
+    have((isLeastElement(b, x, r, x), strictWellOrder(r, x), pair(a, b) ∈ r, a ∈ x) |- ()) by Cut(strictWellOrderPartial, lastStep)
+    have((isLeastElement(b, x, r, x), strictWellOrder(r, x), a ∈ initialSegment(b, r, x), a ∈ x) |- ()) by Cut(initialSegmentElim, lastStep)
+    have((isLeastElement(b, x, r, x), strictWellOrder(r, x), a ∈ initialSegment(b, r, x)) |- ()) by Cut(initialSegmentElementInDomain, lastStep)
+    thenHave((isLeastElement(b, x, r, x), strictWellOrder(r, x), ∃(a, a ∈ initialSegment(b, r, x))) |- ()) by LeftExists
+    have((isLeastElement(b, x, r, x), strictWellOrder(r, x), initialSegment(b, r, x) =/= ∅) |- ()) by Cut(nonEmptySetHasAnElement of (x := initialSegment(b, r, x)), lastStep)
   }
 
   val initialSegmentOrder = DEF(b, r, x) --> relationRestriction(r, initialSegment(b, r, x), initialSegment(b, r, x))
@@ -377,26 +402,28 @@ object Segments extends lisa.Main {
       have((strictWellOrder(initialSegmentOrder(b, r, x), initialSegment(b, r, x)), fIsIsomorphism, pair(app(f, a), a) ∈ r) |- app(f, app(f, a)) =/= app(f, a)) by Cut(strictWellOrderIrreflexive of (r := initialSegmentOrder(b, r, x), x := initialSegment(b, r, x)), lastStep)
       val right = have((strictWellOrder(r, x), fIsIsomorphism, pair(app(f, a), a) ∈ r) |- app(f, app(f, a)) =/= app(f, a)) by Cut(initialSegmentStrictWellOrder, lastStep)
 
-      val left = have((isLeastElement(a, nonIdentitySet(f, x), r, x), pair(app(f, a), a) ∈ r, app(f, a) ∈ x) |- app(f, app(f, a)) === app(f, a)) by Cut(belowLeastElement of (b := app(f, a), y := nonIdentitySet(f, x)), notInNonIdentitySetElim of (t := app(f, a)))
+      have((strictPartialOrder(r, x), isLeastElement(a, nonIdentitySet(f, x), r, x), pair(app(f, a), a) ∈ r, app(f, a) ∈ x) |- app(f, app(f, a)) === app(f, a)) by Cut(belowLeastElement of (b := app(f, a), y := nonIdentitySet(f, x)), notInNonIdentitySetElim of (t := app(f, a)))
+      val left = have((strictWellOrder(r, x), isLeastElement(a, nonIdentitySet(f, x), r, x), pair(app(f, a), a) ∈ r, app(f, a) ∈ x) |- app(f, app(f, a)) === app(f, a)) by Cut(strictWellOrderPartial, lastStep)
     
       have((strictWellOrder(r, x), fIsIsomorphism, isLeastElement(a, nonIdentitySet(f, x), r, x), pair(app(f, a), a) ∈ r, app(f, a) ∈ x) |- ()) by RightAnd(left, right)
     }
 
     val aNotBelowFA = have((strictWellOrder(r, x), fIsIsomorphism, isLeastElement(a, nonIdentitySet(f, x), r, x), a ∈ x) |- pair(a, app(f, a)) ∉ r) subproof{
 
-      val fInverseBelowA = have((pair(a, app(f, a)) ∈ initialSegmentOrder(b, r, x), app(inverseRelation(f), a) ∈ x, a ∈ x, fIsIsomorphism, bijective(f, x, initialSegment(b, r, x)), a ∈ initialSegment(b, r, x)) |- pair(app(inverseRelation(f), a), a) ∈ r) by Substitution.ApplyRules(inverseRelationRightCancel of (b := a, y := initialSegment(b, r, x)))
-        (relationIsomorphismElimBackward of (r1 := r, r2 := initialSegmentOrder(b, r, x), y := initialSegment(b, r, x), a := app(inverseRelation(f), a), b := a))
+      val fInverseBelowA = have((pair(a, app(f, a)) ∈ initialSegmentOrder(b, r, x), app(inv(f), a) ∈ x, a ∈ x, fIsIsomorphism, bijective(f, x, initialSegment(b, r, x)), a ∈ initialSegment(b, r, x)) |- pair(app(inv(f), a), a) ∈ r) by Substitution.ApplyRules(inverseRelationRightCancel of (b := a, y := initialSegment(b, r, x)))
+        (relationIsomorphismElimBackward of (r1 := r, r2 := initialSegmentOrder(b, r, x), y := initialSegment(b, r, x), a := app(inv(f), a), b := a))
       
-      val left = have((pair(a, app(f, a)) ∈ initialSegmentOrder(b, r, x), app(inverseRelation(f), a) ∈ x, a ∈ x, fIsIsomorphism, isLeastElement(a, nonIdentitySet(f, x), r, x), bijective(f, x, initialSegment(b, r, x)), a ∈ initialSegment(b, r, x)) |- app(inverseRelation(f), a) ∉ nonIdentitySet(f, x)) by Cut(fInverseBelowA, belowLeastElement of (b := app(inverseRelation(f), a), y := nonIdentitySet(f, x)))
-      have((irreflexive(r, x), pair(a, app(f, a)) ∈ initialSegmentOrder(b, r, x), app(inverseRelation(f), a) ∈ x, a ∈ x, fIsIsomorphism, bijective(f, x, initialSegment(b, r, x)), a ∈ initialSegment(b, r, x)) |- app(inverseRelation(f), a) =/= a) by Cut(fInverseBelowA, pairInAntiReflexiveRelation of (a := app(inverseRelation(f), a), b := a))
-      have((strictWellOrder(r, x), pair(a, app(f, a)) ∈ initialSegmentOrder(b, r, x), app(inverseRelation(f), a) ∈ x, a ∈ x, fIsIsomorphism, bijective(f, x, initialSegment(b, r, x)), a ∈ initialSegment(b, r, x)) |- app(inverseRelation(f), a) =/= a) by Cut(strictWellOrderIrreflexive, lastStep)
-      thenHave((strictWellOrder(r, x), bijective(f, x, initialSegment(b, r, x)), pair(a, app(f, a)) ∈ initialSegmentOrder(b, r, x), app(inverseRelation(f), a) ∈ x, a ∈ x, fIsIsomorphism, a ∈ initialSegment(b, r, x)) |- app(inverseRelation(f), a) =/= app(f, app(inverseRelation(f), a))) by Substitution.ApplyRules(inverseRelationRightCancel of (y := initialSegment(b, r, x), b := a))
+      have((strictPartialOrder(r, x), pair(a, app(f, a)) ∈ initialSegmentOrder(b, r, x), app(inv(f), a) ∈ x, a ∈ x, fIsIsomorphism, isLeastElement(a, nonIdentitySet(f, x), r, x), bijective(f, x, initialSegment(b, r, x)), a ∈ initialSegment(b, r, x)) |- app(inv(f), a) ∉ nonIdentitySet(f, x)) by Cut(fInverseBelowA, belowLeastElement of (b := app(inv(f), a), y := nonIdentitySet(f, x)))
+      val left = have((strictWellOrder(r, x), pair(a, app(f, a)) ∈ initialSegmentOrder(b, r, x), app(inv(f), a) ∈ x, a ∈ x, fIsIsomorphism, isLeastElement(a, nonIdentitySet(f, x), r, x), bijective(f, x, initialSegment(b, r, x)), a ∈ initialSegment(b, r, x)) |- app(inv(f), a) ∉ nonIdentitySet(f, x)) by Cut(strictWellOrderPartial, lastStep)
+      have((irreflexive(r, x), pair(a, app(f, a)) ∈ initialSegmentOrder(b, r, x), app(inv(f), a) ∈ x, a ∈ x, fIsIsomorphism, bijective(f, x, initialSegment(b, r, x)), a ∈ initialSegment(b, r, x)) |- app(inv(f), a) =/= a) by Cut(fInverseBelowA, pairInAntiReflexiveRelation of (a := app(inv(f), a), b := a))
+      have((strictWellOrder(r, x), pair(a, app(f, a)) ∈ initialSegmentOrder(b, r, x), app(inv(f), a) ∈ x, a ∈ x, fIsIsomorphism, bijective(f, x, initialSegment(b, r, x)), a ∈ initialSegment(b, r, x)) |- app(inv(f), a) =/= a) by Cut(strictWellOrderIrreflexive, lastStep)
+      thenHave((strictWellOrder(r, x), bijective(f, x, initialSegment(b, r, x)), pair(a, app(f, a)) ∈ initialSegmentOrder(b, r, x), app(inv(f), a) ∈ x, a ∈ x, fIsIsomorphism, a ∈ initialSegment(b, r, x)) |- app(inv(f), a) =/= app(f, app(inv(f), a))) by Substitution.ApplyRules(inverseRelationRightCancel of (y := initialSegment(b, r, x), b := a))
 
-      val right = have((strictWellOrder(r, x), bijective(f, x, initialSegment(b, r, x)), pair(a, app(f, a)) ∈ initialSegmentOrder(b, r, x), app(inverseRelation(f), a) ∈ x, a ∈ x, fIsIsomorphism, a ∈ initialSegment(b, r, x)) |- app(inverseRelation(f), a) ∈ nonIdentitySet(f, x)) by Cut(
-        lastStep, nonIdentitySetIntro of (t := app(inverseRelation(f), a))
+      val right = have((strictWellOrder(r, x), bijective(f, x, initialSegment(b, r, x)), pair(a, app(f, a)) ∈ initialSegmentOrder(b, r, x), app(inv(f), a) ∈ x, a ∈ x, fIsIsomorphism, a ∈ initialSegment(b, r, x)) |- app(inv(f), a) ∈ nonIdentitySet(f, x)) by Cut(
+        lastStep, nonIdentitySetIntro of (t := app(inv(f), a))
       )
 
-      have((strictWellOrder(r, x), bijective(f, x, initialSegment(b, r, x)), pair(a, app(f, a)) ∈ initialSegmentOrder(b, r, x), app(inverseRelation(f), a) ∈ x, a ∈ x, a ∈ initialSegment(b, r, x), fIsIsomorphism, isLeastElement(a, nonIdentitySet(f, x), r, x)) |- ()) by RightAnd(left, right)
+      have((strictWellOrder(r, x), bijective(f, x, initialSegment(b, r, x)), pair(a, app(f, a)) ∈ initialSegmentOrder(b, r, x), app(inv(f), a) ∈ x, a ∈ x, a ∈ initialSegment(b, r, x), fIsIsomorphism, isLeastElement(a, nonIdentitySet(f, x), r, x)) |- ()) by RightAnd(left, right)
 
       have((strictWellOrder(r, x), fIsIsomorphism, isLeastElement(a, nonIdentitySet(f, x), r, x), a ∈ x, 
       bijective(f, x, initialSegment(b, r, x)), pair(a, app(f, a)) ∈ initialSegmentOrder(b, r, x), a ∈ initialSegment(b, r, x)) |- ()) by Cut(inverseFunctionImageInDomain of (y := initialSegment(b, r, x), b := a), lastStep)
@@ -434,10 +461,134 @@ object Segments extends lisa.Main {
   }
 
   val initialSegmentIsomorphismRestriction = Lemma(
-    (relationIsomorphism(f, r1, x, r2, y), a ∈ x) |- 
+    (relationIsomorphism(f, r1, x, r2, y), strictWellOrder(r1, x), strictWellOrder(r2, y), a ∈ x) |- 
     relationIsomorphism(f ↾ initialSegment(a, r1, x), initialSegmentOrder(a, r1, x), initialSegment(a, r1, x), initialSegmentOrder(app(f, a), r2, y), initialSegment(app(f, a), r2, y))
   ) {
-    sorry
+
+    val frestr = f ↾ initialSegment(a, r1, x)
+    val isorestr = relationIsomorphism(f ↾ initialSegment(a, r1, x), initialSegmentOrder(a, r1, x), initialSegment(a, r1, x), initialSegmentOrder(app(f, a), r2, y), initialSegment(app(f, a), r2, y))
+
+    val xInterInitSegment = have(strictWellOrder(r1, x) |- x ∩ initialSegment(a, r1, x) === initialSegment(a, r1, x)) by Cut(initialSegmentSubsetDomain of (b := a, r := r1), setIntersectionOfSubsetBackward of (y := initialSegment(a, r1, x)))
+
+    val inSegment = have((strictWellOrder(r1, x), b ∈ initialSegment(a, r1, x)) |- b ∈ x) by Cut(initialSegmentSubsetDomain of (b := a, r := r1), subsetElim of (z := b, x := initialSegment(a, r1, x), y := x))
+    
+    val restrRange = have((relationIsomorphism(f, r1, x, r2, y), strictWellOrder(r1, x), strictWellOrder(r2, y), bijective(f, x, y), a ∈ x) |- ran(frestr) === initialSegment(app(f, a), r2, y)) subproof {
+
+      have((functionFrom(f, x, y), strictWellOrder(r1, x)) |- b ∈ ran(frestr) <=> ∃(c, c ∈ initialSegment(a, r1, x) /\ (app(f, c) === b))) by Substitution.ApplyRules(xInterInitSegment)(functionRestrictionFromRangeMembership of (z := initialSegment(a, r1, x)))
+      val rangeEq = have((relationIsomorphism(f, r1, x, r2, y), strictWellOrder(r1, x)) |- b ∈ ran(frestr) <=> ∃(c, c ∈ initialSegment(a, r1, x) /\ (app(f, c) === b))) by Cut(relationIsomorphismFunctionFrom, lastStep) 
+
+      val forward = have((relationIsomorphism(f, r1, x, r2, y), strictWellOrder(r1, x), strictWellOrder(r2, y)) |- b ∈ ran(frestr) ==> b ∈ initialSegment(app(f, a), r2, y)) subproof { 
+        have((strictWellOrder(r2, y), app(f, c) === b, pair(app(f, c), app(f, a)) ∈ r2) |- b ∈ initialSegment(app(f, a), r2, y)) by Substitution.ApplyRules(app(f, c) === b)(initialSegmentIntro of (b := app(f, a), r := r2, x := y, a := b))
+        have((relationIsomorphism(f, r1, x, r2, y), strictWellOrder(r2, y), app(f, c) === b, pair(c, a) ∈ r1) |- b ∈ initialSegment(app(f, a), r2, y)) by Cut(relationIsomorphismElimForward of (a := c, b := a), lastStep)
+        have((relationIsomorphism(f, r1, x, r2, y), strictWellOrder(r1, x), strictWellOrder(r2, y), app(f, c) === b, c ∈ initialSegment(a, r1, x)) |- b ∈ initialSegment(app(f, a), r2, y)) by Cut(initialSegmentElim of (a := c, b := a, r := r1), lastStep)
+        thenHave((relationIsomorphism(f, r1, x, r2, y), strictWellOrder(r1, x), strictWellOrder(r2, y), c ∈ initialSegment(a, r1, x) /\ (app(f, c) === b)) |- b ∈ initialSegment(app(f, a), r2, y)) by LeftAnd
+        thenHave((relationIsomorphism(f, r1, x, r2, y), strictWellOrder(r1, x), strictWellOrder(r2, y), ∃(c, c ∈ initialSegment(a, r1, x) /\ (app(f, c) === b))) |- b ∈ initialSegment(app(f, a), r2, y)) by LeftExists
+        thenHave((relationIsomorphism(f, r1, x, r2, y), strictWellOrder(r1, x), strictWellOrder(r2, y), b ∈ ran(frestr)) |- b ∈ initialSegment(app(f, a), r2, y)) by Substitution.ApplyRules(rangeEq)
+      }
+
+      val backward = have((relationIsomorphism(f, r1, x, r2, y), strictWellOrder(r1, x), strictWellOrder(r2, y), bijective(f, x, y), a ∈ x) |- b ∈ initialSegment(app(f, a), r2, y) ==> b ∈ ran(frestr)) subproof {
+        have((strictWellOrder(r2, y), b ∈ initialSegment(app(f, a), r2, y), b ∈ y, bijective(f, x, y)) |- pair(app(f, app(inv(f), b)), app(f, a)) ∈ r2) by Substitution.ApplyRules(inverseRelationRightCancel)(initialSegmentElim of (a := b, b := app(f, a), r := r2, x := y))
+        have((relationIsomorphism(f, r1, x, r2, y), strictWellOrder(r2, y), b ∈ initialSegment(app(f, a), r2, y), b ∈ y, bijective(f, x, y), app(inv(f), b) ∈ x, a ∈ x) |- pair(app(inv(f), b), a) ∈ r1) by Cut(lastStep, relationIsomorphismElimBackward of (a := app(inv(f), b), b := a))
+        have((relationIsomorphism(f, r1, x, r2, y), strictWellOrder(r1, x), strictWellOrder(r2, y), b ∈ initialSegment(app(f, a), r2, y), b ∈ y, bijective(f, x, y), app(inv(f), b) ∈ x, a ∈ x) |- app(inv(f), b) ∈ initialSegment(a, r1, x)) by Cut(lastStep, initialSegmentIntro of (a := app(inv(f), b), b := a, r := r1))
+        have((relationIsomorphism(f, r1, x, r2, y), strictWellOrder(r1, x), strictWellOrder(r2, y), b ∈ initialSegment(app(f, a), r2, y), b ∈ y, bijective(f, x, y), app(inv(f), b) ∈ x, a ∈ x) |- app(inv(f), b) ∈ initialSegment(a, r1, x) /\ (app(f, app(inv(f), b)) === b)) by RightAnd(lastStep, inverseRelationRightCancel)
+        thenHave((relationIsomorphism(f, r1, x, r2, y), strictWellOrder(r1, x), strictWellOrder(r2, y), b ∈ initialSegment(app(f, a), r2, y), b ∈ y, bijective(f, x, y), app(inv(f), b) ∈ x, a ∈ x) |- ∃(c, c ∈ initialSegment(a, r1, x) /\ (app(f, c) === b))) by RightExists
+        have((relationIsomorphism(f, r1, x, r2, y), strictWellOrder(r1, x), strictWellOrder(r2, y), b ∈ initialSegment(app(f, a), r2, y), bijective(f, x, y), b ∈ y, a ∈ x) |- ∃(c, c ∈ initialSegment(a, r1, x) /\ (app(f, c) === b))) by Cut(inverseFunctionImageInDomain, lastStep)
+        have((relationIsomorphism(f, r1, x, r2, y), strictWellOrder(r1, x), strictWellOrder(r2, y), b ∈ initialSegment(app(f, a), r2, y), bijective(f, x, y), a ∈ x) |- ∃(c, c ∈ initialSegment(a, r1, x) /\ (app(f, c) === b))) by Cut(initialSegmentElementInDomain of (a := b, b := app(f, a), r := r2, x := y), lastStep)
+        thenHave((relationIsomorphism(f, r1, x, r2, y), strictWellOrder(r1, x), strictWellOrder(r2, y), bijective(f, x, y), a ∈ x, b ∈ initialSegment(app(f, a), r2, y)) |- b ∈ ran(frestr)) by Substitution.ApplyRules(rangeEq)
+      }
+      have((relationIsomorphism(f, r1, x, r2, y), strictWellOrder(r1, x), strictWellOrder(r2, y), bijective(f, x, y), a ∈ x) |- b ∈ ran(frestr) <=> b ∈ initialSegment(app(f, a), r2, y)) by RightIff(forward, backward)
+      thenHave((relationIsomorphism(f, r1, x, r2, y), strictWellOrder(r1, x), strictWellOrder(r2, y), bijective(f, x, y), a ∈ x) |- ∀(b, b ∈ ran(frestr) <=> b ∈ initialSegment(app(f, a), r2, y))) by RightForall
+      have(thesis) by Cut(lastStep, equalityIntro of (x := ran(frestr), y := initialSegment(app(f, a), r2, y)))
+    }
+
+    val restrBijective = have((relationIsomorphism(f, r1, x, r2, y), strictWellOrder(r1, x), strictWellOrder(r2, y), a ∈ x) |- bijective(frestr, initialSegment(a, r1, x), initialSegment(app(f, a), r2, y))) subproof {
+      have((injective(f, x, y), strictWellOrder(r1, x)) |- injective(f ↾ initialSegment(a, r1, x), initialSegment(a, r1, x), y)) by Substitution.ApplyRules(xInterInitSegment)(functionRestrictionInjective of (z := initialSegment(a, r1, x)))
+      have((bijective(f, x, y), strictWellOrder(r1, x)) |- injective(f ↾ initialSegment(a, r1, x), initialSegment(a, r1, x), y)) by Cut(bijectiveInjective, lastStep)
+      have((bijective(f, x, y), strictWellOrder(r1, x)) |- bijective(f ↾ initialSegment(a, r1, x), initialSegment(a, r1, x), ran(f ↾ initialSegment(a, r1, x)))) by Cut(lastStep, injectiveIsBijectiveOverRange of (f := f ↾ initialSegment(a, r1, x), x := initialSegment(a, r1, x)))
+      thenHave((relationIsomorphism(f, r1, x, r2, y), strictWellOrder(r1, x), strictWellOrder(r2, y), bijective(f, x, y), a ∈ x) |- bijective(frestr, initialSegment(a, r1, x), initialSegment(app(f, a), r2, y))) by Substitution.ApplyRules(restrRange)
+      have(thesis) by Cut(relationIsomorphismBijective, lastStep)
+    }
+
+    have((functionFrom(f, x, y), strictWellOrder(r1, x), b ∈ initialSegment(a, r1, x)) |- app(f, b) === app(frestr, b)) by Cut(inSegment, functionRestrictionFromApp of (x := initialSegment(a, r1, x), y := x, z := y, a := b))
+    have((bijective(f, x, y), strictWellOrder(r1, x), b ∈ initialSegment(a, r1, x)) |- app(f, b) === app(frestr, b)) by Cut(bijectiveIsFunctionFrom, lastStep)
+    val appRestr = have((relationIsomorphism(f, r1, x, r2, y), strictWellOrder(r1, x), b ∈ initialSegment(a, r1, x)) |- app(f, b) === app(frestr, b)) by Cut(relationIsomorphismBijective, lastStep)
+
+    val forward = have((relationIsomorphism(f, r1, x, r2, y), strictWellOrder(r1, x), strictWellOrder(r2, y), a ∈ x, b ∈ initialSegment(a, r1, x), c ∈ initialSegment(a, r1, x)) |- pair(b, c) ∈ initialSegmentOrder(a, r1, x) ==> pair(app(frestr, b), app(frestr, c)) ∈ initialSegmentOrder(app(f, a), r2, y)) subproof {
+      have((functionFrom(frestr, initialSegment(a, r1, x), initialSegment(app(f, a), r2, y)), b ∈ initialSegment(a, r1, x), app(frestr, c) ∈ initialSegment(app(f, a), r2, y), pair(app(frestr, b), app(frestr, c)) ∈ r2) |- pair(app(frestr, b), app(frestr, c)) ∈ initialSegmentOrder(app(f, a), r2, y)) by Cut(functionFromAppInCodomain of (x := initialSegment(a, r1, x), y := initialSegment(app(f, a), r2, y), a := b, f := frestr), initialSegmentOrderIntro of (b := app(f, a), r := r2, x := y, s := app(frestr, b), t := app(frestr, c)))
+      have((functionFrom(frestr, initialSegment(a, r1, x), initialSegment(app(f, a), r2, y)), b ∈ initialSegment(a, r1, x), c ∈ initialSegment(a, r1, x), pair(app(frestr, b), app(frestr, c)) ∈ r2) |- pair(app(frestr, b), app(frestr, c)) ∈ initialSegmentOrder(app(f, a), r2, y)) by Cut(functionFromAppInCodomain of (x := initialSegment(a, r1, x), y := initialSegment(app(f, a), r2, y), a := c, f := frestr), lastStep)
+      have((bijective(frestr, initialSegment(a, r1, x), initialSegment(app(f, a), r2, y)), b ∈ initialSegment(a, r1, x), c ∈ initialSegment(a, r1, x), pair(app(frestr, b), app(frestr, c)) ∈ r2) |- pair(app(frestr, b), app(frestr, c)) ∈ initialSegmentOrder(app(f, a), r2, y)) by Cut(bijectiveIsFunctionFrom of (f := frestr, x := initialSegment(a, r1, x), y := initialSegment(app(f, a), r2, y)), lastStep)
+      thenHave((bijective(frestr, initialSegment(a, r1, x), initialSegment(app(f, a), r2, y)), relationIsomorphism(f, r1, x, r2, y), strictWellOrder(r1, x), b ∈ initialSegment(a, r1, x), c ∈ initialSegment(a, r1, x), pair(app(f, b), app(f, c)) ∈ r2) |- pair(app(frestr, b), app(frestr, c)) ∈ initialSegmentOrder(app(f, a), r2, y)) by Substitution.ApplyRules(appRestr, appRestr of (b := c))
+      have((bijective(frestr, initialSegment(a, r1, x), initialSegment(app(f, a), r2, y)), relationIsomorphism(f, r1, x, r2, y), strictWellOrder(r1, x), b ∈ initialSegment(a, r1, x), c ∈ initialSegment(a, r1, x), pair(b, c) ∈ r1) |- pair(app(frestr, b), app(frestr, c)) ∈ initialSegmentOrder(app(f, a), r2, y)) by Cut(relationIsomorphismElimForward of (a := b, b := c), lastStep)
+      have((bijective(frestr, initialSegment(a, r1, x), initialSegment(app(f, a), r2, y)), relationIsomorphism(f, r1, x, r2, y), strictWellOrder(r1, x), b ∈ initialSegment(a, r1, x), c ∈ initialSegment(a, r1, x), pair(b, c) ∈ initialSegmentOrder(a, r1, x)) |- pair(app(frestr, b), app(frestr, c)) ∈ initialSegmentOrder(app(f, a), r2, y)) by Cut(initialSegmentOrderIsOriginalOrder of (s := b, t := c, r := r1, b := a), lastStep)
+      have((relationIsomorphism(f, r1, x, r2, y), strictWellOrder(r1, x), strictWellOrder(r2, y), a ∈ x, b ∈ initialSegment(a, r1, x), c ∈ initialSegment(a, r1, x), pair(b, c) ∈ initialSegmentOrder(a, r1, x)) |- pair(app(frestr, b), app(frestr, c)) ∈ initialSegmentOrder(app(f, a), r2, y)) by Cut(restrBijective, lastStep)
+    }
+
+    val backward = have((relationIsomorphism(f, r1, x, r2, y), strictWellOrder(r1, x), b ∈ initialSegment(a, r1, x), c ∈ initialSegment(a, r1, x)) |- pair(app(frestr, b), app(frestr, c)) ∈ initialSegmentOrder(app(f, a), r2, y) ==> pair(b, c) ∈ initialSegmentOrder(a, r1, x)) subproof {
+      have((relationIsomorphism(f, r1, x, r2, y), pair(app(f, b), app(f, c)) ∈ r2, b ∈ x, b ∈ initialSegment(a, r1, x), c ∈ x, c ∈ initialSegment(a, r1, x)) |- pair(b, c) ∈ initialSegmentOrder(a, r1, x)) by Cut(relationIsomorphismElimBackward of (a := b, b := c), initialSegmentOrderIntro of (b := a, r := r1, s := b, t := c))
+      have((relationIsomorphism(f, r1, x, r2, y), strictWellOrder(r1, x), pair(app(f, b), app(f, c)) ∈ r2, b ∈ x, b ∈ initialSegment(a, r1, x), c ∈ initialSegment(a, r1, x)) |- pair(b, c) ∈ initialSegmentOrder(a, r1, x)) by Cut(inSegment of (b := c), lastStep)
+      have((relationIsomorphism(f, r1, x, r2, y), strictWellOrder(r1, x), pair(app(f, b), app(f, c)) ∈ r2, b ∈ initialSegment(a, r1, x), c ∈ initialSegment(a, r1, x)) |- pair(b, c) ∈ initialSegmentOrder(a, r1, x)) by Cut(inSegment, lastStep)
+      thenHave((relationIsomorphism(f, r1, x, r2, y), strictWellOrder(r1, x), pair(app(frestr, b), app(frestr, c)) ∈ r2, b ∈ initialSegment(a, r1, x), c ∈ initialSegment(a, r1, x)) |- pair(b, c) ∈ initialSegmentOrder(a, r1, x)) by Substitution.ApplyRules(appRestr, appRestr of (b := c))
+      have((relationIsomorphism(f, r1, x, r2, y), strictWellOrder(r1, x), pair(app(frestr, b), app(frestr, c)) ∈ initialSegmentOrder(app(f, a), r2, y), b ∈ initialSegment(a, r1, x), c ∈ initialSegment(a, r1, x)) |- pair(b, c) ∈ initialSegmentOrder(a, r1, x)) by Cut(initialSegmentOrderIsOriginalOrder of (s := app(frestr, b), t := app(frestr, c), r := r2, b := app(f, a), x := y), lastStep)
+    }
+
+    have((relationIsomorphism(f, r1, x, r2, y), strictWellOrder(r1, x), strictWellOrder(r2, y), a ∈ x, b ∈ initialSegment(a, r1, x), c ∈ initialSegment(a, r1, x)) |- pair(b, c) ∈ initialSegmentOrder(a, r1, x) <=> pair(app(frestr, b), app(frestr, c)) ∈ initialSegmentOrder(app(f, a), r2, y)) by RightIff(forward, backward)
+    thenHave((relationIsomorphism(f, r1, x, r2, y), strictWellOrder(r1, x), strictWellOrder(r2, y), a ∈ x) |- (b ∈ initialSegment(a, r1, x) /\ c ∈ initialSegment(a, r1, x)) ==> (pair(b, c) ∈ initialSegmentOrder(a, r1, x) <=> pair(app(frestr, b), app(frestr, c)) ∈ initialSegmentOrder(app(f, a), r2, y))) by Restate
+    thenHave((relationIsomorphism(f, r1, x, r2, y), strictWellOrder(r1, x), strictWellOrder(r2, y), a ∈ x) |- ∀(c, (b ∈ initialSegment(a, r1, x) /\ c ∈ initialSegment(a, r1, x)) ==> (pair(b, c) ∈ initialSegmentOrder(a, r1, x) <=> pair(app(frestr, b), app(frestr, c)) ∈ initialSegmentOrder(app(f, a), r2, y)))) by RightForall
+    thenHave((relationIsomorphism(f, r1, x, r2, y), strictWellOrder(r1, x), strictWellOrder(r2, y), a ∈ x) |- ∀(b, ∀(c, (b ∈ initialSegment(a, r1, x) /\ c ∈ initialSegment(a, r1, x)) ==> (pair(b, c) ∈ initialSegmentOrder(a, r1, x) <=> pair(app(frestr, b), app(frestr, c)) ∈ initialSegmentOrder(app(f, a), r2, y))))) by RightForall
+    have((relationIsomorphism(f, r1, x, r2, y), strictWellOrder(r1, x), strictWellOrder(r2, y), a ∈ x, strictWellOrder(initialSegmentOrder(a, r1, x), initialSegment(a, r1, x)), strictWellOrder(initialSegmentOrder(app(f, a), r2, y), initialSegment(app(f, a), r2, y)), bijective(frestr, initialSegment(a, r1, x), initialSegment(app(f, a), r2, y))) |- isorestr) by Cut(lastStep, strictWellOrderIsomorphismIntro of (f := frestr, r1 := initialSegmentOrder(a, r1, x), x := initialSegment(a, r1, x), r2 := initialSegmentOrder(app(f, a), r2, y), y := initialSegment(app(f, a), r2, y)))
+    have((relationIsomorphism(f, r1, x, r2, y), strictWellOrder(r1, x), strictWellOrder(r2, y), a ∈ x, strictWellOrder(initialSegmentOrder(a, r1, x), initialSegment(a, r1, x)), strictWellOrder(initialSegmentOrder(app(f, a), r2, y), initialSegment(app(f, a), r2, y))) |- isorestr) by Cut(restrBijective, lastStep)
+    have((relationIsomorphism(f, r1, x, r2, y), strictWellOrder(r1, x), strictWellOrder(r2, y), a ∈ x, strictWellOrder(initialSegmentOrder(app(f, a), r2, y), initialSegment(app(f, a), r2, y))) |- isorestr) by Cut(initialSegmentStrictWellOrder of (b := a, r := r1), lastStep)
+    have(thesis) by Cut(initialSegmentStrictWellOrder of (b := app(f, a), r := r2, x := y), lastStep)
+  }
+
+  val closedSetIsInitialSegment = Lemma(
+    (strictWellOrder(r, x), z ⊆ x, ∀(a, ∀(b, (pair(a, b) ∈ r /\ b ∈ z) ==> a ∈ z))) |- (z === x, ∃(b, b ∈ x /\ (z === initialSegment(b, r, x))))
+  ) {
+
+    val closed = ∀(a, ∀(b, (pair(a, b) ∈ r /\ b ∈ z) ==> a ∈ z))
+
+    val diffLeastElement = have((strictWellOrder(r, x), z ⊆ x) |- (z === x, ∃(b, isLeastElement(b, x \ z, r, x)))) subproof {
+      have(z ⊆ x |- (z === x, !(x ⊆ z))) by Restate.from(subsetAntisymmetry of (y := z))
+      thenHave(z ⊆ x |- (z === x, x \ z =/= ∅)) by Substitution.ApplyRules(setDifferenceEmpty)
+      have((strictWellOrder(r, x), z ⊆ x, x \ z ⊆ x) |- (z === x, ∃(b, isLeastElement(b, x \ z, r, x)))) by Cut(lastStep, strictWellOrderElim of (y := x \ z))
+      have(thesis) by Cut(setDifferenceSubsetDomain of (y := z), lastStep)
+    }
+
+    val diffMember = have(a ∈ x |- a ∈ (x \ z) <=> a ∉ z) by Tautology.from(setDifferenceMembership of (z := a, y := z))
+
+    val forward = have((strictWellOrder(r, x), isLeastElement(b, x \ z, r, x)) |- a ∈ initialSegment(b, r, x) ==> a ∈ z) subproof {
+      have((strictPartialOrder(r, x), isLeastElement(b, x \ z, r, x), pair(a, b) ∈ r, a ∈ x) |- !(a ∉ z)) by Substitution.ApplyRules(diffMember)(belowLeastElement of (y := x \ z, a := b, b := a))
+      have((strictWellOrder(r, x), isLeastElement(b, x \ z, r, x), pair(a, b) ∈ r, a ∈ x) |- a ∈ z) by Cut(strictWellOrderPartial, lastStep)
+      have((strictWellOrder(r, x), isLeastElement(b, x \ z, r, x), a ∈ initialSegment(b, r, x), a ∈ x) |- a ∈ z) by Cut(initialSegmentElim, lastStep)
+      have((strictWellOrder(r, x), isLeastElement(b, x \ z, r, x), a ∈ initialSegment(b, r, x)) |- a ∈ z) by Cut(initialSegmentElementInDomain, lastStep)
+    }
+
+    val backward = have((closed, strictWellOrder(r, x), isLeastElement(b, x \ z, r, x), z ⊆ x) |- a ∈ z ==> a ∈ initialSegment(b, r, x)) subproof {
+      have((isLeastElement(b, x \ z, r, x), b ∈ x) |- b ∉ z) by Substitution.ApplyRules(diffMember)(isLeastElementInSubset of (a := b, y := x \ z))
+      thenHave((isLeastElement(b, x \ z, r, x), b ∈ x, b ∈ z) |- ()) by Restate
+      val middle = thenHave((isLeastElement(b, x \ z, r, x), a === b, b ∈ x, a ∈ z) |- ()) by Substitution.ApplyRules(a === b)
+
+      have(closed |- closed) by Hypothesis
+      thenHave((closed, pair(b, a) ∈ r, b ∉ z, a ∈ z) |- ()) by InstantiateForall(b, a)
+      thenHave((closed, pair(b, a) ∈ r, b ∈ x, b ∈ (x \ z), a ∈ z) |- ()) by Substitution.ApplyRules(diffMember of (a := b))
+      have((closed, isLeastElement(b, x \ z, r, x), pair(b, a) ∈ r, b ∈ x, b ∈ (x \ z), a ∈ z) |- ()) by Cut(isLeastElementInSubset of (a := b, y := x \ z), lastStep)
+      val right = have((closed, isLeastElement(b, x \ z, r, x), pair(b, a) ∈ r, b ∈ x, a ∈ z) |- ()) by Cut(isLeastElementInSubset of (a := b, y := x \ z), lastStep)
+
+      have((closed, isLeastElement(b, x \ z, r, x), (a === b) \/ (pair(b, a) ∈ r), b ∈ x, a ∈ z) |- ()) by LeftOr(right, middle)
+      have((closed, strictWellOrder(r, x), isLeastElement(b, x \ z, r, x), (a === b) \/ (pair(b, a) ∈ r) \/ (pair(a, b) ∈ r), b ∈ x, a ∈ z) |- a ∈ initialSegment(b, r, x)) by LeftOr(initialSegmentIntro, lastStep)
+      have((closed, connected(r, x), strictWellOrder(r, x), isLeastElement(b, x \ z, r, x), a ∈ x, b ∈ x, a ∈ z) |- a ∈ initialSegment(b, r, x)) by Cut(connectedElim of (y := a, z := b), lastStep)
+      have((closed, strictWellOrder(r, x), isLeastElement(b, x \ z, r, x), a ∈ x, b ∈ x, a ∈ z) |- a ∈ initialSegment(b, r, x)) by Cut(strictWellOrderConnected, lastStep)
+      have((closed, strictWellOrder(r, x), isLeastElement(b, x \ z, r, x), a ∈ x, a ∈ z) |- a ∈ initialSegment(b, r, x)) by Cut(isLeastElementInDomain of (y := x \ z, a := b), lastStep)
+      have((closed, strictWellOrder(r, x), isLeastElement(b, x \ z, r, x), z ⊆ x, a ∈ z) |- a ∈ initialSegment(b, r, x)) by Cut(subsetElim of (z := a, x := z, y := x), lastStep)
+    }
+
+    have((closed, strictWellOrder(r, x), isLeastElement(b, x \ z, r, x), z ⊆ x) |- a ∈ z <=> a ∈ initialSegment(b, r, x)) by RightIff(forward, backward)
+    thenHave((closed, strictWellOrder(r, x), isLeastElement(b, x \ z, r, x), z ⊆ x) |- ∀(a, a ∈ z <=> a ∈ initialSegment(b, r, x))) by RightForall
+    have((closed, strictWellOrder(r, x), isLeastElement(b, x \ z, r, x), z ⊆ x) |- z === initialSegment(b, r, x)) by Cut(lastStep, equalityIntro of (x := z, y := initialSegment(b, r, x)))
+    have((closed, strictWellOrder(r, x), isLeastElement(b, x \ z, r, x), z ⊆ x) |- b ∈ x /\ (z === initialSegment(b, r, x))) by RightAnd(isLeastElementInDomain of (y := x \ z, a := b), lastStep)
+    thenHave((closed, strictWellOrder(r, x), isLeastElement(b, x \ z, r, x), z ⊆ x) |- ∃(b, b ∈ x /\ (z === initialSegment(b, r, x)))) by RightExists
+    thenHave((closed, strictWellOrder(r, x), ∃(b, isLeastElement(b, x \ z, r, x)), z ⊆ x) |- ∃(b, b ∈ x /\ (z === initialSegment(b, r, x)))) by LeftExists
+    have(thesis) by Cut(diffLeastElement, lastStep)
   }
 
   val initialSegmentIsomorphicCases = Lemma(
@@ -449,11 +600,25 @@ object Segments extends lisa.Main {
     val fDef = ∀(p, p ∈ f <=> (p ∈ (x × y) /\ 
       (initialSegmentOrder(fst(p), r1, x), initialSegment(fst(p), r1, x)) ≃ (initialSegmentOrder(snd(p), r2, y), initialSegment(snd(p), r2, y))))
 
+    val fExistence = have(∃(f, fDef)) subproof {
+      have(∃!(f, fDef)) by UniqueComprehension(x × y, lambda(p, (initialSegmentOrder(fst(p), r1, x), initialSegment(fst(p), r1, x)) ≃ (initialSegmentOrder(snd(p), r2, y), initialSegment(snd(p), r2, y))))
+      have(thesis) by Cut(lastStep, existsOneImpliesExists of (P := lambda(f, fDef)))
+    }
+
     val fDefElim = have((fDef, pair(a, b) ∈ f) |- (initialSegmentOrder(a, r1, x), initialSegment(a, r1, x)) ≃ (initialSegmentOrder(b, r2, y), initialSegment(b, r2, y))) subproof {
       have(fDef |- fDef) by Hypothesis
       thenHave(fDef |- pair(a, b) ∈ f <=> (pair(a, b) ∈ (x × y) /\ 
         (initialSegmentOrder(fst(pair(a, b)), r1, x), initialSegment(fst(pair(a, b)), r1, x)) ≃ (initialSegmentOrder(snd(pair(a, b)), r2, y), initialSegment(snd(pair(a, b)), r2, y)))) by InstantiateForall(pair(a, b))
       thenHave((fDef, pair(a, b) ∈ f) |- (initialSegmentOrder(fst(pair(a, b)), r1, x), initialSegment(fst(pair(a, b)), r1, x)) ≃ (initialSegmentOrder(snd(pair(a, b)), r2, y), initialSegment(snd(pair(a, b)), r2, y))) by Weakening
+      thenHave(thesis) by Substitution.ApplyRules(firstInPairReduction, secondInPairReduction)
+    }
+
+    val fDefIntro = have((fDef, a ∈ x, b ∈ y, (initialSegmentOrder(a, r1, x), initialSegment(a, r1, x)) ≃ (initialSegmentOrder(b, r2, y), initialSegment(b, r2, y))) |- pair(a, b) ∈ f) subproof {
+      have(fDef |- fDef) by Hypothesis
+      thenHave(fDef |- pair(a, b) ∈ f <=> (pair(a, b) ∈ (x × y) /\ 
+        (initialSegmentOrder(fst(pair(a, b)), r1, x), initialSegment(fst(pair(a, b)), r1, x)) ≃ (initialSegmentOrder(snd(pair(a, b)), r2, y), initialSegment(snd(pair(a, b)), r2, y)))) by InstantiateForall(pair(a, b))
+      thenHave((fDef, pair(a, b) ∈ (x × y), (initialSegmentOrder(fst(pair(a, b)), r1, x), initialSegment(fst(pair(a, b)), r1, x)) ≃ (initialSegmentOrder(snd(pair(a, b)), r2, y), initialSegment(snd(pair(a, b)), r2, y))) |-  pair(a, b) ∈ f) by Weakening
+      have((fDef, a ∈ x, b ∈ y, (initialSegmentOrder(fst(pair(a, b)), r1, x), initialSegment(fst(pair(a, b)), r1, x)) ≃ (initialSegmentOrder(snd(pair(a, b)), r2, y), initialSegment(snd(pair(a, b)), r2, y))) |-  pair(a, b) ∈ f) by Cut(cartesianProductIntro, lastStep)
       thenHave(thesis) by Substitution.ApplyRules(firstInPairReduction, secondInPairReduction)
     }
 
@@ -537,15 +702,89 @@ object Segments extends lisa.Main {
       thenHave((fDef, strictWellOrder(r1, x)) |- ∀(b, ∀(c, pair(a, c) ∈ f /\ pair(b, c) ∈ f ==> (a === b)))) by RightForall
       thenHave((fDef, strictWellOrder(r1, x)) |- ∀(a, ∀(b, ∀(c, pair(a, c) ∈ f /\ pair(b, c) ∈ f ==> (a === b))))) by RightForall
       have((fDef, strictWellOrder(r1, x), functionFrom(f, dom(f), ran(f))) |- injective(f, dom(f), ran(f))) by Cut(lastStep, injectiveIntroAlt of (x := dom(f), y := ran(f)))
-      have((fDef, strictWellOrder(r1, x), functionFrom(f, dom(f), ran(f)), surjective(f, dom(f), ran(f))) |- bijective(f, dom(f), ran(f))) by Cut(lastStep, bijectiveIntro of (x := dom(f), y := ran(f)))
-      have((fDef, strictWellOrder(r1, x), functionFrom(f, dom(f), ran(f)), functional(f)) |- bijective(f, dom(f), ran(f))) by Cut(surjectiveBetweenDomainRange, lastStep)
-      have((fDef, strictWellOrder(r1, x), functionFrom(f, dom(f), ran(f))) |- bijective(f, dom(f), ran(f))) by Cut(functionFromIsFunctional of (x := dom(f), y := ran(f)), lastStep)
+      have((fDef, strictWellOrder(r1, x), functionFrom(f, dom(f), ran(f))) |- bijective(f, dom(f), ran(f))) by Cut(lastStep, injectiveIsBijectiveOverRange of (x := dom(f), y := ran(f)))
       have(thesis) by Cut(fFunctionFrom, lastStep)
     }
 
-    // val domInitialSegment = have(fDef |- exists(a, dom(f) === initialSegment(a, r1, x))) subproof {
-      
-    // }
+    val inSegment = have((strictWellOrder(r, x), a ∈ initialSegment(b, r, x)) |- a ∈ x) by Cut(initialSegmentSubsetDomain, subsetElim of (z := a, x := initialSegment(b, r, x), y := x))
+
+    val domClosed = have((fDef, b ∈ dom(f), strictWellOrder(r1, x), strictWellOrder(r2, y), pair(a, b) ∈ r1) |- a ∈ dom(f)) subproof {
+      have((relationIsomorphism(g, initialSegmentOrder(b, r1, x), initialSegment(b, r1, x), initialSegmentOrder(c, r2, y), initialSegment(c, r2, y)), strictWellOrder(r1, x), strictWellOrder(r2, y), strictWellOrder(initialSegmentOrder(b, r1, x), initialSegment(b, r1, x)), strictWellOrder(initialSegmentOrder(c, r2, y), initialSegment(c, r2, y)), a ∈ initialSegment(b, r1, x), pair(a, b) ∈ r1, pair(app(g, a), c) ∈ r2) |- 
+      relationIsomorphism(g ↾ initialSegment(a, r1, x), initialSegmentOrder(a, r1, x), initialSegment(a, r1, x), initialSegmentOrder(app(g, a), r2, y), initialSegment(app(g, a), r2, y))) by 
+        Substitution.ApplyRules(initialSegmentOrderRestriction, initialSegmentRestriction)(initialSegmentIsomorphismRestriction of (f := g, r1 := initialSegmentOrder(b, r1, x), x := initialSegment(b, r1, x), r2 := initialSegmentOrder(c, r2, y), y := initialSegment(c, r2, y)))
+      have((relationIsomorphism(g, initialSegmentOrder(b, r1, x), initialSegment(b, r1, x), initialSegmentOrder(c, r2, y), initialSegment(c, r2, y)), strictWellOrder(r1, x), strictWellOrder(r2, y), strictWellOrder(initialSegmentOrder(c, r2, y), initialSegment(c, r2, y)), a ∈ initialSegment(b, r1, x), pair(a, b) ∈ r1, pair(app(g, a), c) ∈ r2) |- 
+      relationIsomorphism(g ↾ initialSegment(a, r1, x), initialSegmentOrder(a, r1, x), initialSegment(a, r1, x), initialSegmentOrder(app(g, a), r2, y), initialSegment(app(g, a), r2, y))) by 
+        Cut(initialSegmentStrictWellOrder of (r := r1), lastStep)
+      have((relationIsomorphism(g, initialSegmentOrder(b, r1, x), initialSegment(b, r1, x), initialSegmentOrder(c, r2, y), initialSegment(c, r2, y)), strictWellOrder(r1, x), strictWellOrder(r2, y), a ∈ initialSegment(b, r1, x), pair(a, b) ∈ r1, pair(app(g, a), c) ∈ r2) |- relationIsomorphism(g ↾ initialSegment(a, r1, x), initialSegmentOrder(a, r1, x), initialSegment(a, r1, x), initialSegmentOrder(app(g, a), r2, y), initialSegment(app(g, a), r2, y))) by 
+        Cut(initialSegmentStrictWellOrder of (b := c, r := r2, x := y), lastStep)
+      have((relationIsomorphism(g, initialSegmentOrder(b, r1, x), initialSegment(b, r1, x), initialSegmentOrder(c, r2, y), initialSegment(c, r2, y)), strictWellOrder(r1, x), strictWellOrder(r2, y), a ∈ initialSegment(b, r1, x), pair(a, b) ∈ r1, app(g, a) ∈ initialSegment(c, r2, y)) |- relationIsomorphism(g ↾ initialSegment(a, r1, x), initialSegmentOrder(a, r1, x), initialSegment(a, r1, x), initialSegmentOrder(app(g, a), r2, y), initialSegment(app(g, a), r2, y))) by Cut(initialSegmentElim of (a := app(g, a), b := c, r := r2, x := y), lastStep)
+      have((relationIsomorphism(g, initialSegmentOrder(b, r1, x), initialSegment(b, r1, x), initialSegmentOrder(c, r2, y), initialSegment(c, r2, y)), strictWellOrder(r1, x), strictWellOrder(r2, y), a ∈ initialSegment(b, r1, x), pair(a, b) ∈ r1) |- relationIsomorphism(g ↾ initialSegment(a, r1, x), initialSegmentOrder(a, r1, x), initialSegment(a, r1, x), initialSegmentOrder(app(g, a), r2, y), initialSegment(app(g, a), r2, y))) by Cut(relationIsomorphismAppInCodomain of (f := g, r1 := initialSegmentOrder(b, r1, x), x := initialSegment(b, r1, x), r2 := initialSegmentOrder(c, r2, y), y := initialSegment(c, r2, y)), lastStep)
+      have((relationIsomorphism(g, initialSegmentOrder(b, r1, x), initialSegment(b, r1, x), initialSegmentOrder(c, r2, y), initialSegment(c, r2, y)), strictWellOrder(r1, x), strictWellOrder(r2, y), pair(a, b) ∈ r1) |- relationIsomorphism(g ↾ initialSegment(a, r1, x), initialSegmentOrder(a, r1, x), initialSegment(a, r1, x), initialSegmentOrder(app(g, a), r2, y), initialSegment(app(g, a), r2, y))) by Cut(initialSegmentIntro of (r := r1), lastStep)
+      have((relationIsomorphism(g, initialSegmentOrder(b, r1, x), initialSegment(b, r1, x), initialSegmentOrder(c, r2, y), initialSegment(c, r2, y)), strictWellOrder(r1, x), strictWellOrder(r2, y), pair(a, b) ∈ r1) |- (initialSegmentOrder(a, r1, x), initialSegment(a, r1, x)) ≃ (initialSegmentOrder(app(g, a), r2, y), initialSegment(app(g, a), r2, y))) by Cut(lastStep, isomorphicIntro of (f := g ↾ initialSegment(a, r1, x), r1 := initialSegmentOrder(a, r1, x), x := initialSegment(a, r1, x), r2 := initialSegmentOrder(app(g, a), r2, y), y := initialSegment(app(g, a), r2, y)))
+      have((fDef, relationIsomorphism(g, initialSegmentOrder(b, r1, x), initialSegment(b, r1, x), initialSegmentOrder(c, r2, y), initialSegment(c, r2, y)), strictWellOrder(r1, x), strictWellOrder(r2, y), a ∈ x, app(g, a) ∈ y, pair(a, b) ∈ r1) |- pair(a, app(g, a)) ∈ f) by Cut(lastStep, fDefIntro of (b := app(g, a)))
+      have((fDef, relationIsomorphism(g, initialSegmentOrder(b, r1, x), initialSegment(b, r1, x), initialSegmentOrder(c, r2, y), initialSegment(c, r2, y)), strictWellOrder(r1, x), strictWellOrder(r2, y), a ∈ x, app(g, a) ∈ y, pair(a, b) ∈ r1) |- a ∈ dom(f)) by Cut(lastStep, relationDomainIntroPair of (r := f, b := app(g, a)))
+      have((fDef, relationIsomorphism(g, initialSegmentOrder(b, r1, x), initialSegment(b, r1, x), initialSegmentOrder(c, r2, y), initialSegment(c, r2, y)), strictWellOrder(r1, x), strictWellOrder(r2, y), a ∈ initialSegment(b, r1, x), app(g, a) ∈ y, pair(a, b) ∈ r1) |- a ∈ dom(f)) by Cut(inSegment of (r := r1), lastStep)
+      have((fDef, relationIsomorphism(g, initialSegmentOrder(b, r1, x), initialSegment(b, r1, x), initialSegmentOrder(c, r2, y), initialSegment(c, r2, y)), strictWellOrder(r1, x), strictWellOrder(r2, y), a ∈ initialSegment(b, r1, x), app(g, a) ∈ initialSegment(c, r2, y), pair(a, b) ∈ r1) |- a ∈ dom(f)) by Cut(inSegment of (b := c, r := r2, x := y, a := app(g, a)), lastStep)
+      have((fDef, relationIsomorphism(g, initialSegmentOrder(b, r1, x), initialSegment(b, r1, x), initialSegmentOrder(c, r2, y), initialSegment(c, r2, y)), strictWellOrder(r1, x), strictWellOrder(r2, y), a ∈ initialSegment(b, r1, x), pair(a, b) ∈ r1) |- a ∈ dom(f)) by Cut(relationIsomorphismAppInCodomain of (f := g, r1 := initialSegmentOrder(b, r1, x), x := initialSegment(b, r1, x), r2 := initialSegmentOrder(c, r2, y), y := initialSegment(c, r2, y)), lastStep)
+      have((fDef, relationIsomorphism(g, initialSegmentOrder(b, r1, x), initialSegment(b, r1, x), initialSegmentOrder(c, r2, y), initialSegment(c, r2, y)), strictWellOrder(r1, x), strictWellOrder(r2, y), pair(a, b) ∈ r1) |- a ∈ dom(f)) by Cut(initialSegmentIntro of (r := r1), lastStep)
+      thenHave((fDef, ∃(g, relationIsomorphism(g, initialSegmentOrder(b, r1, x), initialSegment(b, r1, x), initialSegmentOrder(c, r2, y), initialSegment(c, r2, y))), strictWellOrder(r1, x), strictWellOrder(r2, y), pair(a, b) ∈ r1) |- a ∈ dom(f)) by LeftExists
+      have((fDef, (initialSegmentOrder(b, r1, x), initialSegment(b, r1, x)) ≃ (initialSegmentOrder(c, r2, y), initialSegment(c, r2, y)), strictWellOrder(r1, x), strictWellOrder(r2, y), pair(a, b) ∈ r1) |- a ∈ dom(f)) by Cut(isomorphicElim of (r1 := initialSegmentOrder(b, r1, x), x := initialSegment(b, r1, x), r2 := initialSegmentOrder(c, r2, y), y := initialSegment(c, r2, y)), lastStep)
+      have((fDef, pair(b, c) ∈ f, strictWellOrder(r1, x), strictWellOrder(r2, y), pair(a, b) ∈ r1) |- a ∈ dom(f)) by Cut(fDefElim of (a := b, b := c), lastStep)
+      thenHave((fDef, ∃(c, pair(b, c) ∈ f), strictWellOrder(r1, x), strictWellOrder(r2, y), pair(a, b) ∈ r1) |- a ∈ dom(f)) by LeftExists
+      have(thesis) by Cut(relationDomainElim of (r := f, a := b), lastStep)
+    }
+
+    val domInitialSegment = have((fDef, strictWellOrder(r1, x), strictWellOrder(r2, y)) |- (dom(f) === x) \/ ∃(a, a ∈ x /\ (dom(f) === initialSegment(a, r1, x)))) subproof {
+      have((fDef, strictWellOrder(r1, x), strictWellOrder(r2, y)) |- (pair(a, b) ∈ r1 /\ b ∈ dom(f)) ==> a ∈ dom(f)) by Restate.from(domClosed)
+      thenHave((fDef, strictWellOrder(r1, x), strictWellOrder(r2, y)) |- ∀(b, (pair(a, b) ∈ r1 /\ b ∈ dom(f)) ==> a ∈ dom(f))) by RightForall
+      thenHave((fDef, strictWellOrder(r1, x), strictWellOrder(r2, y)) |- ∀(a, ∀(b, (pair(a, b) ∈ r1 /\ b ∈ dom(f)) ==> a ∈ dom(f)))) by RightForall
+      have((fDef, strictWellOrder(r1, x), strictWellOrder(r2, y), dom(f) ⊆ x) |- (dom(f) === x, ∃(a, a ∈ x /\ (dom(f) === initialSegment(a, r1, x))))) by Cut(lastStep, closedSetIsInitialSegment of (z := dom(f), r := r1))
+      have((fDef, strictWellOrder(r1, x), strictWellOrder(r2, y), relationBetween(f, x, y)) |- (dom(f) === x, ∃(a, a ∈ x /\ (dom(f) === initialSegment(a, r1, x))))) by Cut(relationBetweenDomain of (r := f, a := x, b := y), lastStep)
+      have((fDef, strictWellOrder(r1, x), strictWellOrder(r2, y)) |- (dom(f) === x, ∃(a, a ∈ x /\ (dom(f) === initialSegment(a, r1, x))))) by Cut(fRelationBetween, lastStep)
+    }
+
+    val ranInitialSegment = have((fDef, strictWellOrder(r1, x), strictWellOrder(r2, y)) |- (ran(f) === y) \/ ∃(b, b ∈ y /\ (ran(f) === initialSegment(b, r2, y)))) subproof {
+
+      val ig = app(inv(g), d)
+
+      have((relationIsomorphism(g, initialSegmentOrder(b, r1, x), initialSegment(b, r1, x), initialSegmentOrder(c, r2, y), initialSegment(c, r2, y)), strictWellOrder(r1, x), strictWellOrder(initialSegmentOrder(b, r1, x), initialSegment(b, r1, x)), strictWellOrder(r2, y), strictWellOrder(initialSegmentOrder(c, r2, y), initialSegment(c, r2, y)), ig ∈ initialSegment(b, r1, x), pair(ig, b) ∈ r1, pair(app(g, ig), c) ∈ r2) |- relationIsomorphism(g ↾ initialSegment(ig, r1, x), initialSegmentOrder(ig, r1, x), initialSegment(ig, r1, x), initialSegmentOrder(app(g, ig), r2, y), initialSegment(app(g, ig), r2, y))) by 
+        Substitution.ApplyRules(initialSegmentOrderRestriction, initialSegmentRestriction)(initialSegmentIsomorphismRestriction of (f := g, r1 := initialSegmentOrder(b, r1, x), x := initialSegment(b, r1, x), r2 := initialSegmentOrder(c, r2, y), y := initialSegment(c, r2, y), a := ig))
+      have((relationIsomorphism(g, initialSegmentOrder(b, r1, x), initialSegment(b, r1, x), initialSegmentOrder(c, r2, y), initialSegment(c, r2, y)), strictWellOrder(r1, x), strictWellOrder(r2, y), strictWellOrder(initialSegmentOrder(c, r2, y), initialSegment(c, r2, y)), ig ∈ initialSegment(b, r1, x), pair(ig, b) ∈ r1, pair(app(g, ig), c) ∈ r2) |- relationIsomorphism(g ↾ initialSegment(ig, r1, x), initialSegmentOrder(ig, r1, x), initialSegment(ig, r1, x), initialSegmentOrder(app(g, ig), r2, y), initialSegment(app(g, ig), r2, y))) by
+        Cut(initialSegmentStrictWellOrder of (r := r1), lastStep)
+      have((relationIsomorphism(g, initialSegmentOrder(b, r1, x), initialSegment(b, r1, x), initialSegmentOrder(c, r2, y), initialSegment(c, r2, y)), strictWellOrder(r1, x), strictWellOrder(r2, y), ig ∈ initialSegment(b, r1, x), pair(ig, b) ∈ r1, pair(app(g, ig), c) ∈ r2) |- relationIsomorphism(g ↾ initialSegment(ig, r1, x), initialSegmentOrder(ig, r1, x), initialSegment(ig, r1, x), initialSegmentOrder(app(g, ig), r2, y), initialSegment(app(g, ig), r2, y))) by
+        Cut(initialSegmentStrictWellOrder of (b := c, r := r2, x := y), lastStep)
+      thenHave((relationIsomorphism(g, initialSegmentOrder(b, r1, x), initialSegment(b, r1, x), initialSegmentOrder(c, r2, y), initialSegment(c, r2, y)), bijective(g, initialSegment(b, r1, x), initialSegment(c, r2, y)), strictWellOrder(r1, x), strictWellOrder(r2, y), d ∈ initialSegment(c, r2, y), ig ∈ initialSegment(b, r1, x), pair(ig, b) ∈ r1, pair(d, c) ∈ r2) |- relationIsomorphism(g ↾ initialSegment(ig, r1, x), initialSegmentOrder(ig, r1, x), initialSegment(ig, r1, x), initialSegmentOrder(d, r2, y), initialSegment(d, r2, y))) by
+        Substitution.ApplyRules(inverseRelationRightCancel of (f := g, x := initialSegment(b, r1, x), y := initialSegment(c, r2, y), b := d))
+      have((relationIsomorphism(g, initialSegmentOrder(b, r1, x), initialSegment(b, r1, x), initialSegmentOrder(c, r2, y), initialSegment(c, r2, y)), bijective(g, initialSegment(b, r1, x), initialSegment(c, r2, y)), strictWellOrder(r1, x), strictWellOrder(r2, y), d ∈ initialSegment(c, r2, y), ig ∈ initialSegment(b, r1, x), pair(ig, b) ∈ r1, pair(d, c) ∈ r2) |- (initialSegmentOrder(ig, r1, x), initialSegment(ig, r1, x)) ≃ (initialSegmentOrder(d, r2, y), initialSegment(d, r2, y))) by 
+        Cut(lastStep, isomorphicIntro of (f := g ↾ initialSegment(ig, r1, x), r1 := initialSegmentOrder(ig, r1, x), x := initialSegment(ig, r1, x), r2 := initialSegmentOrder(d, r2, y), y := initialSegment(d, r2, y)))
+      have((fDef, relationIsomorphism(g, initialSegmentOrder(b, r1, x), initialSegment(b, r1, x), initialSegmentOrder(c, r2, y), initialSegment(c, r2, y)), bijective(g, initialSegment(b, r1, x), initialSegment(c, r2, y)), strictWellOrder(r1, x), strictWellOrder(r2, y), d ∈ y, d ∈ initialSegment(c, r2, y), ig ∈ x, ig ∈ initialSegment(b, r1, x), pair(ig, b) ∈ r1, pair(d, c) ∈ r2) |- pair(ig, d) ∈ f) by 
+        Cut(lastStep, fDefIntro of (a := ig, b := d))
+      have((fDef, relationIsomorphism(g, initialSegmentOrder(b, r1, x), initialSegment(b, r1, x), initialSegmentOrder(c, r2, y), initialSegment(c, r2, y)), bijective(g, initialSegment(b, r1, x), initialSegment(c, r2, y)), strictWellOrder(r1, x), strictWellOrder(r2, y), d ∈ y, d ∈ initialSegment(c, r2, y), ig ∈ initialSegment(b, r1, x), pair(ig, b) ∈ r1, pair(d, c) ∈ r2) |- pair(ig, d) ∈ f) by 
+        Cut(inSegment of (a := ig, r := r1), lastStep)
+      have((fDef, relationIsomorphism(g, initialSegmentOrder(b, r1, x), initialSegment(b, r1, x), initialSegmentOrder(c, r2, y), initialSegment(c, r2, y)), bijective(g, initialSegment(b, r1, x), initialSegment(c, r2, y)), strictWellOrder(r1, x), strictWellOrder(r2, y), d ∈ initialSegment(c, r2, y), ig ∈ initialSegment(b, r1, x), pair(ig, b) ∈ r1, pair(d, c) ∈ r2) |- pair(ig, d) ∈ f) by 
+        Cut(inSegment of (a := d, b := c, r := r2, x := y), lastStep)
+      have((fDef, relationIsomorphism(g, initialSegmentOrder(b, r1, x), initialSegment(b, r1, x), initialSegmentOrder(c, r2, y), initialSegment(c, r2, y)), bijective(g, initialSegment(b, r1, x), initialSegment(c, r2, y)), strictWellOrder(r1, x), strictWellOrder(r2, y), d ∈ initialSegment(c, r2, y), ig ∈ initialSegment(b, r1, x), pair(d, c) ∈ r2) |- pair(ig, d) ∈ f) by 
+        Cut(initialSegmentElim of (a := ig, r := r1), lastStep)
+      have((fDef, relationIsomorphism(g, initialSegmentOrder(b, r1, x), initialSegment(b, r1, x), initialSegmentOrder(c, r2, y), initialSegment(c, r2, y)), bijective(g, initialSegment(b, r1, x), initialSegment(c, r2, y)), strictWellOrder(r1, x), strictWellOrder(r2, y), d ∈ initialSegment(c, r2, y), pair(d, c) ∈ r2) |- pair(ig, d) ∈ f) by 
+        Cut(inverseFunctionImageInDomain of (f := g, x := initialSegment(b, r1, x), y := initialSegment(c, r2, y), b := d), lastStep)
+      have((fDef, relationIsomorphism(g, initialSegmentOrder(b, r1, x), initialSegment(b, r1, x), initialSegmentOrder(c, r2, y), initialSegment(c, r2, y)), bijective(g, initialSegment(b, r1, x), initialSegment(c, r2, y)), strictWellOrder(r1, x), strictWellOrder(r2, y), pair(d, c) ∈ r2) |- pair(ig, d) ∈ f) by 
+        Cut(initialSegmentIntro of (a := d, r := r2, x := y, b := c), lastStep)
+      have((fDef, relationIsomorphism(g, initialSegmentOrder(b, r1, x), initialSegment(b, r1, x), initialSegmentOrder(c, r2, y), initialSegment(c, r2, y)), strictWellOrder(r1, x), strictWellOrder(r2, y), pair(d, c) ∈ r2) |- pair(ig, d) ∈ f) by 
+        Cut(relationIsomorphismBijective of (f := g, r1 := initialSegmentOrder(b, r1, x), x := initialSegment(b, r1, x), r2 := initialSegmentOrder(c, r2, y), y := initialSegment(c, r2, y)), lastStep)
+      have((fDef, relationIsomorphism(g, initialSegmentOrder(b, r1, x), initialSegment(b, r1, x), initialSegmentOrder(c, r2, y), initialSegment(c, r2, y)), strictWellOrder(r1, x), strictWellOrder(r2, y), pair(d, c) ∈ r2) |- d ∈ ran(f)) by 
+        Cut(lastStep, relationRangeIntroPair of (r := f, a := ig, b := d))
+      thenHave((fDef, ∃(g, relationIsomorphism(g, initialSegmentOrder(b, r1, x), initialSegment(b, r1, x), initialSegmentOrder(c, r2, y), initialSegment(c, r2, y))), strictWellOrder(r1, x), strictWellOrder(r2, y), pair(d, c) ∈ r2) |- d ∈ ran(f)) by LeftExists
+      thenHave((fDef, (initialSegmentOrder(b, r1, x), initialSegment(b, r1, x)) ≃ (initialSegmentOrder(c, r2, y), initialSegment(c, r2, y)), strictWellOrder(r1, x), strictWellOrder(r2, y), pair(d, c) ∈ r2) |- d ∈ ran(f)) by Substitution.ApplyRules(isomorphic.definition)
+      have((fDef, pair(b, c) ∈ f, strictWellOrder(r1, x), strictWellOrder(r2, y), pair(d, c) ∈ r2) |- d ∈ ran(f)) by Cut(fDefElim of (a := b, b := c), lastStep)
+      thenHave((fDef, ∃(b, pair(b, c) ∈ f), strictWellOrder(r1, x), strictWellOrder(r2, y), pair(d, c) ∈ r2) |- d ∈ ran(f)) by LeftExists
+      have((fDef, c ∈ ran(f), strictWellOrder(r1, x), strictWellOrder(r2, y), pair(d, c) ∈ r2) |- d ∈ ran(f)) by Cut(relationRangeElim of (b := c, r := f), lastStep)
+      thenHave((fDef, strictWellOrder(r1, x), strictWellOrder(r2, y)) |- (pair(d, c) ∈ r2 /\ c ∈ ran(f)) ==> d ∈ ran(f)) by Restate
+      thenHave((fDef, strictWellOrder(r1, x), strictWellOrder(r2, y)) |- ∀(c, (pair(d, c) ∈ r2 /\ c ∈ ran(f)) ==> d ∈ ran(f))) by RightForall
+      thenHave((fDef, strictWellOrder(r1, x), strictWellOrder(r2, y)) |- ∀(d, ∀(c, (pair(d, c) ∈ r2 /\ c ∈ ran(f)) ==> d ∈ ran(f)))) by RightForall
+      have((fDef, strictWellOrder(r1, x), strictWellOrder(r2, y), ran(f) ⊆ y) |- (ran(f) === y, ∃(b, b ∈ y /\ (ran(f) === initialSegment(b, r2, y))))) by Cut(lastStep, closedSetIsInitialSegment of (z := ran(f), x := y, r := r2))
+      have((fDef, strictWellOrder(r1, x), strictWellOrder(r2, y), relationBetween(f, x, y)) |- (ran(f) === y, ∃(b, b ∈ y /\ (ran(f) === initialSegment(b, r2, y))))) by Cut(relationBetweenRange of (r := f, a := x, b := y), lastStep)
+      have((fDef, strictWellOrder(r1, x), strictWellOrder(r2, y)) |- (ran(f) === y, ∃(b, b ∈ y /\ (ran(f) === initialSegment(b, r2, y))))) by Cut(fRelationBetween, lastStep)
+    }
 
     val r1Dom = relationRestriction(r1, dom(f), dom(f))
     val r2Ran = relationRestriction(r2, ran(f), ran(f))
@@ -553,11 +792,201 @@ object Segments extends lisa.Main {
     have((fDef, a ∈ dom(f), functionFrom(f, dom(f), ran(f))) |- (initialSegmentOrder(a, r1, x), initialSegment(a, r1, x)) ≃ (initialSegmentOrder(app(f, a), r2, y), initialSegment(app(f, a), r2, y))) by Cut(appIntroFunctionFrom of (x := dom(f), y := ran(f)), fDefElim of (b := app(f, a)))
     val fDefAppElim = have((fDef, a ∈ dom(f), strictWellOrder(r2, y)) |- (initialSegmentOrder(a, r1, x), initialSegment(a, r1, x)) ≃ (initialSegmentOrder(app(f, a), r2, y), initialSegment(app(f, a), r2, y))) by Cut(fFunctionFrom, lastStep)
 
-    val fIsomorphism = have((fDef, strictWellOrder(r1, x), strictWellOrder(r2, y)) |- relationIsomorphism(f, r1Dom, dom(f), r2Ran, ran(f))) subproof{
-      sorry
+    val fIsomorphism = have((fDef, strictWellOrder(r1, x), strictWellOrder(r2, y)) |- (r1Dom, dom(f)) ≃ (r2Ran, ran(f))) subproof{
+
+      val forward = have((fDef, a ∈ dom(f), b ∈ dom(f), strictWellOrder(r1, x), strictWellOrder(r2, y)) |- pair(a, b) ∈ r1Dom ==> pair(app(f, a), app(f, b)) ∈ r2Ran) subproof {
+        have((relationIsomorphism(g, initialSegmentOrder(b, r1, x), initialSegment(b, r1, x), initialSegmentOrder(app(f, b), r2, y), initialSegment(app(f, b), r2, y)), pair(a, b) ∈ r1, strictWellOrder(r1, x)) |- app(g, a) ∈ initialSegment(app(f, b), r2, y)) by 
+          Cut(initialSegmentIntro of (r := r1), relationIsomorphismAppInCodomain of (f := g, r1 := initialSegmentOrder(b, r1, x), x := initialSegment(b, r1, x), r2 := initialSegmentOrder(app(f, b), r2, y), y := initialSegment(app(f, b), r2, y))) 
+        val gLowerThanF = have((relationIsomorphism(g, initialSegmentOrder(b, r1, x), initialSegment(b, r1, x), initialSegmentOrder(app(f, b), r2, y), initialSegment(app(f, b), r2, y)), pair(a, b) ∈ r1, strictWellOrder(r1, x), strictWellOrder(r2, y)) |- pair(app(g, a), app(f, b)) ∈ r2) by 
+          Cut(lastStep, initialSegmentElim of (a := app(g, a), b := app(f, b), r := r2, x := y))
+
+        have((relationIsomorphism(g, initialSegmentOrder(b, r1, x), initialSegment(b, r1, x), initialSegmentOrder(app(f, b), r2, y), initialSegment(app(f, b), r2, y)), strictWellOrder(r1, x), strictWellOrder(r2, y), strictWellOrder(initialSegmentOrder(b, r1, x), initialSegment(b, r1, x)), strictWellOrder(initialSegmentOrder(app(f, b), r2, y), initialSegment(app(f, b), r2, y)), a ∈ initialSegment(b, r1, x), pair(a, b) ∈ r1, pair(app(g, a), app(f, b)) ∈ r2) |- 
+        relationIsomorphism(g ↾ initialSegment(a, r1, x), initialSegmentOrder(a, r1, x), initialSegment(a, r1, x), initialSegmentOrder(app(g, a), r2, y), initialSegment(app(g, a), r2, y))) by 
+          Substitution.ApplyRules(initialSegmentOrderRestriction, initialSegmentRestriction)(initialSegmentIsomorphismRestriction of (f := g, r1 := initialSegmentOrder(b, r1, x), x := initialSegment(b, r1, x), r2 := initialSegmentOrder(app(f, b), r2, y), y := initialSegment(app(f, b), r2, y)))
+        have((relationIsomorphism(g, initialSegmentOrder(b, r1, x), initialSegment(b, r1, x), initialSegmentOrder(app(f, b), r2, y), initialSegment(app(f, b), r2, y)), strictWellOrder(r1, x), strictWellOrder(r2, y), strictWellOrder(initialSegmentOrder(app(f, b), r2, y), initialSegment(app(f, b), r2, y)), a ∈ initialSegment(b, r1, x), pair(a, b) ∈ r1, pair(app(g, a), app(f, b)) ∈ r2) |- 
+        relationIsomorphism(g ↾ initialSegment(a, r1, x), initialSegmentOrder(a, r1, x), initialSegment(a, r1, x), initialSegmentOrder(app(g, a), r2, y), initialSegment(app(g, a), r2, y))) by 
+          Cut(initialSegmentStrictWellOrder of (r := r1), lastStep)
+        have((relationIsomorphism(g, initialSegmentOrder(b, r1, x), initialSegment(b, r1, x), initialSegmentOrder(app(f, b), r2, y), initialSegment(app(f, b), r2, y)), strictWellOrder(r1, x), strictWellOrder(r2, y), a ∈ initialSegment(b, r1, x), pair(a, b) ∈ r1, pair(app(g, a), app(f, b)) ∈ r2) |- 
+        relationIsomorphism(g ↾ initialSegment(a, r1, x), initialSegmentOrder(a, r1, x), initialSegment(a, r1, x), initialSegmentOrder(app(g, a), r2, y), initialSegment(app(g, a), r2, y))) by 
+          Cut(initialSegmentStrictWellOrder of (b := app(f, b), r := r2, x := y), lastStep)
+        have((relationIsomorphism(g, initialSegmentOrder(b, r1, x), initialSegment(b, r1, x), initialSegmentOrder(app(f, b), r2, y), initialSegment(app(f, b), r2, y)), strictWellOrder(r1, x), strictWellOrder(r2, y), a ∈ initialSegment(b, r1, x), pair(a, b) ∈ r1) |- 
+        relationIsomorphism(g ↾ initialSegment(a, r1, x), initialSegmentOrder(a, r1, x), initialSegment(a, r1, x), initialSegmentOrder(app(g, a), r2, y), initialSegment(app(g, a), r2, y))) by 
+          Cut(gLowerThanF, lastStep)
+        have((relationIsomorphism(g, initialSegmentOrder(b, r1, x), initialSegment(b, r1, x), initialSegmentOrder(app(f, b), r2, y), initialSegment(app(f, b), r2, y)), strictWellOrder(r1, x), strictWellOrder(r2, y), a ∈ initialSegment(b, r1, x), pair(a, b) ∈ r1) |- 
+        (initialSegmentOrder(a, r1, x), initialSegment(a, r1, x)) ≃ (initialSegmentOrder(app(g, a), r2, y), initialSegment(app(g, a), r2, y))) by 
+          Cut(lastStep, isomorphicIntro of (f := g ↾ initialSegment(a, r1, x), r1 := initialSegmentOrder(a, r1, x), x := initialSegment(a, r1, x), r2 := initialSegmentOrder(app(g, a), r2, y), y := initialSegment(app(g, a), r2, y)))
+        have((fDef, relationIsomorphism(g, initialSegmentOrder(b, r1, x), initialSegment(b, r1, x), initialSegmentOrder(app(f, b), r2, y), initialSegment(app(f, b), r2, y)), strictWellOrder(r1,
+        x), strictWellOrder(r2, y), a ∈ x, a ∈ initialSegment(b, r1, x), pair(a, b) ∈ r1, app(g, a) ∈ y) |- pair(a, app(g, a)) ∈ f) by 
+          Cut(lastStep, fDefIntro of (b := app(g, a)))
+        have((fDef, relationIsomorphism(g, initialSegmentOrder(b, r1, x), initialSegment(b, r1, x), initialSegmentOrder(app(f, b), r2, y), initialSegment(app(f, b), r2, y)), strictWellOrder(r1, x), strictWellOrder(r2, y), a ∈ x, a ∈ initialSegment(b, r1, x), pair(a, b) ∈ r1, app(g, a) ∈ initialSegment(app(f, b), r2, y)) |- pair(a, app(g, a)) ∈ f) by 
+          Cut(inSegment of (a := app(g, a), b := app(f, b), r := r2, x := y), lastStep)
+        have((fDef, relationIsomorphism(g, initialSegmentOrder(b, r1, x), initialSegment(b, r1, x), initialSegmentOrder(app(f, b), r2, y), initialSegment(app(f, b), r2, y)), strictWellOrder(r1, x), strictWellOrder(r2, y), a ∈ initialSegment(b, r1, x), pair(a, b) ∈ r1, app(g, a) ∈ initialSegment(app(f, b), r2, y)) |- pair(a, app(g, a)) ∈ f) by 
+          Cut(inSegment of (r := r1), lastStep)
+        have((fDef, relationIsomorphism(g, initialSegmentOrder(b, r1, x), initialSegment(b, r1, x), initialSegmentOrder(app(f, b), r2, y), initialSegment(app(f, b), r2, y)), strictWellOrder(r1, x), strictWellOrder(r2, y), a ∈ initialSegment(b, r1, x), pair(a, b) ∈ r1) |- pair(a, app(g, a)) ∈ f) by 
+          Cut(relationIsomorphismAppInCodomain of (f := g, r1 := initialSegmentOrder(b, r1, x), x := initialSegment(b, r1, x), r2 := initialSegmentOrder(app(f, b), r2, y), y := initialSegment(app(f, b), r2, y)), lastStep)
+        have((fDef, relationIsomorphism(g, initialSegmentOrder(b, r1, x), initialSegment(b, r1, x), initialSegmentOrder(app(f, b), r2, y), initialSegment(app(f, b), r2, y)), strictWellOrder(r1, x), strictWellOrder(r2, y), pair(a, b) ∈ r1) |- pair(a, app(g, a)) ∈ f) by 
+          Cut(initialSegmentIntro of (r := r1), lastStep)
+        have((fDef, relationIsomorphism(g, initialSegmentOrder(b, r1, x), initialSegment(b, r1, x), initialSegmentOrder(app(f, b), r2, y), initialSegment(app(f, b), r2, y)), functionFrom(f, dom(f), ran(f)), strictWellOrder(r1, x), strictWellOrder(r2, y), pair(a, b) ∈ r1) |- app(f, a) === app(g, a)) by 
+          Cut(lastStep, pairIsAppFunctionFrom of (x := dom(f), y := ran(f), b := app(g, a)))
+        have((fDef, relationIsomorphism(g, initialSegmentOrder(b, r1, x), initialSegment(b, r1, x), initialSegmentOrder(app(f, b), r2, y), initialSegment(app(f, b), r2, y)), strictWellOrder(r1, x), strictWellOrder(r2, y), pair(a, b) ∈ r1) |- app(f, a) === app(g, a)) by 
+          Cut(fFunctionFrom, lastStep)
+        have((fDef, relationIsomorphism(g, initialSegmentOrder(b, r1, x), initialSegment(b, r1, x), initialSegmentOrder(app(f, b), r2, y), initialSegment(app(f, b), r2, y)), strictWellOrder(r1, x), strictWellOrder(r2, y), pair(a, b) ∈ r1) |- pair(app(f, a), app(f, b)) ∈ r2) by 
+          Substitution.ApplyRules(lastStep)(gLowerThanF)
+        thenHave((fDef, ∃(g, relationIsomorphism(g, initialSegmentOrder(b, r1, x), initialSegment(b, r1, x), initialSegmentOrder(app(f, b), r2, y), initialSegment(app(f, b), r2, y))), strictWellOrder(r1, x), strictWellOrder(r2, y), pair(a, b) ∈ r1) |- pair(app(f, a), app(f, b)) ∈ r2) by LeftExists
+        have((fDef, (initialSegmentOrder(b, r1, x), initialSegment(b, r1, x)) ≃ (initialSegmentOrder(app(f, b), r2, y), initialSegment(app(f, b), r2, y)), strictWellOrder(r1, x), strictWellOrder(r2, y), pair(a, b) ∈ r1) |- pair(app(f, a), app(f, b)) ∈ r2) by 
+          Cut(isomorphicElim of (r1 := initialSegmentOrder(b, r1, x), x := initialSegment(b, r1, x), r2 := initialSegmentOrder(app(f, b), r2, y), y := initialSegment(app(f, b), r2, y)), lastStep)
+        have((fDef, b ∈ dom(f), strictWellOrder(r1, x), strictWellOrder(r2, y), pair(a, b) ∈ r1) |- pair(app(f, a), app(f, b)) ∈ r2) by 
+          Cut(fDefAppElim of (a := b), lastStep)
+        have((fDef, b ∈ dom(f), app(f, a) ∈ ran(f), app(f, b) ∈ ran(f), strictWellOrder(r1, x), strictWellOrder(r2, y), pair(a, b) ∈ r1) |- pair(app(f, a), app(f, b)) ∈ r2Ran) by 
+          Cut(lastStep, relationRestrictionIntroPair of (r := r2, a := app(f, a), b := app(f, b), x := ran(f), y := ran(f)))
+        have((fDef, functionFrom(f, dom(f), ran(f)), b ∈ dom(f), app(f, a) ∈ ran(f), strictWellOrder(r1, x), strictWellOrder(r2, y), pair(a, b) ∈ r1) |- pair(app(f, a), app(f, b)) ∈ r2Ran) by 
+          Cut(functionFromAppInCodomain of (a := b, x := dom(f), y := ran(f)), lastStep)
+        have((fDef, functionFrom(f, dom(f), ran(f)), b ∈ dom(f), a ∈ dom(f), strictWellOrder(r1, x), strictWellOrder(r2, y), pair(a, b) ∈ r1) |- pair(app(f, a), app(f, b)) ∈ r2Ran) by 
+          Cut(functionFromAppInCodomain of (x := dom(f), y := ran(f)), lastStep)
+        have((fDef, functionFrom(f, dom(f), ran(f)), b ∈ dom(f), a ∈ dom(f), strictWellOrder(r1, x), strictWellOrder(r2, y), pair(a, b) ∈ r1Dom) |- pair(app(f, a), app(f, b)) ∈ r2Ran) by 
+          Cut(relationRestrictionInRelation of (r := r1, x := dom(f), y := dom(f), p := pair(a, b)), lastStep)
+        have((fDef, a ∈ dom(f), b ∈ dom(f), strictWellOrder(r1, x), strictWellOrder(r2, y), pair(a, b) ∈ r1Dom) |- pair(app(f, a), app(f, b)) ∈ r2Ran) by Cut(fFunctionFrom, lastStep)
+      }
+
+      val backward = have((fDef, a ∈ dom(f), b ∈ dom(f), strictWellOrder(r1, x), strictWellOrder(r2, y)) |- pair(app(f, a), app(f, b)) ∈ r2Ran ==> pair(a, b) ∈ r1Dom) subproof {
+
+        val igfa = app(inv(g), app(f, a))
+
+        have((bijective(g, initialSegment(b, r1, x), initialSegment(app(f, b), r2, y)), pair(app(f, a), app(f, b)) ∈ r2, strictWellOrder(r2, y)) |- igfa ∈ initialSegment(b, r1, x)) by 
+          Cut(initialSegmentIntro of (a := app(f, a), b := app(f, b), r := r2, x := y), inverseFunctionImageInDomain of (f := g, x := initialSegment(b, r1, x), y := initialSegment(app(f, b), r2, y), b := app(f, a)))
+        val igfaB = have((bijective(g, initialSegment(b, r1, x), initialSegment(app(f, b), r2, y)), pair(app(f, a), app(f, b)) ∈ r2, strictWellOrder(r1, x), strictWellOrder(r2, y)) |- pair(igfa, b) ∈ r1) by 
+          Cut(lastStep, initialSegmentElim of (a := igfa, r := r1))
+
+        have((relationIsomorphism(g, initialSegmentOrder(b, r1, x), initialSegment(b, r1, x), initialSegmentOrder(app(f, b), r2, y), initialSegment(app(f, b), r2, y)), strictWellOrder(r1, x), strictWellOrder(r2, y), strictWellOrder(initialSegmentOrder(b, r1, x), initialSegment(b, r1, x)), strictWellOrder(initialSegmentOrder(app(f, b), r2, y), initialSegment(app(f, b), r2, y)), igfa ∈ initialSegment(b, r1, x), pair(igfa, b) ∈ r1, pair(app(g, igfa), app(f, b)) ∈ r2) |- 
+        relationIsomorphism(g ↾ initialSegment(igfa, r1, x), initialSegmentOrder(igfa, r1, x), initialSegment(igfa, r1, x), initialSegmentOrder(app(g, igfa), r2, y), initialSegment(app(g, igfa), r2, y))) by 
+          Substitution.ApplyRules(initialSegmentOrderRestriction, initialSegmentRestriction)(initialSegmentIsomorphismRestriction of (f := g, a := igfa, r1 := initialSegmentOrder(b, r1, x), x := initialSegment(b, r1, x), r2 := initialSegmentOrder(app(f, b), r2, y), y := initialSegment(app(f, b), r2, y)))
+        have((relationIsomorphism(g, initialSegmentOrder(b, r1, x), initialSegment(b, r1, x), initialSegmentOrder(app(f, b), r2, y), initialSegment(app(f, b), r2, y)), strictWellOrder(r1, x), strictWellOrder(r2, y), strictWellOrder(initialSegmentOrder(app(f, b), r2, y), initialSegment(app(f, b), r2, y)), igfa ∈ initialSegment(b, r1, x), pair(igfa, b) ∈ r1, pair(app(g, igfa), app(f, b)) ∈ r2) |- 
+        relationIsomorphism(g ↾ initialSegment(igfa, r1, x), initialSegmentOrder(igfa, r1, x), initialSegment(igfa, r1, x), initialSegmentOrder(app(g, igfa), r2, y), initialSegment(app(g, igfa), r2, y))) by 
+          Cut(initialSegmentStrictWellOrder of (r := r1), lastStep)
+        have((relationIsomorphism(g, initialSegmentOrder(b, r1, x), initialSegment(b, r1, x), initialSegmentOrder(app(f, b), r2, y), initialSegment(app(f, b), r2, y)), strictWellOrder(r1, x), strictWellOrder(r2, y), igfa ∈ initialSegment(b, r1, x), pair(igfa, b) ∈ r1, pair(app(g, igfa), app(f, b)) ∈ r2) |- 
+        relationIsomorphism(g ↾ initialSegment(igfa, r1, x), initialSegmentOrder(igfa, r1, x), initialSegment(igfa, r1, x), initialSegmentOrder(app(g, igfa), r2, y), initialSegment(app(g, igfa), r2, y))) by 
+          Cut(initialSegmentStrictWellOrder of (b := app(f, b), r := r2, x := y), lastStep)
+        thenHave((relationIsomorphism(g, initialSegmentOrder(b, r1, x), initialSegment(b, r1, x), initialSegmentOrder(app(f, b), r2, y), initialSegment(app(f, b), r2, y)), bijective(g, initialSegment(b, r1, x), initialSegment(app(f, b), r2, y)), strictWellOrder(r1, x), strictWellOrder(r2, y), app(f, a) ∈ initialSegment(app(f, b), r2, y), igfa ∈ initialSegment(b, r1, x), pair(igfa, b) ∈ r1, pair(app(f, a), app(f, b)) ∈ r2) |- 
+        relationIsomorphism(g ↾ initialSegment(igfa, r1, x), initialSegmentOrder(igfa, r1, x), initialSegment(igfa, r1, x), initialSegmentOrder(app(f, a), r2, y), initialSegment(app(f, a), r2, y))) by 
+          Substitution.ApplyRules(inverseRelationRightCancel of (f := g, x := initialSegment(b, r1, x), y := initialSegment(app(f, b), r2, y), b := app(f, a)))
+        have((relationIsomorphism(g, initialSegmentOrder(b, r1, x), initialSegment(b, r1, x), initialSegmentOrder(app(f, b), r2, y), initialSegment(app(f, b), r2, y)), bijective(g, initialSegment(b, r1, x), initialSegment(app(f, b), r2, y)), strictWellOrder(r1, x), strictWellOrder(r2, y), app(f, a) ∈ initialSegment(app(f, b), r2, y), igfa ∈ initialSegment(b, r1, x), pair(igfa, b) ∈ r1, pair(app(f, a), app(f, b)) ∈ r2) |- 
+        (initialSegmentOrder(igfa, r1, x), initialSegment(igfa, r1, x)) ≃ (initialSegmentOrder(app(f, a), r2, y), initialSegment(app(f, a), r2, y))) by Cut(lastStep, isomorphicIntro of (f := g ↾ initialSegment(igfa, r1, x), r1 := initialSegmentOrder(igfa, r1, x), x := initialSegment(igfa, r1, x), r2 := initialSegmentOrder(app(f, a), r2, y), y := initialSegment(app(f, a), r2, y)))
+        have((fDef, relationIsomorphism(g, initialSegmentOrder(b, r1, x), initialSegment(b, r1, x), initialSegmentOrder(app(f, b), r2, y), initialSegment(app(f, b), r2, y)), bijective(g, initialSegment(b, r1, x), initialSegment(app(f, b), r2, y)), strictWellOrder(r1, x), strictWellOrder(r2, y), app(f, a) ∈ y, app(f, a) ∈ initialSegment(app(f, b), r2, y), igfa ∈ x, igfa ∈ initialSegment(b, r1, x), pair(igfa, b) ∈ r1, pair(app(f, a), app(f, b)) ∈ r2) |- pair(igfa, app(f, a)) ∈ f) by 
+          Cut(lastStep, fDefIntro of (a := igfa, b := app(f, a)))
+        have((fDef, relationIsomorphism(g, initialSegmentOrder(b, r1, x), initialSegment(b, r1, x), initialSegmentOrder(app(f, b), r2, y), initialSegment(app(f, b), r2, y)), bijective(g, initialSegment(b, r1, x), initialSegment(app(f, b), r2, y)), functionFrom(f, dom(f), ran(f)), strictWellOrder(r1, x), strictWellOrder(r2, y), app(f, a) ∈ y, app(f, a) ∈ initialSegment(app(f, b), r2, y), igfa ∈ x, igfa ∈ initialSegment(b, r1, x), pair(igfa, b) ∈ r1, pair(app(f, a), app(f, b)) ∈ r2) |- app(f, igfa) === app(f, a)) by 
+          Cut(lastStep, pairIsAppFunctionFrom of (x := dom(f), y := ran(f), a := igfa, b := app(f, a)))
+        have((fDef, relationIsomorphism(g, initialSegmentOrder(b, r1, x), initialSegment(b, r1, x), initialSegmentOrder(app(f, b), r2, y), initialSegment(app(f, b), r2, y)), bijective(g, initialSegment(b, r1, x), initialSegment(app(f, b), r2, y)), injective(f, dom(f), ran(f)), functionFrom(f, dom(f), ran(f)), strictWellOrder(r1, x), strictWellOrder(r2, y), app(f, a) ∈ y, app(f, a) ∈ initialSegment(app(f, b), r2, y), igfa ∈ x, igfa ∈ initialSegment(b, r1, x), pair(igfa, b) ∈ r1, pair(app(f, a), app(f, b)) ∈ r2, a ∈ dom(f), igfa ∈ dom(f)) |- igfa === a) by 
+          Cut(lastStep, injectiveElim of (x := dom(f), y := ran(f), a := igfa, b := a))
+        have((fDef, relationIsomorphism(g, initialSegmentOrder(b, r1, x), initialSegment(b, r1, x), initialSegmentOrder(app(f, b), r2, y), initialSegment(app(f, b), r2, y)), bijective(g, initialSegment(b, r1, x), initialSegment(app(f, b), r2, y)), injective(f, dom(f), ran(f)), strictWellOrder(r1, x), strictWellOrder(r2, y), app(f, a) ∈ y, app(f, a) ∈ initialSegment(app(f, b), r2, y), igfa ∈ x, igfa ∈ initialSegment(b, r1, x), pair(igfa, b) ∈ r1, pair(app(f, a), app(f, b)) ∈ r2, a ∈ dom(f), igfa ∈ dom(f)) |- igfa === a) by 
+          Cut(fFunctionFrom, lastStep)
+        have((fDef, relationIsomorphism(g, initialSegmentOrder(b, r1, x), initialSegment(b, r1, x), initialSegmentOrder(app(f, b), r2, y), initialSegment(app(f, b), r2, y)), bijective(g, initialSegment(b, r1, x), initialSegment(app(f, b), r2, y)), bijective(f, dom(f), ran(f)), strictWellOrder(r1, x), strictWellOrder(r2, y), app(f, a) ∈ y, app(f, a) ∈ initialSegment(app(f, b), r2, y), igfa ∈ x, igfa ∈ initialSegment(b, r1, x), pair(igfa, b) ∈ r1, pair(app(f, a), app(f, b)) ∈ r2, a ∈ dom(f), igfa ∈ dom(f)) |- igfa === a) by 
+          Cut(bijectiveInjective of (x := dom(f), y := ran(f)), lastStep)
+        have((fDef, relationIsomorphism(g, initialSegmentOrder(b, r1, x), initialSegment(b, r1, x), initialSegmentOrder(app(f, b), r2, y), initialSegment(app(f, b), r2, y)), bijective(g, initialSegment(b, r1, x), initialSegment(app(f, b), r2, y)), strictWellOrder(r1, x), strictWellOrder(r2, y), app(f, a) ∈ y, app(f, a) ∈ initialSegment(app(f, b), r2, y), igfa ∈ x, igfa ∈ initialSegment(b, r1, x), pair(igfa, b) ∈ r1, pair(app(f, a), app(f, b)) ∈ r2, a ∈ dom(f), igfa ∈ dom(f)) |- igfa === a) by 
+          Cut(fBijective, lastStep)
+        have((fDef, relationIsomorphism(g, initialSegmentOrder(b, r1, x), initialSegment(b, r1, x), initialSegmentOrder(app(f, b), r2, y), initialSegment(app(f, b), r2, y)), bijective(g, initialSegment(b, r1, x), initialSegment(app(f, b), r2, y)), strictWellOrder(r1, x), strictWellOrder(r2, y), app(f, a) ∈ y, app(f, a) ∈ initialSegment(app(f, b), r2, y), igfa ∈ x, igfa ∈ initialSegment(b, r1, x), pair(igfa, b) ∈ r1, pair(app(f, a), app(f, b)) ∈ r2, a ∈ dom(f), b ∈ dom(f)) |- igfa === a) by 
+          Cut(domClosed of (a := igfa), lastStep)
+        have((fDef, relationIsomorphism(g, initialSegmentOrder(b, r1, x), initialSegment(b, r1, x), initialSegmentOrder(app(f, b), r2, y), initialSegment(app(f, b), r2, y)), bijective(g, initialSegment(b, r1, x), initialSegment(app(f, b), r2, y)), strictWellOrder(r1, x), strictWellOrder(r2, y), app(f, a) ∈ y, app(f, a) ∈ initialSegment(app(f, b), r2, y), igfa ∈ x, igfa ∈ initialSegment(b, r1, x), pair(app(f, a), app(f, b)) ∈ r2, a ∈ dom(f), b ∈ dom(f)) |- igfa === a) by 
+          Cut(igfaB, lastStep)
+        have((fDef, relationIsomorphism(g, initialSegmentOrder(b, r1, x), initialSegment(b, r1, x), initialSegmentOrder(app(f, b), r2, y), initialSegment(app(f, b), r2, y)), bijective(g, initialSegment(b, r1, x), initialSegment(app(f, b), r2, y)), strictWellOrder(r1, x), strictWellOrder(r2, y), app(f, a) ∈ y, app(f, a) ∈ initialSegment(app(f, b), r2, y), igfa ∈ x, igfa ∈ initialSegment(b, r1, x), pair(app(f, a), app(f, b)) ∈ r2, a ∈ dom(f), b ∈ dom(f)) |- pair(a, b) ∈ r1) by 
+          Substitution.ApplyRules(lastStep)(igfaB)
+        have((fDef, relationIsomorphism(g, initialSegmentOrder(b, r1, x), initialSegment(b, r1, x), initialSegmentOrder(app(f, b), r2, y), initialSegment(app(f, b), r2, y)), bijective(g, initialSegment(b, r1, x), initialSegment(app(f, b), r2, y)), strictWellOrder(r1, x), strictWellOrder(r2, y), app(f, a) ∈ y, app(f, a) ∈ initialSegment(app(f, b), r2, y), igfa ∈ initialSegment(b, r1, x), pair(app(f, a), app(f, b)) ∈ r2, a ∈ dom(f), b ∈ dom(f)) |- pair(a, b) ∈ r1) by 
+          Cut(inSegment of (a := igfa, r := r1), lastStep)
+        have((fDef, relationIsomorphism(g, initialSegmentOrder(b, r1, x), initialSegment(b, r1, x), initialSegmentOrder(app(f, b), r2, y), initialSegment(app(f, b), r2, y)), bijective(g, initialSegment(b, r1, x), initialSegment(app(f, b), r2, y)), strictWellOrder(r1, x), strictWellOrder(r2, y), app(f, a) ∈ initialSegment(app(f, b), r2, y), igfa ∈ initialSegment(b, r1, x), pair(app(f, a), app(f, b)) ∈ r2, a ∈ dom(f), b ∈ dom(f)) |- pair(a, b) ∈ r1) by 
+          Cut(inSegment of (a := app(f, a), b := app(f, b), r := r2, x := y), lastStep)
+        have((fDef, relationIsomorphism(g, initialSegmentOrder(b, r1, x), initialSegment(b, r1, x), initialSegmentOrder(app(f, b), r2, y), initialSegment(app(f, b), r2, y)), bijective(g, initialSegment(b, r1, x), initialSegment(app(f, b), r2, y)), strictWellOrder(r1, x), strictWellOrder(r2, y), app(f, a) ∈ initialSegment(app(f, b), r2, y), pair(app(f, a), app(f, b)) ∈ r2, a ∈ dom(f), b ∈ dom(f)) |- pair(a, b) ∈ r1) by 
+          Cut(inverseFunctionImageInDomain of (b := app(f, a), x := initialSegment(b, r1, x), y := initialSegment(app(f, b), r2, y), f := g), lastStep)
+        have((fDef, relationIsomorphism(g, initialSegmentOrder(b, r1, x), initialSegment(b, r1, x), initialSegmentOrder(app(f, b), r2, y), initialSegment(app(f, b), r2, y)), bijective(g, initialSegment(b, r1, x), initialSegment(app(f, b), r2, y)), strictWellOrder(r1, x), strictWellOrder(r2, y), pair(app(f, a), app(f, b)) ∈ r2, a ∈ dom(f), b ∈ dom(f)) |- pair(a, b) ∈ r1) by 
+          Cut(initialSegmentIntro of (a := app(f, a), b := app(f, b), r := r2, x := y), lastStep)
+        have((fDef, relationIsomorphism(g, initialSegmentOrder(b, r1, x), initialSegment(b, r1, x), initialSegmentOrder(app(f, b), r2, y), initialSegment(app(f, b), r2, y)), strictWellOrder(r1, x), strictWellOrder(r2, y), pair(app(f, a), app(f, b)) ∈ r2, a ∈ dom(f), b ∈ dom(f)) |- pair(a, b) ∈ r1) by 
+          Cut(relationIsomorphismBijective of (f := g, x := initialSegment(b, r1, x), y := initialSegment(app(f, b), r2, y), r1 := initialSegmentOrder(b, r1, x), r2 := initialSegmentOrder(app(f, b), r2, y)), lastStep)
+        thenHave((fDef, ∃(g, relationIsomorphism(g, initialSegmentOrder(b, r1, x), initialSegment(b, r1, x), initialSegmentOrder(app(f, b), r2, y), initialSegment(app(f, b), r2, y))), strictWellOrder(r1, x), strictWellOrder(r2, y), pair(app(f, a), app(f, b)) ∈ r2, a ∈ dom(f), b ∈ dom(f)) |- pair(a, b) ∈ r1) by LeftExists
+        thenHave((fDef, (initialSegmentOrder(b, r1, x), initialSegment(b, r1, x)) ≃ (initialSegmentOrder(app(f, b), r2, y), initialSegment(app(f, b), r2, y)), strictWellOrder(r1, x), strictWellOrder(r2, y), pair(app(f, a), app(f, b)) ∈ r2, a ∈ dom(f), b ∈ dom(f)) |- pair(a, b) ∈ r1) by 
+          Substitution.ApplyRules(isomorphic.definition)
+        have((fDef, strictWellOrder(r1, x), strictWellOrder(r2, y), pair(app(f, a), app(f, b)) ∈ r2, a ∈ dom(f), b ∈ dom(f)) |- pair(a, b) ∈ r1) by Cut(fDefAppElim of (a := b), lastStep)
+        have((fDef, strictWellOrder(r1, x), strictWellOrder(r2, y), pair(app(f, a), app(f, b)) ∈ r2, a ∈ dom(f), b ∈ dom(f)) |- pair(a, b) ∈ r1Dom) by Cut(lastStep, relationRestrictionIntroPair of (r := r1, x := dom(f), y := dom(f)))
+        have((fDef, strictWellOrder(r1, x), strictWellOrder(r2, y), pair(app(f, a), app(f, b)) ∈ r2Ran, a ∈ dom(f), b ∈ dom(f)) |- pair(a, b) ∈ r1Dom) by Cut(relationRestrictionInRelation of (r := r2, x := ran(f), y := ran(f), p := pair(app(f, a), app(f, b))), lastStep)
+      }
+      
+      have((fDef, a ∈ dom(f), b ∈ dom(f), strictWellOrder(r1, x), strictWellOrder(r2, y)) |- pair(a, b) ∈ r1Dom <=> pair(app(f, a), app(f, b)) ∈ r2Ran) by RightIff(forward, backward)
+      thenHave((fDef, strictWellOrder(r1, x), strictWellOrder(r2, y)) |- (a ∈ dom(f) /\ b ∈ dom(f)) ==> (pair(a, b) ∈ r1Dom <=> pair(app(f, a), app(f, b)) ∈ r2Ran)) by Restate
+      thenHave((fDef, strictWellOrder(r1, x), strictWellOrder(r2, y)) |- ∀(b, (a ∈ dom(f) /\ b ∈ dom(f)) ==> (pair(a, b) ∈ r1Dom <=> pair(app(f, a), app(f, b)) ∈ r2Ran))) by RightForall
+      thenHave((fDef, strictWellOrder(r1, x), strictWellOrder(r2, y)) |- ∀(a, ∀(b, (a ∈ dom(f) /\ b ∈ dom(f)) ==> (pair(a, b) ∈ r1Dom <=> pair(app(f, a), app(f, b)) ∈ r2Ran)))) by RightForall
+      have((fDef, strictWellOrder(r1, x), strictWellOrder(r2, y), strictWellOrder(r1Dom, dom(f)), strictWellOrder(r2Ran, ran(f)), bijective(f, dom(f), ran(f))) |- relationIsomorphism(f, r1Dom, dom(f), r2Ran, ran(f))) by Cut(lastStep, strictWellOrderIsomorphismIntro of (r1 := r1Dom, x := dom(f), r2 := r2Ran, y := ran(f)))
+      have((fDef, strictWellOrder(r1, x), strictWellOrder(r2, y), dom(f) ⊆ x, strictWellOrder(r2Ran, ran(f)), bijective(f, dom(f), ran(f))) |- relationIsomorphism(f, r1Dom, dom(f), r2Ran, ran(f))) by Cut(relationRestrictionStrictWellOrder of (r := r1, y := dom(f)), lastStep)
+      have((fDef, strictWellOrder(r1, x), strictWellOrder(r2, y), dom(f) ⊆ x, ran(f) ⊆ y, bijective(f, dom(f), ran(f))) |- relationIsomorphism(f, r1Dom, dom(f), r2Ran, ran(f))) by 
+        Cut(relationRestrictionStrictWellOrder of (r := r2, x := y, y := ran(f)), lastStep)
+      have((fDef, relationBetween(f, x, y), strictWellOrder(r1, x), strictWellOrder(r2, y), ran(f) ⊆ y, bijective(f, dom(f), ran(f))) |- relationIsomorphism(f, r1Dom, dom(f), r2Ran, ran(f))) by 
+        Cut(relationBetweenDomain of (r := f, a := x, b := y), lastStep)
+      have((fDef, relationBetween(f, x, y), strictWellOrder(r1, x), strictWellOrder(r2, y), bijective(f, dom(f), ran(f))) |- relationIsomorphism(f, r1Dom, dom(f), r2Ran, ran(f))) by 
+        Cut(relationBetweenRange of (r := f, a := x, b := y), lastStep)
+      have((fDef, strictWellOrder(r1, x), strictWellOrder(r2, y), bijective(f, dom(f), ran(f))) |- relationIsomorphism(f, r1Dom, dom(f), r2Ran, ran(f))) by 
+        Cut(fRelationBetween, lastStep)
+      have((fDef, strictWellOrder(r1, x), strictWellOrder(r2, y)) |- relationIsomorphism(f, r1Dom, dom(f), r2Ran, ran(f))) by 
+        Cut(fBijective, lastStep)
+      have((fDef, strictWellOrder(r1, x), strictWellOrder(r2, y)) |- (r1Dom, dom(f)) ≃ (r2Ran, ran(f))) by 
+        Cut(lastStep, isomorphicIntro of (r1 := r1Dom, x := dom(f), r2 := r2Ran, y := ran(f)))
     }
 
-    sorry
+    have((fDef, strictWellOrder(r1, x), strictWellOrder(r2, y), dom(f) === x) |- (relationRestriction(r1, x, x), x) ≃ (r2Ran, ran(f))) by Substitution.ApplyRules(dom(f) === x)(fIsomorphism)
+    thenHave((fDef, strictWellOrder(r1, x), strictWellOrder(r2, y), relationBetween(r1, x, x), dom(f) === x) |- (r1, x) ≃ (r2Ran, ran(f))) by Substitution.ApplyRules(relationRestrictionOnItself of (r := r1, y := x))
+    val case1 = have((fDef, strictWellOrder(r1, x), strictWellOrder(r2, y), dom(f) === x) |- (r1, x) ≃ (r2Ran, ran(f))) by Cut(strictWellOrderIsRelationBetween of (r := r1), lastStep)
+
+    have((fDef, strictWellOrder(r1, x), strictWellOrder(r2, y), dom(f) === x, ran(f) === y) |- (r1, x) ≃ (relationRestriction(r2, y, y), y)) by Substitution.ApplyRules(ran(f) === y)(case1)
+    thenHave((fDef, strictWellOrder(r1, x), strictWellOrder(r2, y), relationBetween(r2, y, y), dom(f) === x, ran(f) === y) |- (r1, x) ≃ (r2, y)) by Substitution.ApplyRules(relationRestrictionOnItself of (r := r2, x := y))
+    val case11 = have((fDef, strictWellOrder(r1, x), strictWellOrder(r2, y), dom(f) === x, ran(f) === y) |- (r1, x) ≃ (r2, y)) by Cut(strictWellOrderIsRelationBetween of (r := r2, x := y), lastStep)
+
+    val hyp = have(b ∈ y |- b ∈ y) by Hypothesis
+
+    have((fDef, strictWellOrder(r1, x), strictWellOrder(r2, y), dom(f) === x, ran(f) === initialSegment(b, r2, y)) |- (r1, x) ≃ (relationRestriction(r2, initialSegment(b, r2, y), initialSegment(b, r2, y)), initialSegment(b, r2, y))) by Substitution.ApplyRules(ran(f) === initialSegment(b, r2, y))(case1)
+    thenHave((fDef, strictWellOrder(r1, x), strictWellOrder(r2, y), dom(f) === x, ran(f) === initialSegment(b, r2, y)) |- (r1, x) ≃ (initialSegmentOrder(b, r2, y), initialSegment(b, r2, y))) by Substitution.ApplyRules(initialSegmentOrder.shortDefinition)
+    have((fDef, strictWellOrder(r1, x), strictWellOrder(r2, y), dom(f) === x, b ∈ y, (ran(f) === initialSegment(b, r2, y))) |- b ∈ y /\ (r1, x) ≃ (initialSegmentOrder(b, r2, y), initialSegment(b, r2, y))) by RightAnd(lastStep, hyp)
+    thenHave((fDef, strictWellOrder(r1, x), strictWellOrder(r2, y), dom(f) === x, b ∈ y /\ (ran(f) === initialSegment(b, r2, y))) |- b ∈ y /\ (r1, x) ≃ (initialSegmentOrder(b, r2, y), initialSegment(b, r2, y))) by LeftAnd
+    thenHave((fDef, strictWellOrder(r1, x), strictWellOrder(r2, y), dom(f) === x, b ∈ y /\ (ran(f) === initialSegment(b, r2, y))) |- ∃(b, b ∈ y /\ (r1, x) ≃ (initialSegmentOrder(b, r2, y), initialSegment(b, r2, y)))) by RightExists
+    val case12 = thenHave((fDef, strictWellOrder(r1, x), strictWellOrder(r2, y), dom(f) === x, ∃(b, b ∈ y /\ (ran(f) === initialSegment(b, r2, y)))) |- ∃(b, b ∈ y /\ (r1, x) ≃ (initialSegmentOrder(b, r2, y), initialSegment(b, r2, y)))) by LeftExists
+
+    have((fDef, strictWellOrder(r1, x), strictWellOrder(r2, y), dom(f) === x, (ran(f) === y) \/ ∃(b, b ∈ y /\ (ran(f) === initialSegment(b, r2, y)))) |- ((r1, x) ≃ (r2, y), ∃(b, b ∈ y /\ (r1, x) ≃ (initialSegmentOrder(b, r2, y), initialSegment(b, r2, y))))) by LeftOr(case11, case12)
+    val finalCase1 = have((fDef, strictWellOrder(r1, x), strictWellOrder(r2, y), dom(f) === x) |- ((r1, x) ≃ (r2, y), ∃(b, b ∈ y /\ (r1, x) ≃ (initialSegmentOrder(b, r2, y), initialSegment(b, r2, y))))) by Cut(ranInitialSegment, lastStep)
+
+    have((fDef, strictWellOrder(r1, x), strictWellOrder(r2, y), dom(f) === initialSegment(a, r1, x)) |- (relationRestriction(r1, initialSegment(a, r1, x), initialSegment(a, r1, x)), initialSegment(a, r1, x)) ≃ (r2Ran, ran(f))) by Substitution.ApplyRules(dom(f) === initialSegment(a, r1, x))(fIsomorphism)
+    val case2 = thenHave((fDef, strictWellOrder(r1, x), strictWellOrder(r2, y), dom(f) === initialSegment(a, r1, x)) |- (initialSegmentOrder(a, r1, x), initialSegment(a, r1, x)) ≃ (r2Ran, ran(f))) by Substitution.ApplyRules(initialSegmentOrder.shortDefinition)
+
+    thenHave((fDef, strictWellOrder(r1, x), strictWellOrder(r2, y), dom(f) === initialSegment(a, r1, x), ran(f) === y) |- (initialSegmentOrder(a, r1, x), initialSegment(a, r1, x)) ≃ (relationRestriction(r2, y, y), y)) by Substitution.ApplyRules(ran(f) === y)
+    thenHave((fDef, strictWellOrder(r1, x), strictWellOrder(r2, y), relationBetween(r2, y, y), dom(f) === initialSegment(a, r1, x), ran(f) === y) |- (initialSegmentOrder(a, r1, x), initialSegment(a, r1, x)) ≃ (r2, y)) by Substitution.ApplyRules(relationRestrictionOnItself of (r := r2, x := y))
+    have((fDef, strictWellOrder(r1, x), strictWellOrder(r2, y), dom(f) === initialSegment(a, r1, x), ran(f) === y) |- (initialSegmentOrder(a, r1, x), initialSegment(a, r1, x)) ≃ (r2, y)) by Cut(strictWellOrderIsRelationBetween of (r := r2, x := y), lastStep)
+    have((fDef, strictWellOrder(r1, x), strictWellOrder(r2, y), a ∈ x, dom(f) === initialSegment(a, r1, x), ran(f) === y) |- a ∈ x /\ (initialSegmentOrder(a, r1, x), initialSegment(a, r1, x)) ≃ (r2, y)) by RightAnd(lastStep, hyp of (b := a, y := x))
+    thenHave((fDef, strictWellOrder(r1, x), strictWellOrder(r2, y), a ∈ x /\ (dom(f) === initialSegment(a, r1, x)), ran(f) === y) |- a ∈ x /\ (initialSegmentOrder(a, r1, x), initialSegment(a, r1, x)) ≃ (r2, y)) by LeftAnd
+    thenHave((fDef, strictWellOrder(r1, x), strictWellOrder(r2, y), a ∈ x /\ (dom(f) === initialSegment(a, r1, x)), ran(f) === y) |- ∃(a, a ∈ x /\ (initialSegmentOrder(a, r1, x), initialSegment(a, r1, x)) ≃ (r2, y))) by RightExists
+    val case21 = thenHave((fDef, strictWellOrder(r1, x), strictWellOrder(r2, y), ∃(a, a ∈ x /\ (dom(f) === initialSegment(a, r1, x))), ran(f) === y) |- ∃(a, a ∈ x /\ (initialSegmentOrder(a, r1, x), initialSegment(a, r1, x)) ≃ (r2, y))) by LeftExists
+
+    have((fDef, strictWellOrder(r1, x), strictWellOrder(r2, y), dom(f) === initialSegment(a, r1, x), ran(f) === initialSegment(b, r2, y)) |- (initialSegmentOrder(a, r1, x), initialSegment(a, r1, x)) ≃ (relationRestriction(r2, initialSegment(b, r2, y), initialSegment(b, r2, y)), initialSegment(b, r2, y))) by Substitution.ApplyRules(ran(f) === initialSegment(b, r2, y))(case2)
+    thenHave((fDef, strictWellOrder(r1, x), strictWellOrder(r2, y), dom(f) === initialSegment(a, r1, x), ran(f) === initialSegment(b, r2, y)) |- (initialSegmentOrder(a, r1, x), initialSegment(a, r1, x)) ≃ (initialSegmentOrder(b, r2, y), initialSegment(b, r2, y))) by Substitution.ApplyRules(initialSegmentOrder.shortDefinition)
+    have((fDef, strictWellOrder(r1, x), strictWellOrder(r2, y), a ∈ x, dom(f) === initialSegment(a, r1, x), b ∈ y, ran(f) === initialSegment(b, r2, y)) |- pair(a, b) ∈ f) by Cut(lastStep, fDefIntro)
+    have((fDef, strictWellOrder(r1, x), strictWellOrder(r2, y), a ∈ x, dom(f) === initialSegment(a, r1, x), b ∈ y, ran(f) === initialSegment(b, r2, y)) |- b ∈ ran(f)) by Cut(lastStep, relationRangeIntroPair of (r := f))
+    thenHave((fDef, strictWellOrder(r1, x), strictWellOrder(r2, y), a ∈ x, dom(f) === initialSegment(a, r1, x), b ∈ y, ran(f) === initialSegment(b, r2, y)) |- b ∈ initialSegment(b, r2, y)) by RightSubstEq.withParametersSimple(List((ran(f), initialSegment(b, r2, y))), lambda(x, b ∈ x))
+    have((fDef, strictWellOrder(r1, x), strictWellOrder(r2, y), a ∈ x, dom(f) === initialSegment(a, r1, x), b ∈ y, ran(f) === initialSegment(b, r2, y)) |- ()) by RightAnd(lastStep, notInSelfInitialSegment of (r := r2, x := y))
+    thenHave((fDef, strictWellOrder(r1, x), strictWellOrder(r2, y), a ∈ x /\ (dom(f) === initialSegment(a, r1, x)), b ∈ y /\ (ran(f) === initialSegment(b, r2, y))) |- ()) by Restate
+    thenHave((fDef, strictWellOrder(r1, x), strictWellOrder(r2, y), ∃(a, a ∈ x /\ (dom(f) === initialSegment(a, r1, x))), b ∈ y /\ (ran(f) === initialSegment(b, r2, y))) |- ()) by LeftExists
+    val case22 = thenHave((fDef, strictWellOrder(r1, x), strictWellOrder(r2, y), ∃(a, a ∈ x /\ (dom(f) === initialSegment(a, r1, x))), ∃(b, b ∈ y /\ (ran(f) === initialSegment(b, r2, y)))) |- ()) by LeftExists
+
+    have((fDef, strictWellOrder(r1, x), strictWellOrder(r2, y), ∃(a, a ∈ x /\ (dom(f) === initialSegment(a, r1, x))), (ran(f) === y) \/ ∃(b, b ∈ y /\ (ran(f) === initialSegment(b, r2, y)))) |- ∃(a, a ∈ x /\ (initialSegmentOrder(a, r1, x), initialSegment(a, r1, x)) ≃ (r2, y))) by LeftOr(case21, case22)
+    val finalCase2 = have((fDef, strictWellOrder(r1, x), strictWellOrder(r2, y), ∃(a, a ∈ x /\ (dom(f) === initialSegment(a, r1, x)))) |- ∃(a, a ∈ x /\ (initialSegmentOrder(a, r1, x), initialSegment(a, r1, x)) ≃ (r2, y))) by Cut(ranInitialSegment, lastStep)
+
+    have((fDef, strictWellOrder(r1, x), strictWellOrder(r2, y), (dom(f) === x) \/ ∃(a, a ∈ x /\ (dom(f) === initialSegment(a, r1, x)))) |- 
+      ((r1, x) ≃ (r2, y), ∃(b, b ∈ y /\ (r1, x) ≃ (initialSegmentOrder(b, r2, y), initialSegment(b, r2, y))),
+      ∃(a, a ∈ x /\ (initialSegmentOrder(a, r1, x), initialSegment(a, r1, x)) ≃ (r2, y)))
+    ) by LeftOr(finalCase1, finalCase2)
+    have((fDef, strictWellOrder(r1, x), strictWellOrder(r2, y)) |- 
+      ((r1, x) ≃ (r2, y), ∃(b, b ∈ y /\ (r1, x) ≃ (initialSegmentOrder(b, r2, y), initialSegment(b, r2, y))),
+      ∃(a, a ∈ x /\ (initialSegmentOrder(a, r1, x), initialSegment(a, r1, x)) ≃ (r2, y)))
+    ) by Cut(domInitialSegment, lastStep)
+    thenHave((∃(f, fDef), strictWellOrder(r1, x), strictWellOrder(r2, y)) |- 
+      ((r1, x) ≃ (r2, y), ∃(b, b ∈ y /\ (r1, x) ≃ (initialSegmentOrder(b, r2, y), initialSegment(b, r2, y))),
+      ∃(a, a ∈ x /\ (initialSegmentOrder(a, r1, x), initialSegment(a, r1, x)) ≃ (r2, y)))
+    ) by LeftExists
+    have((strictWellOrder(r1, x), strictWellOrder(r2, y)) |- 
+      ((r1, x) ≃ (r2, y), ∃(b, b ∈ y /\ (r1, x) ≃ (initialSegmentOrder(b, r2, y), initialSegment(b, r2, y))),
+      ∃(a, a ∈ x /\ (initialSegmentOrder(a, r1, x), initialSegment(a, r1, x)) ≃ (r2, y)))
+    ) by Cut(fExistence, lastStep)
   }
 
 }
