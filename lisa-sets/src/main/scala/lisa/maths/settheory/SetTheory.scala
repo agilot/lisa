@@ -45,7 +45,9 @@ object SetTheory extends lisa.Main {
   private val P = predicate[1]
   private val Q = predicate[1]
   private val R = predicate[2]
+  private val S = predicate[3]
   private val F = function[1]
+  private val G = function[2]
   private val schemPred = predicate[1]
 
   /**
@@ -134,6 +136,9 @@ object SetTheory extends lisa.Main {
   def classFunction(R: Term ** 2 |-> Formula): Formula = classFunction(R, lambda(x, True))
   def classFunction(R: Term ** 2 |-> Formula, A: Term): Formula = classFunction(R, lambda(x, x ∈ A))
 
+  def classFunctionTwoArgs(S: Term ** 3 |-> Formula, R: Term ** 2 |-> Formula): Formula = ∀(x, ∀(y, R(x, y) ==> ∃!(z, S(x, y, z))))
+  def classFunctionTwoArgs(S: Term ** 3 |-> Formula): Formula = classFunctionTwoArgs(S, lambda((x, y), True))
+
   val classFunctionElim = Lemma(
     (classFunction(R, P), P(x)) |- ∃!(y, R(x, y))
   ) {
@@ -145,6 +150,43 @@ object SetTheory extends lisa.Main {
     classFunction(R) |- ∃!(y, R(x, y))
   ) {
     have(thesis) by Restate.from(classFunctionElim of (P := lambda(x, True)))
+  }
+
+  val classFunctionTwoArgsElim = Lemma(
+    (classFunctionTwoArgs(S, R), R(x, y)) |- ∃!(z, S(x, y, z))
+  ) {
+    have(classFunctionTwoArgs(S, R) |- classFunctionTwoArgs(S, R)) by Hypothesis
+    thenHave(thesis) by InstantiateForall(x, y)
+  }
+
+  val totalClassFunctionTwoArgsElim = Lemma(
+    classFunctionTwoArgs(S) |- ∃!(z, S(x, y, z))
+  ) {
+    have(thesis) by Restate.from(classFunctionTwoArgsElim of (R := lambda((x, y), True)))
+  }
+
+  val classFunctionHasImage = Lemma(
+    (classFunction(R, P), P(x)) |- ∃(y, R(x, y))
+  ) {
+    have(thesis) by Cut(classFunctionElim, existsOneImpliesExists of (P := lambda(y, R(x, y))))
+  }
+
+  val totalClassFunctionHasImage = Lemma(
+    classFunction(R) |- ∃(y, R(x, y))
+  ) {
+    have(thesis) by Restate.from(classFunctionHasImage of (P := lambda(x, True)))
+  }
+
+  val classFunctionTwoArgsHasImage = Lemma(
+    (classFunctionTwoArgs(S, R), R(x, y)) |- ∃(z, S(x, y, z))
+  ) {
+    have(thesis) by Cut(classFunctionTwoArgsElim, existsOneImpliesExists of (P := lambda(z, S(x, y, z))))
+  }
+
+  val totalClassFunctionTwoArgsHasImage = Lemma(
+    classFunctionTwoArgs(S) |- ∃(z, S(x, y, z))
+  ) {
+    have(thesis) by Restate.from(classFunctionTwoArgsHasImage of (R := lambda((x, y), True)))
   }
 
   val classFunctionUniqueness = Lemma(
@@ -172,6 +214,35 @@ object SetTheory extends lisa.Main {
     have(∃(y, F(x) === y) |- ∃!(y, F(x) === y)) by Cut(uniqueness of (P := lambda(y, F(x) === y)), existenceAndUniqueness of (P := lambda(y, F(x) === y)))
     have(∃!(y, F(x) === y)) by Cut(existence, lastStep)
     thenHave(P(x) ==> ∃!(y, F(x) === y)) by Weakening
+    thenHave(thesis) by RightForall
+  }
+
+    val classFunctionTwoArgsUniqueness = Lemma(
+    (classFunctionTwoArgs(S, R), R(x, y), S(x, y, z), S(x, y, w)) |- z === w
+  ) {
+    have(thesis) by Cut(classFunctionTwoArgsElim, existsOneImpliesUniqueness of (P := lambda(z, S(x, y, z)), x := z, y := w))
+  }
+
+  val totalClassFunctionTwoArgsUniqueness = Lemma(
+    (classFunctionTwoArgs(S), S(x, y, z), S(x, y, w)) |- z === w
+  ) {
+    have(thesis) by Restate.from(classFunctionTwoArgsUniqueness of (R := lambda((x, y), True)))
+  }
+
+  val functionIsClassFunctionTwoArgs = Lemma(
+    classFunctionTwoArgs(lambda((x, y, z), G(x, y) === z), R)
+  ) {
+    have(((G(x, y) === z) /\ (G(x, y) === w)) ==> (z === w)) by Restate.from(equalityTransitivity of (x := z, y := G(x, y), z := w))
+    thenHave(∀(z, ((G(x, y) === z) /\ (G(x, y) === w)) ==> (z === w))) by RightForall
+    val uniqueness = thenHave(∀(w, ∀(z, ((G(x, y) === z) /\ (G(x, y) === w)) ==> (z === w)))) by RightForall
+
+    have(G(x, y) === G(x, y)) by RightRefl
+    val existence = thenHave(∃(z, G(x, y) === z)) by RightExists
+
+    have(∃(z, G(x, y) === z) |- ∃!(z, G(x, y) === z)) by Cut(uniqueness, existenceAndUniqueness of (P := lambda(z, G(x, y) === z)))
+    have(∃!(z, G(x, y) === z)) by Cut(existence, lastStep)
+    thenHave(R(x, y) ==> ∃!(z, G(x, y) === z)) by Weakening
+    thenHave(∀(y, R(x, y) ==> ∃!(z, G(x, y) === z))) by RightForall
     thenHave(thesis) by RightForall
   }
 
@@ -224,7 +295,7 @@ object SetTheory extends lisa.Main {
    *
    *    `x = ∅ ⊢ y ∉ x`
    */
-  val setEmptyHasNoElements = Lemma(
+  val emptySetHasNoElements = Lemma(
     x === ∅ |- y ∉ x
   ) {
     have(thesis) by Restate.from(setWithElementNonEmpty)
@@ -270,7 +341,9 @@ object SetTheory extends lisa.Main {
    * 
    *  `∀ z. z ∈ x ⇒ z ∈ y ⊢ x ⊆ y`
    */
-  val subsetIntro = Lemma(∀(z, z ∈ x ==> z ∈ y) |- x ⊆ y) {
+  val subsetIntro = Lemma(
+    ∀(z, z ∈ x ==> z ∈ y) |- x ⊆ y
+  ) {
     have(thesis) by Weakening(subsetAxiom)
   }
 
@@ -279,7 +352,9 @@ object SetTheory extends lisa.Main {
    *
    *  `x ⊆ y, z ∈ x ⊢ z ∈ y`
    */
-  val subsetElim = Lemma((x ⊆ y, z ∈ x) |- z ∈ y) {
+  val subsetElim = Lemma(
+    (x ⊆ y, z ∈ x) |- z ∈ y
+  ) {
     have(x ⊆ y |- ∀(z, z ∈ x ==> z ∈ y)) by Weakening(subsetAxiom)
     thenHave(thesis) by InstantiateForall(z)
   }
@@ -410,7 +485,7 @@ object SetTheory extends lisa.Main {
   }
 
   /**
-   * Lemma --- The empty set is in every power set.
+   * Lemma --- The empty set is an element of every power set.
    *
    *    `∅ ∈ 𝓟(x)`
    */
@@ -481,6 +556,11 @@ object SetTheory extends lisa.Main {
     have(thesis) by Cut(unorderedPairRightIntro, setWithElementNonEmpty of (x := unorderedPair(x, y)))
   }
 
+  /**
+   * Lemma --- Unordered pair subset
+   *
+   *    `{x, y} ⊆ z <=> x ∈ z ∧ y ∈ z`
+   */
   val unorderedPairSubset = Lemma(
     unorderedPair(x, y) ⊆ z <=> (x ∈ z /\ y ∈ z) 
   ) {
@@ -515,7 +595,11 @@ object SetTheory extends lisa.Main {
     have(thesis) by Cut(lastStep, equalityIntro of (x := unorderedPair(x, y), y := unorderedPair(y, x)))
   }
 
-  // TODO
+  /**
+   * Lemma --- Unordered pair equality 
+   *
+   *   `{a, b} = {c, d} |- (a = c ∧ b = d) ∨ (a = d ∧ b = c)`
+   */
   val unorderedPairDeconstruction = Lemma(
     (unorderedPair(a, b) === unorderedPair(c, d)) |- (((a === c) /\ (b === d)) \/ ((a === d) /\ (b === c)))
   ) {
@@ -526,7 +610,7 @@ object SetTheory extends lisa.Main {
   }
 
   /**
-   * Lemma --- Two [[unorderedPair]]s are equal iff their elements are equal pairwise.
+   * Lemma --- Unordered pair equality equivalence
    *
    *    `{a, b} = {c, d} <=> (a = c ∧ b = d) ∨ (a = d ∧ b = c)`
    */
@@ -592,7 +676,9 @@ object SetTheory extends lisa.Main {
    *
    *   `x ∈ {x}`
    */
-  val singletonIntro = Lemma(x ∈ singleton(x)) {
+  val singletonIntro = Lemma(
+    x ∈ singleton(x)
+  ) {
     have(thesis) by Restate.from(singletonMembership of (y := x))
   }
 
@@ -601,14 +687,16 @@ object SetTheory extends lisa.Main {
    *
    *   `y ∈ {x} |- x = y`
    */
-  val singletonElim = Lemma(y ∈ singleton(x) |- x === y) {
+  val singletonElim = Lemma(
+    y ∈ singleton(x) |- x === y
+  ) {
     have(thesis) by Weakening(singletonMembership)
   }
 
   /**
    * Lemma --- A singleton set is never empty.
    *
-   *    `! {x} = ∅`
+   *    `{x} ≠ ∅`
    */
   val singletonNonEmpty = Lemma(
     singleton(x) =/= ∅
@@ -616,6 +704,11 @@ object SetTheory extends lisa.Main {
     have(thesis) by Cut(singletonIntro, setWithElementNonEmpty of (y := x, x := singleton(x)))
   }
 
+  /**
+   * Lemma --- Singleton subset
+   *
+   *    `{x} ⊆ y <=> x ∈ y`
+   */
   val singletonSubset = Lemma(
     singleton(x) ⊆ y <=> x ∈ y 
   ) {
@@ -633,6 +726,11 @@ object SetTheory extends lisa.Main {
     have(thesis) by Substitution.ApplyRules(singleton.shortDefinition, singleton.shortDefinition of (x := y))(unorderedPairExtensionality of (a := x, b := x, c := y, d := y))
   }
 
+  /**
+   * Lemma --- Singleton-Unordered pair equality
+   *
+    *    `{x} = {y, z} <=> x = y ∧ x = z`
+    */
   val singletonEqualsUnorderedPair = Lemma(
     (singleton(x) === unorderedPair(y, z)) <=> ((x === y) /\ (x === z))
   ) {
@@ -659,7 +757,9 @@ object SetTheory extends lisa.Main {
    *
    *   `z ∈ y, y ∈ x ⊢ z ∈ ∪ x`
    */
-  val unionIntro = Lemma((z ∈ y, y ∈ x) |- z ∈ union(x)) {
+  val unionIntro = Lemma(
+    (z ∈ y, y ∈ x) |- z ∈ union(x)
+  ) {
     have((z ∈ y, y ∈ x) |- y ∈ x /\ z ∈ y) by Restate
     thenHave((z ∈ y, y ∈ x) |- ∃(y, y ∈ x /\ z ∈ y)) by RightExists
     thenHave((z ∈ y, y ∈ x) |- z ∈ union(x)) by Substitution.ApplyRules(unionAxiom)
@@ -670,14 +770,16 @@ object SetTheory extends lisa.Main {
    *
    *   `z ∈ ∪ x |- ∃ y ∈ x. z ∈ y`
    */
-  val unionElim = Lemma(z ∈ union(x) |- ∃(y, y ∈ x /\ z ∈ y)) {
+  val unionElim = Lemma(
+    z ∈ union(x) |- ∃(y, y ∈ x /\ z ∈ y)
+  ) {
     have(thesis) by Weakening(unionAxiom)
   }
 
   /**
    * Lemma --- Any element of a set is a subset of its union.
    * 
-   *   `z ∈ x |- z ⊆ ∪ x`
+   *   `x ∈ y |- x ⊆ ∪ y`
    */
   val subsetUnion = Lemma(x ∈ y |- x ⊆ union(y)) {
     have(x ∈ y |- z ∈ x ==> z ∈ union(y)) by RightImplies(unionIntro of (x := y, y := x))
@@ -732,17 +834,22 @@ object SetTheory extends lisa.Main {
   }
 
   val unorderedPairElementsInUnion = Lemma(
-    unorderedPair(x, y) ∈ r |- x ∈ union(r) /\ y ∈ union(r)
+    unorderedPair(x, y) ∈ z |- x ∈ union(z) /\ y ∈ union(z)
   ) {
-    val left = have(unorderedPair(x, y) ∈ r |- x ∈ union(r)) by Cut(unorderedPairLeftIntro, unionIntro of (z := x, y := unorderedPair(x, y), x := r))
-    val right = have(unorderedPair(x, y) ∈ r |- y ∈ union(r)) by Cut(unorderedPairRightIntro, unionIntro of (z := y, y := unorderedPair(x, y), x := r))
+    val left = have(unorderedPair(x, y) ∈ z |- x ∈ union(z)) by Cut(unorderedPairLeftIntro, unionIntro of (z := x, y := unorderedPair(x, y), x := z))
+    val right = have(unorderedPair(x, y) ∈ z |- y ∈ union(z)) by Cut(unorderedPairRightIntro, unionIntro of (z := y, y := unorderedPair(x, y), x := z))
     have(thesis) by RightAnd(left, right)
   }
 
+  /**
+   * Lemma --- IF a singleton belongs to the set then its element belongs to the union of the set.
+   *
+   *    `{x} ∈ y |- x ∈ ∪ y`
+   */
   val singletonElementInUnion = Lemma(
-    singleton(x) ∈ r |- x ∈ union(r)
+    singleton(x) ∈ y |- x ∈ union(y)
   ) {
-    have(thesis) by Substitution.ApplyRules(singleton.shortDefinition)(unorderedPairElementsInUnion of (y := x))
+    have(thesis) by Substitution.ApplyRules(singleton.shortDefinition)(unorderedPairElementsInUnion of (y := x, z := y))
   }
 
   /**
@@ -789,7 +896,9 @@ object SetTheory extends lisa.Main {
    *
    *   `z ∈ x ⊢ z ∈ x ∪ y`
    */
-  val setUnionLeftIntro = Lemma(z ∈ x |- z ∈ (x ∪ y)) {
+  val setUnionLeftIntro = Lemma(
+    z ∈ x |- z ∈ (x ∪ y)
+  ) {
     have(thesis) by Weakening(setUnionMembership)
   }
 
@@ -798,7 +907,9 @@ object SetTheory extends lisa.Main {
    *
    *   `z ∈ y ⊢ z ∈ x ∪ y`
    */
-  val setUnionRightIntro = Lemma(z ∈ y |- z ∈ (x ∪ y)) {
+  val setUnionRightIntro = Lemma(
+    z ∈ y |- z ∈ (x ∪ y)
+  ) {
     have(thesis) by Weakening(setUnionMembership)
   }
 
@@ -807,7 +918,9 @@ object SetTheory extends lisa.Main {
    *
    *   `z ∈ x ∪ y ⊢ z ∈ x ∨ z ∈ y`
    */
-  val setUnionElim = Lemma(z ∈ (x ∪ y) |- (z ∈ x, z ∈ y)) {
+  val setUnionElim = Lemma(
+    z ∈ (x ∪ y) |- (z ∈ x, z ∈ y)
+  ) {
     have(thesis) by Weakening(setUnionMembership)
   }
 
@@ -914,6 +1027,66 @@ object SetTheory extends lisa.Main {
     ∅ ∪ a === a
   ) {
     have(thesis) by Substitution.ApplyRules(setUnionCommutativity)(setUnionRightEmpty)
+  }
+
+  val unionDistributesOverSetUnion = Lemma(
+    union(a ∪ b) === union(a) ∪ union(b)
+  ) {
+    val forward = have(z ∈ union(a ∪ b) ==> z ∈ (union(a) ∪ union(b))) subproof {
+      val left = have((z ∈ y, y ∈ a) |- z ∈ (union(a) ∪ union(b))) by Cut(unionIntro of (x := a), setUnionLeftIntro of (x := union(a), y := union(b)))
+      val right = have((z ∈ y, y ∈ b) |- z ∈ (union(a) ∪ union(b))) by Cut(unionIntro of (x := b), setUnionRightIntro of (x := union(a), y := union(b)))
+      have((z ∈ y, y ∈ a \/ (y ∈ b)) |- z ∈ (union(a) ∪ union(b))) by LeftOr(left, right)
+      thenHave((z ∈ y, y ∈ (a ∪ b)) |- z ∈ (union(a) ∪ union(b))) by Substitution.ApplyRules(setUnionMembership)
+      thenHave((z ∈ y /\ y ∈ (a ∪ b)) |- z ∈ (union(a) ∪ union(b))) by LeftAnd
+      thenHave((∃(y, z ∈ y /\ y ∈ (a ∪ b))) |- z ∈ (union(a) ∪ union(b))) by LeftExists
+      have(z ∈ union(a ∪ b) |- z ∈ (union(a) ∪ union(b))) by Cut(unionElim of (z := z, x := a ∪ b), lastStep) 
+    }
+
+    val backward = have(z ∈ (union(a) ∪ union(b)) ==> z ∈ union(a ∪ b)) subproof {
+      have((z ∈ y, y ∈ a) |- z ∈ union(a ∪ b)) by Cut(setUnionLeftIntro of (z := y, x := a, y := b), unionIntro of (x := a ∪ b))
+      thenHave(z ∈ y /\ y ∈ a |- z ∈ union(a ∪ b)) by LeftAnd
+      thenHave((∃(y, z ∈ y /\ y ∈ a) |- z ∈ union(a ∪ b))) by LeftExists
+      val left = have(z ∈ union(a) |- z ∈ union(a ∪ b)) by Cut(unionElim of (x := a), lastStep)
+
+      have((z ∈ y, y ∈ b) |- z ∈ union(a ∪ b)) by Cut(setUnionRightIntro of (z := y, x := a, y := b), unionIntro of (x := a ∪ b))
+      thenHave(z ∈ y /\ y ∈ b |- z ∈ union(a ∪ b)) by LeftAnd
+      thenHave((∃(y, z ∈ y /\ y ∈ b) |- z ∈ union(a ∪ b))) by LeftExists
+      val right = have(z ∈ union(b) |- z ∈ union(a ∪ b)) by Cut(unionElim of (x := b), lastStep)
+
+      have(z ∈ (union(a) ∪ union(b)) |- (z ∈ union(a ∪ b), z ∈ union(b))) by Cut(setUnionElim of (x := union(a), y := union(b)), left)
+      have(z ∈ (union(a) ∪ union(b)) |- z ∈ union(a ∪ b)) by Cut(lastStep, right)
+    }
+
+    have(z ∈ union(a ∪ b) <=> z ∈ (union(a) ∪ union(b))) by RightIff(forward, backward)
+    thenHave(∀(z, z ∈ union(a ∪ b) <=> z ∈ (union(a) ∪ union(b)))) by RightForall
+    have(thesis) by Cut(lastStep, equalityIntro of (x := union(a ∪ b), y := union(a) ∪ union(b)))
+  }
+
+    /**
+   * Lemma --- Union with a subset
+   * 
+   *   `x ⊆ y ⊢ x ∪ y = y`
+   */
+  val setUnionOfSubsetForward = Lemma(
+    x ⊆ y |- x ∪ y === y
+  ) {
+    have((z ∈ (x ∪ y), x ⊆ y) |- z ∈ y) by Cut(setUnionElim, subsetElim)
+    thenHave(x ⊆ y |- z ∈ (x ∪ y) ==> z ∈ y) by RightImplies
+    thenHave(x ⊆ y |- ∀(z, z ∈ (x ∪ y) ==> z ∈ y)) by RightForall
+    have(x ⊆ y |- (x ∪ y) ⊆ y) by Cut(lastStep, subsetIntro of (x := x ∪ y))
+    have((x ⊆ y, y ⊆ (x ∪ y)) |- x ∪ y === y) by Cut(lastStep, subsetAntisymmetry of (x := y, y := x ∪ y))
+    have(thesis) by Cut(setUnionRightSubset of (a := x, b := y), lastStep)
+  }
+
+  /**
+   * Lemma --- Union with a subset
+   * 
+   *   `y ⊆ x ⊢ x ∪ y = x`
+   */
+  val setUnionOfSubsetBackward = Lemma(
+    y ⊆ x |- x ∪ y === x
+  ) {
+    have(thesis) by Substitution.ApplyRules(setUnionCommutativity)(setUnionOfSubsetForward of (x := y, y := x))
   }
 
   /**
@@ -1235,7 +1408,7 @@ object SetTheory extends lisa.Main {
   val disjointElim = Lemma(
     (disjoint(x, y), z ∈ x, z ∈ y) |- ()
   ) {
-    have((x ∩ y === ∅, z ∈ (x ∩ y)) |- ()) by Restate.from(setEmptyHasNoElements of (x := x ∩ y, y := z))
+    have((x ∩ y === ∅, z ∈ (x ∩ y)) |- ()) by Restate.from(emptySetHasNoElements of (x := x ∩ y, y := z))
     have((x ∩ y === ∅, z ∈ x, z ∈ y) |- ()) by Cut(setIntersectionIntro of (x := x, y := y), lastStep)
     thenHave(thesis) by Substitution.ApplyRules(disjoint.definition)
   }
@@ -1362,7 +1535,7 @@ object SetTheory extends lisa.Main {
     
     val backward = have(((x \ y) === ∅) ==> x ⊆ y) subproof {
       have(z ∉ (x \ y) |- z ∈ x ==> z ∈ y) by Restate.from(setDifferenceIntro)
-      have((x \ y) === ∅ |- z ∈ x ==> z ∈ y) by Cut(setEmptyHasNoElements of (x := x \ y, y := z), lastStep)
+      have((x \ y) === ∅ |- z ∈ x ==> z ∈ y) by Cut(emptySetHasNoElements of (x := x \ y, y := z), lastStep)
       thenHave((x \ y) === ∅ |- ∀(z, z ∈ x ==> z ∈ y)) by RightForall
       have((x \ y) === ∅ |- x ⊆ y) by Cut(lastStep, subsetIntro)
     }
@@ -1445,11 +1618,16 @@ object SetTheory extends lisa.Main {
     have(thesis) by Cut(lastStep, equalityIntro of (x := union(pair(x, y)), y := unorderedPair(x, y)))
   }
 
+  /**
+   * Lemma --- If pair belongs to a set ifThe elements of an ordered pair are in the union of the union of the pair.
+   *
+   *    `(x, y) ∈ z |- x ∈ ∪ ∪ z /\ y ∈ ∪ ∪ z`
+   */
   val pairComponentsInUnionUnion = Lemma(
-    pair(x, y) ∈ r |- x ∈ union(union(r)) /\ y ∈ union(union(r))
+    pair(x, y) ∈ z |- x ∈ union(union(z)) /\ y ∈ union(union(z))
   ) {
-    have(unorderedPair(unorderedPair(x, y), singleton(x)) ∈ r |- unorderedPair(x, y) ∈ union(r)) by Weakening(unorderedPairElementsInUnion of (x := unorderedPair(x, y), y := singleton(x)))
-    have(unorderedPair(unorderedPair(x, y), singleton(x)) ∈ r |- x ∈ union(union(r)) /\ y ∈ union(union(r))) by Cut(lastStep, unorderedPairElementsInUnion of (r := union(r)))
+    have(unorderedPair(unorderedPair(x, y), singleton(x)) ∈ z |- unorderedPair(x, y) ∈ union(z)) by Weakening(unorderedPairElementsInUnion of (x := unorderedPair(x, y), y := singleton(x)))
+    have(unorderedPair(unorderedPair(x, y), singleton(x)) ∈ z |- x ∈ union(union(z)) /\ y ∈ union(union(z))) by Cut(lastStep, unorderedPairElementsInUnion of (z := union(z)))
     thenHave(thesis) by Substitution.ApplyRules(pair.shortDefinition)
   }
 

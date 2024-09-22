@@ -148,7 +148,7 @@ object TypeSystem  {
       */
     def apply[A <: Class](t: Term, typ:A): TypeAssignment[A] = 
       val form = typ match
-        case f: Term => in(t, f)
+        case f: Term => t ∈ f
         case f : (Term**1 |-> Formula) @unchecked => 
           ((f: Term**1 |-> Formula)(t): Formula)
       form match
@@ -161,7 +161,7 @@ object TypeSystem  {
 
     def unapply(ta: Formula): Option[(Term, Class)] = ta match
       case ta: TypeAssignment[?] => Some((ta.t, ta.typ))
-      case in(x, set) => Some((x, set))
+      case x ∈ set => Some((x, set))
       case AppliedPredicate(label, args) if label.arity == 1 => Some((args.head, label.asInstanceOf[Term**1 |-> Formula]))
       case _ => None
     

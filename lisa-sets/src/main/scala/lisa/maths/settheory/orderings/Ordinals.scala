@@ -578,7 +578,7 @@ object Ordinals extends lisa.Main {
     thenHave(thesis) by Substitution.ApplyRules(lessOrEqual.definition)
   }
 
-  val lessOrEqualThanOrdinalIsOrdinal = Lemma(
+  val leqOrdinalIsOrdinal = Lemma(
     (ordinal(b), a <= b) |- ordinal(a)
   ) {
     have(ordinal(a) |- ordinal(a)) by Hypothesis
@@ -617,7 +617,7 @@ object Ordinals extends lisa.Main {
     (ordinal(b), a <= b) |- a ⊆ b
   ) {
     have((ordinal(a), ordinal(b), a <= b) |- a ⊆ b) by Weakening(leqOrdinalIsSubset)
-    have(thesis) by Cut(lessOrEqualThanOrdinalIsOrdinal, lastStep)
+    have(thesis) by Cut(leqOrdinalIsOrdinal, lastStep)
   }
 
   val ordinalLeqLtImpliesLt = Lemma(
@@ -637,6 +637,12 @@ object Ordinals extends lisa.Main {
     have((a < b, b <= c) |- (a < c, b < c)) by Cut(lessOrEqualElim of (a := b, b := c), lastStep)
     have(thesis) by Cut(lastStep, ordinalTransitive)
   }
+
+  val ltImpliesNeq = Lemma(
+    a < b |- a =/= b
+  ) {
+    have(a === b |- a ∉ b) by Substitution.ApplyRules(a === b)(selfNonMembership of (x := a))
+  }
   
 
   /**
@@ -648,6 +654,13 @@ object Ordinals extends lisa.Main {
     (ordinal(b), a < b) |- a ⊆ b
   ) {
     have(thesis) by Cut(ltImpliesLeq, ordinalLeqImpliesSubset)
+  }
+
+  val leqAntisymmetry = Lemma(
+    (ordinal(a), ordinal(b), a <= b, b <= a) |- a === b
+  ) {
+    have((ordinal(a), ordinal(b), a <= b, b ⊆ a) |- a === b) by Substitution.ApplyRules(leqOrdinalIsSubset)(subsetAntisymmetry of (x := a, y := b))
+    thenHave(thesis) by Substitution.ApplyRules(leqOrdinalIsSubset)
   }
   
 
@@ -889,7 +902,18 @@ object Ordinals extends lisa.Main {
     thenHave(thesis) by RightForall
   }
 
+  val intersectionInOrdinal = Lemma(
+    (ordinal(a), b < a) |- a ∩ b === b
+  ) {
+    have(thesis) by Cut(elementOfOrdinalIsSubset of (a := b, b := a), setIntersectionOfSubsetBackward of (y := b, x := a))
+  }
 
+  val ordinalNotEmptyContainsZero = Lemma(
+    (ordinal(a), a =/= ∅) |- ∅ < a
+  ) {
+    have(ordinal(a) |- (∅ < a, a === ∅, a < ∅)) by Cut(emptySetOrdinal, ordinalCases of (b := ∅))
+    have(ordinal(a) |- (∅ < a, a === ∅)) by RightAnd(lastStep, emptySetAxiom of (x := a))
+  }
 
   val successor = DEF(a) --> a ∪ singleton(a)
 
@@ -898,23 +922,31 @@ object Ordinals extends lisa.Main {
    *
    *     `a < a + 1`
    */
-  val inSuccessor = Lemma(a < successor(a)) {
+  val inSuccessor = Lemma(
+    a < successor(a)
+  ) {
     have(a ∈ singleton(a) |- a ∈ successor(a)) by Substitution.ApplyRules(successor.shortDefinition)(setUnionRightIntro of (x := a, y := singleton(a), z := a))
     have(thesis) by Cut(singletonIntro of (x := a), lastStep)
   }
 
-  val inSuccessorLeq = Lemma(b < successor(a) |- b <= a) {
+  val inSuccessorLeq = Lemma(
+    b < successor(a) |- b <= a
+  ) {
     have(b ∈ (a ∪ singleton(a)) |-  (b < a, a === b)) by Cut(setUnionElim of (x := a, y := singleton(a), z := b), singletonElim of (y := b, x := a))
     thenHave(b ∈ (a ∪ singleton(a)) |- (b < a) \/ (a === b)) by RightOr
     thenHave(thesis) by Substitution.ApplyRules(successor.shortDefinition, lessOrEqual.definition)
   }
 
-  val inSuccessorSubset = Lemma((ordinal(a), b ∈ successor(a)) |- b ⊆ a) {
+  val inSuccessorSubset = Lemma(
+    (ordinal(a), b < successor(a)) |- b ⊆ a
+  ) {
     have(b ∈ successor(a) |- b <= a) by Restate.from(inSuccessorLeq)
     have(thesis) by Cut(lastStep, ordinalLeqImpliesSubset of (b := a, a := b))
   }
 
-  val successorIsTransitiveSet = Lemma(transitiveSet(a) |- transitiveSet(successor(a))) {
+  val successorIsTransitiveSet = Lemma(
+    transitiveSet(a) |- transitiveSet(successor(a))
+  ) {
     have(transitiveSet(a) |- transitiveSet(a)) by Hypothesis
     thenHave((transitiveSet(a), x ∈ singleton(a)) |- transitiveSet(x)) by Substitution.ApplyRules(singletonElim)
     thenHave(transitiveSet(a) |- x ∈ singleton(a) ==> transitiveSet(x)) by RightImplies
@@ -924,8 +956,10 @@ object Ordinals extends lisa.Main {
     thenHave(thesis) by Substitution.ApplyRules(successor.shortDefinition)
   }
 
-  val successorIsOrdinal = Lemma(ordinal(a) |- ordinal(successor(a))) {
-    have((ordinal(a), b < successor(a)) |- ordinal(b)) by Cut(inSuccessorLeq, lessOrEqualThanOrdinalIsOrdinal of (a := b, b := a))
+  val successorIsOrdinal = Lemma(
+    ordinal(a) |- ordinal(successor(a))
+  ) {
+    have((ordinal(a), b < successor(a)) |- ordinal(b)) by Cut(inSuccessorLeq, leqOrdinalIsOrdinal of (a := b, b := a))
     thenHave(ordinal(a) |- b < successor(a) ==> ordinal(b)) by RightImplies
     thenHave(ordinal(a) |- ∀(b, b < successor(a) ==> ordinal(b))) by RightForall
     have((ordinal(a), transitiveSet(successor(a))) |- ordinal(successor(a))) by Cut(lastStep, transitiveSetOfOrdinalsIsOrdinal of (x := successor(a)))
@@ -933,27 +967,69 @@ object Ordinals extends lisa.Main {
     have(thesis) by Cut(ordinalTransitiveSet, lastStep)
   }
 
-  val ordinalLeqImpliesInSuccessor = Lemma((ordinal(a), b <= a) |- b ∈ successor(a)) {
-    have((ordinal(successor(a)), b <= a) |- b ∈ successor(a)) by Cut(inSuccessor, ordinalLeqLtImpliesLt of (a := b, b := a, c := successor(a)))
-    have(thesis) by Cut(successorIsOrdinal, lastStep)
+  val successorIsOrdinalImpliesOrdinal = Lemma(
+    ordinal(successor(a)) |- ordinal(a)
+  ) {
+    have(thesis) by Cut(inSuccessor, elementsOfOrdinalsAreOrdinals of (b := a, a := successor(a)))
   }
 
-  val ordinalLtImpliesInSuccessor = Lemma((ordinal(a), b < a) |- b ∈ successor(a)) {
-    have(thesis) by Cut(ltImpliesLeq of (a := b, b := a), ordinalLeqImpliesInSuccessor)
+  val ordinalLeqIffLtSuccessor = Lemma(
+    ordinal(a) |- b <= a <=> (b < successor(a))
+  ) {
+    val forward = have(ordinal(a) |- b <= a ==> b < successor(a)) subproof {
+      have((ordinal(successor(a)), b <= a) |- b ∈ successor(a)) by Cut(inSuccessor, ordinalLeqLtImpliesLt of (a := b, b := a, c := successor(a)))
+      have((ordinal(a), b <= a) |- b < successor(a)) by Cut(successorIsOrdinal, lastStep)
+    }
+    
+    val backward = have(ordinal(a) |- b < successor(a) ==> b <= a) subproof {
+      have((ordinal(a), ordinal(b), b < successor(a)) |- b <= a) by Substitution.ApplyRules(leqOrdinalIsSubset)(inSuccessorSubset)
+      have((ordinal(successor(a)), ordinal(b), b < successor(a)) |- b <= a) by Cut(successorIsOrdinalImpliesOrdinal, lastStep)
+      have((ordinal(successor(a)), b < successor(a)) |- b <= a) by Cut(elementsOfOrdinalsAreOrdinals of (a := successor(a)), lastStep)
+      have((ordinal(a), b < successor(a)) |- b <= a) by Cut(successorIsOrdinal, lastStep)
+    }
+
+    have(thesis) by RightIff(forward, backward)
   }
 
-  val ordinalSubsetImpliesInSuccessor = Lemma((ordinal(a), ordinal(b), b ⊆ a) |- b < successor(a)) {
+  val ordinalLtImpliesInSuccessor = Lemma(
+    (ordinal(a), b < a) |- b < successor(a)
+  ) {
+    have(thesis) by Substitution.ApplyRules(ordinalLeqIffLtSuccessor)(ltImpliesLeq of (a := b, b := a))
+  }
+
+  val ordinalSubsetImpliesInSuccessor = Lemma(
+    (ordinal(a), ordinal(b), b ⊆ a) |- b < successor(a)
+  ) {
     have((ordinal(a), ordinal(b), b ⊆ a) |- b <= a) by Weakening(leqOrdinalIsSubset of (b := a, a := b))
-    have(thesis) by Cut(lastStep, ordinalLeqImpliesInSuccessor)
+    thenHave(thesis) by Substitution.ApplyRules(ordinalLeqIffLtSuccessor)
   }
 
-  val ordinalSubsetIffInSuccessor = Lemma((ordinal(a), ordinal(b)) |- b ⊆ a <=> (b < successor(a))) {
+  val ordinalSubsetIffInSuccessor = Lemma(
+    (ordinal(a), ordinal(b)) |- b ⊆ a <=> (b < successor(a))
+  ) {
     val forward = have((ordinal(a), ordinal(b)) |- b ⊆ a ==> b ∈ successor(a)) by RightImplies(ordinalSubsetImpliesInSuccessor)
     val backward = have(ordinal(a) |- b ∈ successor(a) ==> b ⊆ a) by RightImplies(inSuccessorSubset)
     have(thesis) by RightIff(forward, backward)
   }
-  
 
+  val successorNotEmpty = Lemma(
+    successor(a) =/= ∅
+  ) {
+    have(thesis) by Cut(inSuccessor, setWithElementNonEmpty of (y := a, x := successor(a)))
+  }
+
+  val successorGtZero = Lemma(
+    ordinal(a) |- ∅ < successor(a)
+  ) {
+    have(ordinal(successor(a)) |- ∅ < successor(a)) by Cut(successorNotEmpty, ordinalNotEmptyContainsZero of (a := successor(a)))
+    have(thesis) by Cut(successorIsOrdinal, lastStep)
+  }
+
+  /**
+   * Lemma --- There is no element between an element and its successor
+   *
+    *   `a < b < a + 1 |- ⊥`
+    */
   val successorNoInBetween = Lemma(
     (a < b, b < successor(a)) |- ()
   ) {
@@ -964,11 +1040,16 @@ object Ordinals extends lisa.Main {
     have(thesis) by RightAnd(lastStep, selfNonMembership of (x := a))
   }
 
-  val successorIsOrdinalImpliesOrdinal = Lemma(ordinal(successor(a)) |- ordinal(a)) {
-    have(thesis) by Cut(inSuccessor, elementsOfOrdinalsAreOrdinals of (b := a, a := successor(a)))
-  }
 
-  val successorPreservesSubset = Lemma((ordinal(a), ordinal(b), a ⊆ b) |- successor(a) ⊆ successor(b)) {
+
+  /**
+   * Theorem --- Successor preserves subset relationship
+   * 
+   *   `a ⊆ b |- a + 1 ⊆ b + 1`
+   */
+  val successorPreservesSubset = Lemma(
+    (ordinal(a), ordinal(b), a ⊆ b) |- successor(a) ⊆ successor(b)
+  ) {
     have(a < b |- singleton(a) ⊆ b) by Weakening(singletonSubset of (x := a, y := b))
     have((a < b, b ⊆ (b ∪ singleton(b))) |- singleton(a) ⊆ (b ∪ singleton(b))) by Cut(lastStep, subsetTransitivity of (x := singleton(a), y := b, z := b ∪ singleton(b)))
     val left = have(a < b |- singleton(a) ⊆ (b ∪ singleton(b))) by Cut(setUnionLeftSubset of (a := b, b := singleton(b)), lastStep)
@@ -984,23 +1065,80 @@ object Ordinals extends lisa.Main {
     thenHave(thesis) by Substitution.ApplyRules(successor.shortDefinition)
   }
 
-  val successorPreservesLeq = Lemma((ordinal(a), ordinal(b), a <= b) |- successor(a) <= successor(b)) {
-    have((ordinal(a), ordinal(successor(a)), ordinal(b), ordinal(successor(b)), a <= b) |- successor(a) <= successor(b)) by Substitution.ApplyRules(leqOrdinalIsSubset)(successorPreservesSubset)
-    have((ordinal(a), ordinal(b), ordinal(successor(b)), a <= b) |- successor(a) <= successor(b)) by Cut(successorIsOrdinal, lastStep)
-    have(thesis) by Cut(successorIsOrdinal of (a := b), lastStep)
-  }
+  /**
+   * Theorem --- Successor preserves less or equal ordering
+   * 
+   *   `a <= b <=> a + 1 <= b + 1`
+   */
+  val successorPreservesLeq = Lemma(
+    ordinal(b) |- a <= b <=> (successor(a) <= successor(b))
+  ) {
+    val forward = have(ordinal(b) |- a <= b ==> successor(a) <= successor(b)) subproof {
+      have((ordinal(a), ordinal(successor(a)), ordinal(b), ordinal(successor(b)), a <= b) |- successor(a) <= successor(b)) by Substitution.ApplyRules(leqOrdinalIsSubset)(successorPreservesSubset)
+      have((ordinal(a), ordinal(b), ordinal(successor(b)), a <= b) |- successor(a) <= successor(b)) by Cut(successorIsOrdinal, lastStep)
+      have((ordinal(a), ordinal(b), a <= b) |- successor(a) <= successor(b)) by Cut(successorIsOrdinal of (a := b), lastStep)
+      have((ordinal(b), a <= b) |- successor(a) <= successor(b)) by Cut(leqOrdinalIsOrdinal, lastStep)
+    }
 
-  val successorInjectivity = Lemma(successor(a) === successor(b) |- a === b) {
-    sorry
+    val backward = have(ordinal(b) |- successor(a) <= successor(b) ==> a <= b) subproof {
+      have((ordinal(successor(b)), successor(a) <= successor(b)) |- a < successor(b)) by Cut(inSuccessor, ordinalLtLeqImpliesLt of (b := successor(a), c := successor(b)))
+      have((ordinal(successor(b)), successor(a) <= successor(b)) |- a <= b) by Cut(lastStep, inSuccessorLeq of (a := b, b := a))
+      have((ordinal(b), successor(a) <= successor(b)) |- a <= b) by Cut(successorIsOrdinal of (a := b), lastStep)
+    }
+
+    have(thesis) by RightIff(forward, backward)
   }
 
   /**
-   * Theorem --- The empty set is not the successor of any set
+   * Theorem --- Successor is injective
    * 
-   *   `a ≠ 0`
+   *   `a + 1 = b + 1 |- a = b`
    */
-  val successorNonEmpty = Lemma(successor(a) =/= ∅) {
-    have(thesis) by Cut(inSuccessor, setWithElementNonEmpty of (y := a, x := successor(a)))
+  val successorInjectivity = Lemma(
+    (ordinal(b), successor(a) === successor(b)) |- a === b
+  ) {
+    have((ordinal(a), ordinal(b), successor(a) <= successor(b), b <= a) |- a === b) by Substitution.ApplyRules(successorPreservesLeq)(leqAntisymmetry)
+    thenHave((ordinal(a), ordinal(b), successor(a) <= successor(b), successor(b) <= successor(a)) |- a === b) by Substitution.ApplyRules(successorPreservesLeq of (a := b, b := a))
+    have((ordinal(successor(a)), ordinal(b), successor(a) <= successor(b), successor(b) <= successor(a)) |- a === b) by Cut(successorIsOrdinalImpliesOrdinal, lastStep)
+    thenHave((ordinal(successor(a)), ordinal(b), successor(a) <= successor(a), successor(a) === successor(b)) |- a === b) by Substitution.ApplyRules(successor(a) === successor(b))
+    thenHave((ordinal(successor(b)), ordinal(b), successor(a) <= successor(a), successor(a) === successor(b)) |- a === b) by Substitution.ApplyRules(successor(a) === successor(b))
+    have((ordinal(successor(b)), ordinal(b), successor(a) === successor(b)) |- a === b) by Cut(lessOrEqualLeftReflexivity of (a := successor(a)), lastStep)
+    have(thesis) by Cut(successorIsOrdinal of (a := b), lastStep)
+  }
+
+  /**
+   * Theorem --- Successor preserves less than ordering
+   * 
+   *   `a < b <=> a + 1 < b + 1`
+   */
+  val successorPreservesLt = Lemma(
+    ordinal(b) |- a < b <=> (successor(a) < successor(b))
+  ) {
+    val forward = have(ordinal(b) |- a < b ==> successor(a) < successor(b)) subproof {
+      val contradiction = have((ordinal(b), successor(a) === successor(b), a < b) |- ()) by RightAnd(successorInjectivity, ltImpliesLeq)
+
+      have((ordinal(b), a < b) |- successor(a) <= successor(b)) by Substitution.ApplyRules(successorPreservesLeq)(ltImpliesLeq)
+      have((ordinal(b), a < b) |- (successor(a) < successor(b), successor(a) === successor(b))) by Cut(lastStep, lessOrEqualElim of (a := successor(a), b := successor(b)))
+      have((ordinal(b), a < b) |- successor(a) < successor(b)) by Cut(lastStep, contradiction)
+    }
+    
+    val backward = have(ordinal(b) |- successor(a) < successor(b) ==> a < b) subproof {
+      have(successor(a) < successor(b) |- successor(a) < successor(b)) by Hypothesis
+      thenHave((successor(a) < successor(b), a === b) |- successor(a) < successor(a)) by Substitution.ApplyRules(a === b)
+      val contradiction = have((successor(a) < successor(b), a === b) |- ()) by RightAnd(lastStep, selfNonMembership of (x := successor(a)))
+
+      have((ordinal(b), successor(a) < successor(b)) |- a <= b) by Substitution.ApplyRules(successorPreservesLeq)(ltImpliesLeq of (a := successor(a), b := successor(b)))
+      have((ordinal(b), successor(a) < successor(b)) |- (a < b, a === b)) by Cut(lastStep, lessOrEqualElim)
+      have((ordinal(b), successor(a) < successor(b)) |- a < b) by Cut(lastStep, contradiction)
+    }
+    
+    have(thesis) by RightIff(forward, backward)
+  }
+
+  val ltIffSuccessorLeq = Lemma(
+    ordinal(b) |- a < b <=> (successor(a) <= b)
+  ) {
+    have(ordinal(b) |- a < b <=> (successor(a) <= b)) by Substitution.ApplyRules(ordinalLeqIffLtSuccessor)(successorPreservesLt)
   }
 
   /**
@@ -1008,15 +1146,35 @@ object Ordinals extends lisa.Main {
     * 
     *    `a ⊆ a + 1`
     */
-  val subsetSuccessor = Lemma(a ⊆ successor(a)) {
+  val subsetSuccessor = Lemma(
+    a ⊆ successor(a)
+  ) {
     have(thesis) by Substitution.ApplyRules(successor.shortDefinition)(setUnionLeftSubset of (b := singleton(a)))
   }
 
+  val unionSubsetOrdinal = Lemma(
+    ordinal(a) |- union(a) ⊆ a
+  ) {
+    have((ordinal(a), z ∈ y /\ y ∈ a) |- z ∈ a) by LeftAnd(ordinalTransitive of (a := z, b := y, c := a))
+    thenHave((ordinal(a), ∃(y, z ∈ y /\ y ∈ a)) |- z ∈ a) by LeftExists
+    have((ordinal(a), z ∈ union(a)) |- z ∈ a) by Cut(unionElim of (x := a), lastStep)
+    thenHave(ordinal(a) |- z ∈ union(a) ==> z ∈ a) by RightImplies
+    thenHave(ordinal(a) |- ∀(z, z ∈ union(a) ==> z ∈ a)) by RightForall
+    have(thesis) by Cut(lastStep, subsetIntro of (x := union(a), y := a))
+  }
 
-
+  val unionSuccessor = Lemma(
+    ordinal(a) |- union(successor(a)) === a
+  ) {
+    have(union(successor(a)) === union(successor(a))) by RightRefl
+    thenHave(union(successor(a)) === union(a ∪ singleton(a))) by Substitution.ApplyRules(successor.shortDefinition)
+    thenHave(union(successor(a)) === union(a) ∪ union(singleton(a))) by Substitution.ApplyRules(unionDistributesOverSetUnion)
+    thenHave(union(successor(a)) === union(a) ∪ a) by Substitution.ApplyRules(unionSingleton)
+    thenHave(union(a) ⊆ a |- union(successor(a)) === a) by Substitution.ApplyRules(setUnionOfSubsetForward)
+    have(thesis) by Cut(unionSubsetOrdinal, lastStep)
+  }
 
   val successorOrdinal = DEF(a) --> ordinal(a) /\ ∃(b, a === successor(b))
-  val nonsuccessorOrdinal = DEF(a) --> ordinal(a) /\ !(∃(b, a === successor(b)))
 
   val successorOrdinalIntro = Lemma(
     (ordinal(a), a === successor(b)) |- successorOrdinal(a)
@@ -1028,52 +1186,125 @@ object Ordinals extends lisa.Main {
     thenHave(thesis) by Substitution.ApplyRules(successorOrdinal.definition)
   }
 
-  val successorOrdinalIsOrdinal = Lemma(successorOrdinal(a) |- ordinal(a)) {
-    have(thesis) by Weakening(successorOrdinal.definition)
-  }
-
-  val nonsuccessorOrdinalIsOrdinal = Lemma(nonsuccessorOrdinal(a) |- ordinal(a)) {
-    have(thesis) by Weakening(nonsuccessorOrdinal.definition)
-  }
-
-  val successorIsSuccessorOrdinal = Lemma(ordinal(a) |- successorOrdinal(successor(a))) {
+  val successorIsSuccessorOrdinal = Lemma(
+    ordinal(a) |- successorOrdinal(successor(a))
+  ) {
     have(ordinal(successor(a)) |- successorOrdinal(successor(a))) by Restate.from(successorOrdinalIntro of (a := successor(a), b := a))
     have(thesis) by Cut(successorIsOrdinal, lastStep)
   }
 
-  val intersectionInOrdinal = Lemma((ordinal(a), b < a) |- a ∩ b === b) {
-    have(thesis) by Cut(elementOfOrdinalIsSubset of (a := b, b := a), setIntersectionOfSubsetBackward of (y := b, x := a))
+  val successorOrdinalIsOrdinal = Lemma(
+    successorOrdinal(a) |- ordinal(a)
+  ) {
+    have(thesis) by Weakening(successorOrdinal.definition)
   }
 
-  val nonsuccessorOrdinalElim = Lemma(
-    nonsuccessorOrdinal(a) |- a =/= successor(b)
+  val successorOrdinalNotZero = Lemma(
+    successorOrdinal(a) |- a =/= ∅
   ) {
-    have(nonsuccessorOrdinal(a) |- ∀(b, a =/= successor(b))) by Weakening(nonsuccessorOrdinal.definition)
+    have(a === successor(b) |- a =/= ∅) by Substitution.ApplyRules(a === successor(b))(successorNotEmpty of (a := b))
+    thenHave(∃(b, a === successor(b)) |- a =/= ∅) by LeftExists
+    thenHave(ordinal(a) /\ ∃(b, a === successor(b)) |- a =/= ∅) by LeftAnd
+    thenHave(thesis) by Substitution.ApplyRules(successorOrdinal.definition)
+  }
+
+  val successorOrdinalGtZero = Lemma(
+    successorOrdinal(a) |- ∅ < a
+  ) {
+    have((successorOrdinal(a), ordinal(a)) |- ∅ < a) by Cut(successorOrdinalNotZero, ordinalNotEmptyContainsZero)
+    have(thesis) by Cut(successorOrdinalIsOrdinal, lastStep)
+  }
+    
+
+  val limitOrdinal = DEF(a) --> ordinal(a) /\ !(∃(b, a === successor(b))) /\ (a =/= ∅)
+
+  val limitOrdinalIsOrdinal = Lemma(
+    limitOrdinal(a) |- ordinal(a)
+  ) {
+    have(thesis) by Weakening(limitOrdinal.definition)
+  }
+
+  val limitOrdinalElim = Lemma(
+    limitOrdinal(a) |- a =/= successor(b)
+  ) {
+    have(limitOrdinal(a) |- ∀(b, a =/= successor(b))) by Weakening(limitOrdinal.definition)
     thenHave(thesis) by InstantiateForall(b)
   }
 
-  val nonsuccessorOrdinalIsInductive = Lemma((nonsuccessorOrdinal(a), b < a) |- successor(b) ∈ a) {
-    have((ordinal(a), ordinal(successor(b)), b < a) |- (successor(b) ∈ a, a === successor(b))) by Cut(ordinalCases of (b := successor(b)), successorNoInBetween of (a := b, b := a))
-    have((nonsuccessorOrdinal(a), ordinal(a), ordinal(successor(b)), b < a) |- successor(b) ∈ a) by RightAnd(nonsuccessorOrdinalElim, lastStep)
-    have((nonsuccessorOrdinal(a), ordinal(a), ordinal(b), b < a) |- successor(b) ∈ a) by Cut(successorIsOrdinal of (a := b), lastStep)
-    have((nonsuccessorOrdinal(a), ordinal(a), b < a) |- successor(b) ∈ a) by Cut(elementsOfOrdinalsAreOrdinals, lastStep)
-    have(thesis) by Cut(nonsuccessorOrdinalIsOrdinal, lastStep)
+  val limitOrdinalNotZero = Lemma(
+    limitOrdinal(a) |- a =/= ∅
+  ) {
+    have(thesis) by Weakening(limitOrdinal.definition)
   }
 
-
-
-
-  val nonsuccessorOrdinalIsNotSuccessorOrdinal = Lemma(nonsuccessorOrdinal(n) |- !successorOrdinal(n)) {
-    sorry
+  val limitOrdinalGtZero = Lemma(
+    limitOrdinal(a) |- ∅ < a
+  ) {
+    have((limitOrdinal(a), ordinal(a)) |- ∅ < a) by Cut(limitOrdinalNotZero, ordinalNotEmptyContainsZero)
+    have(thesis) by Cut(limitOrdinalIsOrdinal, lastStep)
   }
 
-  val successorOrNonsuccessorOrdinal = Lemma(ordinal(n) |- successorOrdinal(n) \/ nonsuccessorOrdinal(n)) {
-    sorry
+  val limitOrdinalIsInductive = Lemma(
+    (limitOrdinal(a), b < a) |- successor(b) < a
+  ) {
+    have((ordinal(a), ordinal(successor(b)), b < a) |- (successor(b) < a, a === successor(b))) by Cut(ordinalCases of (b := successor(b)), successorNoInBetween of (a := b, b := a))
+    have((limitOrdinal(a), ordinal(a), ordinal(successor(b)), b < a) |- successor(b) < a) by RightAnd(limitOrdinalElim, lastStep)
+    have((limitOrdinal(a), ordinal(a), ordinal(b), b < a) |- successor(b) < a) by Cut(successorIsOrdinal of (a := b), lastStep)
+    have((limitOrdinal(a), ordinal(a), b < a) |- successor(b) < a) by Cut(elementsOfOrdinalsAreOrdinals, lastStep)
+    have(thesis) by Cut(limitOrdinalIsOrdinal, lastStep)
   }
 
-  val leqOrdinalDef = Lemma(ordinal(n) |- m ⊆ n <=> m ∈ successor(n)) {
-    sorry
+  val successorOrdinalIsNotLimit = Lemma(
+    successorOrdinal(a) |- !limitOrdinal(a)
+  ) {
+   have(ordinal(a) /\ ∃(b, a === successor(b)) |- !(ordinal(a) /\ !(∃(b, a === successor(b))) /\ (a =/= ∅))) by Restate
+   thenHave(thesis) by Substitution.ApplyRules(successorOrdinal.definition, limitOrdinal.definition)
   }
 
+  val limitOrdinalIsNotSuccessor = Lemma(
+    limitOrdinal(a) |- !successorOrdinal(a)
+  ) {
+    have(thesis) by Restate.from(successorOrdinalIsNotLimit)
+  }
+
+  val successorOrNonsuccessorOrdinal = Lemma(
+    ordinal(a) |- (a === ∅) \/ successorOrdinal(a) \/ limitOrdinal(a)
+  ) {
+    have(ordinal(a) |- (a === ∅) \/ (ordinal(a) /\ ∃(b, a === successor(b))) \/ (ordinal(a) /\ !(∃(b, a === successor(b))) /\ (a =/= ∅))) by Tautology
+    thenHave(thesis) by Substitution.ApplyRules(successorOrdinal.definition, limitOrdinal.definition)
+  }
+
+  val unionOrdinalLeftOrRight = Lemma(
+    (ordinal(a), ordinal(b)) |- (a ∪ b === a, a ∪ b === b)
+  ) {
+    have((ordinal(a), ordinal(b)) |- (a ⊆ b, b <= a)) by Cut(ordinalCasesLeqLeq, ordinalLeqImpliesSubset)
+    have((ordinal(a), ordinal(b)) |- (a ⊆ b, b ⊆ a)) by Cut(lastStep, ordinalLeqImpliesSubset of (b := a, a := b))
+    have((ordinal(a), ordinal(b)) |- (a ∪ b === b, b ⊆ a)) by Cut(lastStep, setUnionOfSubsetForward of (x := a, y := b))
+    have(thesis) by Cut(lastStep, setUnionOfSubsetBackward of (x := a, y := b))
+  }
+
+  val unionOrdinalMembership = Lemma(
+    (a < c, b < c, ordinal(c)) |- (a ∪ b) < c
+  ) {
+    have(a < c |- a < c) by Hypothesis
+    val left = thenHave((a < c, a ∪ b === a) |- (a ∪ b) < c) by Substitution.ApplyRules(a ∪ b === a)
+    have(b < c |- b < c) by Hypothesis
+    val right = thenHave((b < c, a ∪ b === b) |- (a ∪ b) < c) by Substitution.ApplyRules(a ∪ b === b)
+    have((a < c, ordinal(a), ordinal(b)) |- ((a ∪ b) < c, a ∪ b === b)) by Cut(unionOrdinalLeftOrRight, left)
+    have((a < c, b < c, ordinal(a), ordinal(b)) |- (a ∪ b) < c) by Cut(lastStep, right)
+    have((a < c, b < c, ordinal(c), ordinal(b)) |- (a ∪ b) < c) by Cut(elementsOfOrdinalsAreOrdinals of (b := a, a := c), lastStep)
+    have((a < c, b < c, ordinal(c)) |- (a ∪ b) < c) by Cut(elementsOfOrdinalsAreOrdinals of (a := c), lastStep)
+  }
+
+  val unionIsOrdinal = Lemma(
+    (ordinal(a), ordinal(b)) |- ordinal(a ∪ b)
+  ) {
+    have(ordinal(a) |- ordinal(a)) by Hypothesis
+    val left = thenHave((ordinal(a), a ∪ b === a) |- ordinal(a ∪ b)) by Substitution.ApplyRules(a ∪ b === a)
+    have(ordinal(b) |- ordinal(b)) by Hypothesis
+    val right = thenHave((ordinal(b), a ∪ b === b) |- ordinal(a ∪ b)) by Substitution.ApplyRules(a ∪ b === b)
+    have((ordinal(a), ordinal(b)) |- (ordinal(a ∪ b), a ∪ b === b)) by Cut(unionOrdinalLeftOrRight, left)
+    have(thesis) by Cut(lastStep, right)
+  }
   
 }

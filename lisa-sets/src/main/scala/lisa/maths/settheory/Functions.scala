@@ -1009,6 +1009,12 @@ object Functions extends lisa.Main {
     have(thesis) by Cut(relationRestrictionSubset of (r := f), functionalSubset of (f := relationRestriction(f, x, y), g := f))
   }
 
+  val functionRestrictionDomainFunctionalOver = Lemma(
+    functionalOver(f, y) |- dom(f ↾ x) === y ∩ x
+  ) {
+    have(thesis) by Substitution.ApplyRules(functionalOverDomain)(domainRestrictionDomain)
+  }
+
   val functionRestrictionOnDomain = Lemma(
     functional(f) |- f ↾ dom(f) === f
   ) {

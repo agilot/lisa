@@ -41,11 +41,8 @@ object Recursion extends lisa.Main {
   private val P = predicate[1]
   private val Q = predicate[1]
   private val schemPred = predicate[1]
+  private val S = predicate[3]
   private val R = predicate[2]
-
-  // def transfiniteDefinedFunction(f : Term, d : Term) = functionalOver(f, d) /\ ∀(b, b ∈ d ==> R(f ↾ b, app(f, b)))
-
-
 
   val transfiniteRecursionClassFunction = Theorem(
     (classFunction(R), ordinal(a)) |- ∃!(f, functionalOver(f, a) /\ ∀(b, b < a ==> R(f ↾ b, app(f, b))))
@@ -104,6 +101,7 @@ object Recursion extends lisa.Main {
     val isFExistenceSuccessor = have((classFunction(R), ordinal(a)) |- ∃(f, isF(f, successor(a)))) subproof {
 
       val sDef = ∀(f, f ∈ s <=> ∃(d, (d < a) /\ isF(f, successor(d))))
+
       val sElim = have((sDef, f ∈ s) |- ∃(d, (d < a) /\ isF(f, successor(d)))) subproof {
         have(sDef |- sDef) by Hypothesis
         thenHave(sDef |- f ∈ s <=> ∃(d, (d < a) /\ isF(f, successor(d)))) by InstantiateForall(f)
@@ -146,7 +144,7 @@ object Recursion extends lisa.Main {
         thenHave(sDef |- f ∈ s ==> functional(f)) by RightImplies
         val allFun = thenHave(sDef |- ∀(f, f ∈ s ==> functional(f))) by RightForall
         
-        have((classFunction(R), ordinal(d), ordinal(successor(d)), ordinal(e), ordinal(successor(e)), isF(f, successor(d)), isF(g, successor(e)), d <= e) |- f ⊆ g) by Cut(successorPreservesLeq of (a := d, b := e), isFSubset of (d := successor(d), e := successor(e)))
+        have((classFunction(R), ordinal(successor(d)), ordinal(e), ordinal(successor(e)), isF(f, successor(d)), isF(g, successor(e)), d <= e) |- f ⊆ g) by Substitution.ApplyRules(successorPreservesLeq)(isFSubset of (d := successor(d), e := successor(e)))
         have((classFunction(R), ordinal(d), ordinal(e), ordinal(successor(e)), isF(f, successor(d)), isF(g, successor(e)), d <= e) |- f ⊆ g) by Cut(successorIsOrdinal of (a := d), lastStep)
         val isFSubsetMembership = have((classFunction(R), ordinal(d), ordinal(e), isF(f, successor(d)), isF(g, successor(e)), d <= e) |- f ⊆ g) by Cut(successorIsOrdinal of (a := e), lastStep)
 
@@ -244,7 +242,7 @@ object Recursion extends lisa.Main {
             have((functional(newF), classFunction(R), isFExistsBelow, sDef, ordinal(a), z < a, isF(f, successor(d)), d < a, z ∈ dom(f)) |- app(newF, z) === app(f, z)) by Cut(ihFunctional, lastStep)
             have((functional(newF), classFunction(R), isFExistsBelow, sDef, ordinal(a), z <= d, isF(f, successor(d)), d < a, z ∈ dom(f)) |- app(newF, z) === app(f, z)) by Cut(ordinalLeqLtImpliesLt of (a := z, b := d, c := a), lastStep)
             thenHave((functional(newF), classFunction(R), isFExistsBelow, sDef, ordinal(a), z <= d, isF(f, successor(d)), d < a, z < successor(d)) |- app(newF, z) === app(f, z)) by Substitution.ApplyRules(isFDomain of (d := successor(d)))
-            have((functional(newF), classFunction(R), isFExistsBelow, sDef, ordinal(a), ordinal(d), z <= d, isF(f, successor(d)), d < a) |- app(newF, z) === app(f, z)) by Cut(ordinalLeqImpliesInSuccessor of (b := z, a := d), lastStep)
+            thenHave((functional(newF), classFunction(R), isFExistsBelow, sDef, ordinal(a), ordinal(d), z <= d, isF(f, successor(d)), d < a) |- app(newF, z) === app(f, z)) by Substitution.ApplyRules(ordinalLeqIffLtSuccessor)
             have(thesis) by Cut(functionalOverIsFunctional of (f := newF, x := successor(a)), lastStep)
           }
 
@@ -329,5 +327,134 @@ object Recursion extends lisa.Main {
     ordinal(a) |- ∃!(f, functionalOver(f, a) /\ ∀(b, b < a ==> (app(f, b) === F(f ↾ b))))
   ) {
     have(thesis) by Cut(functionIsClassFunction of (P := lambda(x, True)), transfiniteRecursionClassFunction of (R := lambda((x, y), F(x) === y)))
+  }
+
+  val transfiniteRecursionClassFunctionCases = Theorem(
+    (classFunction(R), classFunctionTwoArgs(S), ordinal(a)) |- ∃!(f, functionalOver(f, a) /\ ∀(b, b < a ==> 
+      ((dom(f ↾ b) === ∅) ==> (app(f, b) === z)) /\
+      (successorOrdinal(dom(f ↾ b)) ==> S(union(dom(f ↾ b)), app(f ↾ b, union(dom(f ↾ b))), app(f, b))) /\
+      (limitOrdinal(dom(f ↾ b)) ==> R(f ↾ b, app(f, b))) /\
+      (!ordinal(dom(f ↾ b)) ==> (app(f, b) === ∅))
+    ))
+  ) {
+
+    val cases = have((dom(x) === ∅) \/ successorOrdinal(dom(x)) \/ limitOrdinal(dom(x)) \/ !ordinal(dom(x))) by Restate.from(successorOrNonsuccessorOrdinal of (a := dom(x)))
+
+    def classFun(x : Term, y : Term) = 
+      ((dom(x) === ∅) ==> (y === z)) /\
+      (successorOrdinal(dom(x)) ==> S(union(dom(x)), app(x, union(dom(x))), y)) /\
+      (limitOrdinal(dom(x)) ==> R(x, y)) /\
+      (!ordinal(dom(x)) ==> (y === ∅))
+    
+    val classFunUniqueness = have((classFunction(R), classFunctionTwoArgs(S)) |- ∀(w, ∀(y, classFun(x, w) /\ classFun(x, y) ==> (w === y)))) subproof {
+      val uniquenessZero = have((dom(x) === ∅, classFun(x, y), classFun(x, w)) |- w === y) subproof {
+        have((dom(x) === ∅, classFun(x, y)) |- z === y) by Restate
+        have((dom(x) === ∅, classFun(x, y), w === z) |- w === y) by Cut(lastStep, equalityTransitivity of (x := w, y := z, z := y))
+        thenHave(thesis) by Tautology
+      }
+      
+      val uniquenessSuccessor = have((successorOrdinal(dom(x)), classFunctionTwoArgs(S), classFun(x, y), classFun(x, w)) |- w === y) subproof {
+        have((successorOrdinal(dom(x)), classFun(x, y)) |- S(union(dom(x)), app(x, union(dom(x))), y)) by Restate
+        have((successorOrdinal(dom(x)), classFunctionTwoArgs(S), classFun(x, y), S(union(dom(x)), app(x, union(dom(x))), w), True) |- y === w) by Cut(lastStep, classFunctionTwoArgsUniqueness of (x := union(dom(x)), y := app(x, union(dom(x))), R := lambda((x, y), True), z := y))
+        thenHave(thesis) by Tautology
+      }
+      
+      val uniquenessLimit = have((limitOrdinal(dom(x)), classFunction(R), classFun(x, y), classFun(x, w)) |- w === y) subproof {
+        have((limitOrdinal(dom(x)), classFun(x, y)) |- R(x, y)) by Restate
+        have((limitOrdinal(dom(x)), classFunction(R), classFun(x, y), R(x, w), True) |- y === w) by Cut(lastStep, classFunctionUniqueness of (P := lambda(x, True), z := w))
+        thenHave(thesis) by Tautology
+      }
+
+      val uniquenessNotOrdinal = have((!ordinal(dom(x)), classFun(x, y), classFun(x, w)) |- w === y) subproof {
+        have((!ordinal(dom(x)), classFun(x, y)) |- ∅ === y) by Restate
+        have((!ordinal(dom(x)), classFun(x, y), w === ∅) |- w === y) by Cut(lastStep, equalityTransitivity of (x := w, y := ∅, z := y))
+        thenHave(thesis) by Tautology
+      }
+
+      val left = have(((dom(x) === ∅) \/ successorOrdinal(dom(x)), classFunctionTwoArgs(S), classFun(x, y), classFun(x, w)) |- w === y) by LeftOr(uniquenessZero, uniquenessSuccessor)
+      val right = have((limitOrdinal(dom(x)) \/ !ordinal(dom(x)), classFunction(R), classFun(x, y), classFun(x, w)) |- w === y) by LeftOr(uniquenessLimit, uniquenessNotOrdinal)
+      have(((dom(x) === ∅) \/ successorOrdinal(dom(x)) \/ limitOrdinal(dom(x)) \/ !ordinal(dom(x)), classFunction(R), classFunctionTwoArgs(S), classFun(x, y), classFun(x, w)) |- w === y) by LeftOr(left, right)
+      have((classFunction(R), classFunctionTwoArgs(S), classFun(x, w), classFun(x, y)) |- w === y) by Cut(cases, lastStep)
+      thenHave((classFunction(R), classFunctionTwoArgs(S)) |- (classFun(x, w) /\ classFun(x, y)) ==> (w === y)) by Restate
+      thenHave((classFunction(R), classFunctionTwoArgs(S)) |- ∀(y, classFun(x, w) /\ classFun(x, y) ==> (w === y))) by RightForall
+      val uniqueness = thenHave((classFunction(R), classFunctionTwoArgs(S)) |- ∀(w, ∀(y, classFun(x, w) /\ classFun(x, y) ==> (w === y)))) by RightForall
+    }
+
+    val classFunExistence = have((classFunction(R), classFunctionTwoArgs(S)) |- ∃(y, classFun(x, y))) subproof {
+    
+      val p = formulaVariable
+
+      have(successorOrdinal(dom(x)) |- (dom(x) =/= ∅) /\ !limitOrdinal(dom(x))) by RightAnd(successorOrdinalNotZero of (a := dom(x)), successorOrdinalIsNotLimit of (a := dom(x)))
+      have(successorOrdinal(dom(x)) |- (dom(x) =/= ∅) /\ !limitOrdinal(dom(x)) /\ ordinal(dom(x))) by RightAnd(lastStep, successorOrdinalIsOrdinal of (a := dom(x))) 
+      thenHave((successorOrdinal(dom(x)), S(union(dom(x)), app(x, union(dom(x))), y)) |- classFun(x, y)) by Tautology
+      thenHave((successorOrdinal(dom(x)), S(union(dom(x)), app(x, union(dom(x))), y)) |- ∃(y, classFun(x, y))) by RightExists
+      thenHave((successorOrdinal(dom(x)), ∃(y, S(union(dom(x)), app(x, union(dom(x))), y))) |- ∃(y, classFun(x, y))) by LeftExists
+      val case1 = have((successorOrdinal(dom(x)), classFunctionTwoArgs(S)) |- ∃(y, classFun(x, y))) by Cut(totalClassFunctionTwoArgsHasImage of (x := union(dom(x)), y := app(x, union(dom(x)))), lastStep)
+
+      have(limitOrdinal(dom(x)) |- (dom(x) =/= ∅) /\ !successorOrdinal(dom(x))) by RightAnd(limitOrdinalNotZero of (a := dom(x)), limitOrdinalIsNotSuccessor of (a := dom(x)))
+      have(limitOrdinal(dom(x)) |- (dom(x) =/= ∅) /\ !successorOrdinal(dom(x)) /\ ordinal(dom(x))) by RightAnd(lastStep, limitOrdinalIsOrdinal of (a := dom(x))) 
+      thenHave((limitOrdinal(dom(x)), R(x, y)) |- classFun(x, y)) by Tautology
+      thenHave((limitOrdinal(dom(x)), R(x, y)) |- ∃(y, classFun(x, y))) by RightExists
+      thenHave((limitOrdinal(dom(x)), ∃(y, R(x, y))) |- ∃(y, classFun(x, y))) by LeftExists
+      val case2 = have((limitOrdinal(dom(x)), classFunction(R)) |- ∃(y, classFun(x, y))) by Cut(totalClassFunctionHasImage, lastStep)
+
+      val zeroLimit = have(dom(x) === ∅ |- !limitOrdinal(dom(x))) by Restate.from(limitOrdinalNotZero of (a := dom(x)))
+      val zeroSucc = have(dom(x) === ∅ |- !successorOrdinal(dom(x))) by Restate.from(successorOrdinalNotZero of (a := dom(x)))
+      have(dom(x) === ∅ |- !limitOrdinal(dom(x)) /\ !successorOrdinal(dom(x))) by RightAnd(zeroLimit, zeroSucc)
+      have(dom(x) === ∅ |- !limitOrdinal(dom(x)) /\ !successorOrdinal(dom(x)) /\ ordinal(∅)) by RightAnd(lastStep, emptySetOrdinal)
+      thenHave(dom(x) === ∅ |- !limitOrdinal(dom(x)) /\ !successorOrdinal(dom(x)) /\ ordinal(dom(x))) by RightSubstEq.withParametersSimple(List((dom(x), ∅)), lambda(b, !limitOrdinal(dom(x)) /\ !successorOrdinal(dom(x)) /\ ordinal(b)))
+      thenHave((dom(x) === ∅, y === z) |- classFun(x, y)) by Tautology
+      thenHave((dom(x) === ∅, y === z) |- ∃(y, classFun(x, y))) by RightExists
+      val case3 = have(dom(x) === ∅ |- ∃(y, classFun(x, y))) by Restate.from(lastStep of (y := z))
+
+      val notOrdinalNotSuccessor = have(!ordinal(dom(x)) |- !successorOrdinal(dom(x))) by Restate.from(successorOrdinalIsOrdinal of (a := dom(x)))
+      val notOrdinalNotLimit = have(!ordinal(dom(x)) |- !limitOrdinal(dom(x))) by Restate.from(limitOrdinalIsOrdinal of (a := dom(x)))
+      have(ordinal(∅)) by Restate.from(emptySetOrdinal)
+      thenHave(dom(x) === ∅ |- ordinal(dom(x))) by Substitution.ApplyRules(dom(x) === ∅)
+      val notOrdinalNotZero = thenHave(!ordinal(dom(x)) |- dom(x) =/= ∅) by Restate
+      have(!ordinal(dom(x)) |- !successorOrdinal(dom(x)) /\ !limitOrdinal(dom(x))) by RightAnd(notOrdinalNotSuccessor, notOrdinalNotLimit)
+      have(!ordinal(dom(x)) |- !successorOrdinal(dom(x)) /\ !limitOrdinal(dom(x)) /\ (dom(x) =/= ∅)) by RightAnd(lastStep, notOrdinalNotZero)
+      thenHave((!ordinal(dom(x)), y === ∅) |- classFun(x, y)) by Tautology
+      thenHave((!ordinal(dom(x)), y === ∅) |- ∃(y, classFun(x, y))) by RightExists
+      val case4 = have(!ordinal(dom(x)) |- ∃(y, classFun(x, y))) by Restate.from(lastStep of (y := ∅))
+
+      have((classFunction(R), classFunctionTwoArgs(S), successorOrdinal(dom(x)) \/ limitOrdinal(dom(x))) |- ∃(y, classFun(x, y))) by LeftOr(case1, case2)
+      have((classFunction(R), classFunctionTwoArgs(S), successorOrdinal(dom(x)) \/ limitOrdinal(dom(x)) \/ (dom(x) === ∅)) |- ∃(y, classFun(x, y))) by LeftOr(lastStep, case3)
+      have((classFunction(R), classFunctionTwoArgs(S), successorOrdinal(dom(x)) \/ limitOrdinal(dom(x)) \/ (dom(x) === ∅) \/ !ordinal(dom(x))) |- ∃(y, classFun(x, y))) by LeftOr(lastStep, case4)
+      have((classFunction(R), classFunctionTwoArgs(S)) |- ∃(y, classFun(x, y))) by Cut(cases, lastStep)
+    }
+
+    have((classFunction(R), classFunctionTwoArgs(S), ∃(y, classFun(x, y))) |- ∃!(y, classFun(x, y))) by Cut(classFunUniqueness, existenceAndUniqueness of (P := lambda(y, classFun(x, y))))
+    have((classFunction(R), classFunctionTwoArgs(S)) |- ∃!(y, classFun(x, y))) by Cut(classFunExistence, lastStep)
+    thenHave((classFunction(R), classFunctionTwoArgs(S)) |- classFunction(lambda((x, y), classFun(x, y)))) by RightForall
+
+    have(thesis) by Cut(lastStep, transfiniteRecursionClassFunction of (R := lambda((x, y), classFun(x, y))))
+  }
+
+  val domRestr = Lemma(
+    (functionalOver(f, a), ordinal(a), b < a) |- dom(f ↾ b) === b
+  ) {
+    have(thesis) by Substitution.ApplyRules(intersectionInOrdinal)(functionRestrictionDomainFunctionalOver of (y := a, x := b))
+  }
+
+  val unionDomRestr = Lemma(
+    (functionalOver(f, a), ordinal(a), b < a) |- union(dom(f ↾ successor(b))) === b
+  ) {
+    have(union(dom(f ↾ successor(b))) === union(dom(f ↾ successor(b)))) by RightRefl
+    thenHave(functionalOver(f, a) |- union(dom(f ↾ successor(b))) === union(a ∩ successor(b))) by Substitution.ApplyRules(functionRestrictionDomainFunctionalOver)
+    thenHave((functionalOver(f, a), successor(b) ⊆ a) |- union(dom(f ↾ successor(b))) === union(successor(b))) by Substitution.ApplyRules(setIntersectionOfSubsetBackward)
+    thenHave((functionalOver(f, a), ordinal(b), successor(b) ⊆ a) |- union(dom(f ↾ successor(b))) === b) by Substitution.ApplyRules(unionSuccessor)
+    have((functionalOver(f, a), ordinal(a), ordinal(b), successor(b) <= a) |- union(dom(f ↾ successor(b))) === b) by Cut(ordinalLeqImpliesSubset of (a := successor(b), b := a), lastStep)
+    thenHave((functionalOver(f, a), ordinal(a), ordinal(b), b < a) |- union(dom(f ↾ successor(b))) === b) by Substitution.ApplyRules(ltIffSuccessorLeq)
+    have(thesis) by Cut(elementsOfOrdinalsAreOrdinals, lastStep)
+  }
+
+  val unionDomRestrApp = Lemma(
+    (functionalOver(f, a), ordinal(a), b < a) |- app(f ↾ successor(b), union(dom(f ↾ successor(b)))) === app(f, b)
+  ) {
+    have(app(f ↾ successor(b), union(dom(f ↾ successor(b)))) === app(f ↾ successor(b), union(dom(f ↾ successor(b))))) by RightRefl
+    thenHave((functionalOver(f, a), ordinal(a), b < a) |- app(f ↾ successor(b), union(dom(f ↾ successor(b)))) === app(f ↾ successor(b), b)) by Substitution.ApplyRules(unionDomRestr)
+    thenHave((functionalOver(f, a), ordinal(a), b < a, b < successor(b)) |- app(f ↾ successor(b), union(dom(f ↾ successor(b)))) === app(f, b)) by Substitution.ApplyRules(functionRestrictionOverApp of (x := successor(b), y := a, a := b))
+    have(thesis) by Cut(inSuccessor of (a := b), lastStep)
   }
 }

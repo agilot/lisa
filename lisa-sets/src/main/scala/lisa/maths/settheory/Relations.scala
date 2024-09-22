@@ -202,7 +202,7 @@ object Relations extends lisa.Main {
   val relationDomainMembership = Lemma(
     a ∈ dom(r) <=> ∃(b, pair(a, b) ∈ r)
   ) {
-    have(pair(a, b) ∈ r |- a ∈ union(union(r))) by Weakening(pairComponentsInUnionUnion of (x := a, y := b))
+    have(pair(a, b) ∈ r |- a ∈ union(union(r))) by Weakening(pairComponentsInUnionUnion of (x := a, y := b, z := r))
     thenHave(∃(b, pair(a, b) ∈ r) |- a ∈ union(union(r))) by LeftExists
     val redundancy = thenHave(∃(b, pair(a, b) ∈ r) ==> a ∈ union(union(r))) by RightImplies
 
@@ -369,7 +369,7 @@ object Relations extends lisa.Main {
   val relationRangeMembership = Lemma(
     b ∈ ran(r) <=> ∃(a, pair(a, b) ∈ r)
   ) {
-    have(pair(a, b) ∈ r |- b ∈ union(union(r))) by Weakening(pairComponentsInUnionUnion of (x := a, y := b))
+    have(pair(a, b) ∈ r |- b ∈ union(union(r))) by Weakening(pairComponentsInUnionUnion of (x := a, y := b, z := r))
     thenHave(∃(a, pair(a, b) ∈ r) |- b ∈ union(union(r))) by LeftExists
     val redundancy = thenHave(∃(a, pair(a, b) ∈ r) ==> b ∈ union(union(r))) by RightImplies
 

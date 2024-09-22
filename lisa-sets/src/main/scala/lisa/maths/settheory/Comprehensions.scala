@@ -97,7 +97,7 @@ object Comprehensions {
 
   // Replacement and Set Builders
 
-  private def innerRepl(c: Variable, replacer: (Term ** 2) |-> Formula, t: Term): BinderFormula = // forall(x, x ∈ y <=> (in(x, t) /\ φ(x)))
+  private def innerRepl(c: Variable, replacer: (Term ** 2) |-> Formula, t: Term): BinderFormula = // forall(x, x ∈ y <=> (x ∈ t /\ φ(x)))
     ∀(y, y ∈ B <=> ∃(x, x ∈ A /\ P(x, y) /\ ∀(z, P(x, z) ==> (z === y)))).substitute(P := replacer, A := t, y := c)
 
   // Axiom(exists(y, forall(x, x ∈ y <=> (x ∈ z /\ φ(x)))))
@@ -134,7 +134,7 @@ object Comprehensions {
     }
 
     /**
-     * in(elem, y) <=> ∃(x, in(x, t) /\ replacer(x, y) /\ ∀(z, P(x, z) ==> (z === y))
+     * in(elem, y) <=> ∃(x, x ∈ t /\ replacer(x, y) /\ ∀(z, P(x, z) ==> (z === y))
      */
     def elim(elem: Term): proof.Fact = instDef of (elem_bound := elem)
 

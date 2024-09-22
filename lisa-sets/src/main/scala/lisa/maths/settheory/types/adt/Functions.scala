@@ -72,7 +72,7 @@ class SemanticFunction[N <: Arity](name: String, adt: SemanticADT[N], cases: Map
   /**
    * Lemma --- Uniqueness of this function.
    */
-  private val uniqueness = Axiom(existsOne(f, untypedDefinition))
+  private val uniqueness = Axiom(∃!(f, untypedDefinition))
 
   /**
    * Set theoretic definition of the constructor.

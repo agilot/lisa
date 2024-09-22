@@ -11,6 +11,7 @@
 
 package lisa.maths.settheory.types.adt
 
+import lisa.maths.Quantifiers.*
 import lisa.maths.settheory.SetTheory.*
 import lisa.maths.settheory.Functions.*
 import lisa.maths.settheory.Relations.*
@@ -190,10 +191,10 @@ private class SyntacticConstructor(
               pairExtensionality of (a := v1, b := subsubterm1, c := v2, d := subsubterm2),
               rightAndEquivalence of (p := pulledVars1 ===+ pulledVars2, p1 := pair(v1, subsubterm1) === pair(v2, subsubterm2), p2 := (v1 === v2) /\ (subsubterm1 === subsubterm2))
             )
-            val newFact = have(
+            val newFact = thenHave(
               (term1 === term2) <=>
                 ((updatedPulledVars1 ===+ updatedPulledVars2) /\ (subsubterm1 === subsubterm2))
-            ) by Apply(equivalenceRewriting).on(lastStep, previousFact)
+            ) by Substitution.ApplyRules(previousFact)
 
             (updatedPulledVars1, updatedRemainingVars1, updatedPulledVars2, updatedRemainingVars2, newFact)
           )
@@ -247,14 +248,14 @@ private class SyntacticADT[N <: Arity](using line: sourcecode.Line, file: source
   def injectivity(c1: SyntacticConstructor, c2: SyntacticConstructor) =
     require(c1.tag != c2.tag, "The given constructors must be different.")
 
-    Lemma(c1.term1 =/= c2.term2) {
+    Lemma(c1.term1 =/= c2.term2) { 
 
       // STEP 0: Caching
       val tagTerm1: Term = c1.tagTerm
       val tagTerm2: Term = c2.tagTerm
 
       // STEP 1: Prove that the tags are different
-      val diffTag = have(tagTerm1 =/= tagTerm2) subproof {
+      val diffTag = have(tagTerm1 =/= tagTerm2) subproof { sp ?=>
 
         // STEP 1.1: Order the tags
         val minTag: Int = Math.min(c1.tag, c2.tag)
@@ -262,17 +263,23 @@ private class SyntacticADT[N <: Arity](using line: sourcecode.Line, file: source
 
         val start = have(tagTerm1 === tagTerm2 |- toTerm(maxTag) === toTerm(minTag)) by Restate
 
+        val ordinals = (1 to minTag).scanLeft[sp.Fact](emptySetOrdinal)((fact, i) =>
+          val term = toTerm(i - 1)
+          have(ordinal(successor(term))) by Cut(fact, successorIsOrdinal of (a := term))
+        )
+
         // STEP 1.2: Apply successor injectivity to both tags until one becomes 0
         (1 to minTag).foldLeft(start)((fact, i) =>
           val midMaxTag = toTerm(maxTag - i)
           val midMinTag = toTerm(minTag - i)
-          have(tagTerm1 === tagTerm2 |- midMaxTag === midMinTag) by Cut(fact, successorInjectivity of (a := midMaxTag, b := midMinTag))
+          have((ordinal(midMinTag), tagTerm1 === tagTerm2) |- midMaxTag === midMinTag) by Cut(fact, successorInjectivity of (a := midMaxTag, b := midMinTag))
+          have(tagTerm1 === tagTerm2 |- midMaxTag === midMinTag) by Cut(ordinals(minTag - i), lastStep)
         )
 
         val chainInjectivity = thenHave(toTerm(maxTag - minTag) =/= ∅ |- tagTerm1 =/= tagTerm2) by Restate
 
         // STEP 1.3: Conclude using the fact that 0 is not the successor of any number
-        have(toTerm(maxTag - minTag) =/= ∅) by Exact(successorNonEmpty)
+        have(toTerm(maxTag - minTag) =/= ∅) by Exact(successorNotEmpty)
         have(thesis) by Cut(lastStep, chainInjectivity)
       }
 
@@ -333,84 +340,50 @@ private class SyntacticADT[N <: Arity](using line: sourcecode.Line, file: source
    * @note The existence of the image of the introduction function is guaranteed by the union and replacement axioms. Moreover, it is not necessary to compute the union with s. It however simplifies further proofs. See [[this.heightSuccessorStrong]] for a proof of the equivalence of the two definitions.
    */
   private def isInIntroductionFunctionImage(s: Term)(y: Term): Formula = isConstructor(y, s) \/ (y ∈ s)
-  
 
-  /**
-   * Lemma --- The introduction function is monotonic with respect to set inclusion.
-   *
-   *      `s ⊆ t |- introductionFunction(s) ⊆ introductionFunction(t)`
-   */
-  private val introductionFunctionMonotonic = benchmark(Lemma(classFunctionMonotonic(P2).substitute(P2 := lambda((x, s), isInIntroductionFunctionImage(s)(x)))) {
-    // In the rest of the proof we assume that s ⊆ t
+  private def isFunctionImage(s : Term)(z : Term) = ∀(y, y ∈ z <=> isInIntroductionFunctionImage(s)(y))
 
-    // STEP 0: Caching predicates that are often used
-    val subsetST = s ⊆ t
-    val isConstructorXS = isConstructor(x, s)
-    val isConstructorXT = isConstructor(x, t)
 
-    // STEP 1: For each constructor, prove that if x is an instance of that constructor with self referencing arguments in s
-    // then it is also an instance of some constructor with self referencing arguments in t
-    val isConstructorXSImpliesT =
-      for c <- constructors yield
-        // STEP 2.0: Caching predicates that are often used
-        // TODO change identifier
-        val labelEq = x === c.term2
-        val isConstructorCXS = isConstructor(c, x, s)
-        val isConstructorCXT = isConstructor(c, x, t)
-        val varsWellTypedS = wellTypedFormula(c.signature2)(s)
-        val varsWellTypedT = wellTypedFormula(c.signature2)(t)
+  private val functionImageExistence = Axiom(∃(z, isFunctionImage(s)(z)))
 
-        if c.arity == 0 then have((subsetST, isConstructorCXS) |- isConstructorXT) by Restate
-        else
-          // STEP 2.1: Prove that we can expand the domain of the (quantified) variables of the constructor
-          val andSeq =
-            for (v, ty) <- c.signature2 yield 
-              ty match
-                case Self => have((subsetST, varsWellTypedS) |- in(v, t)) by Weakening(subsetElim of (x := s, y := t, z := v))
-                case GroundType(term) => have((subsetST, varsWellTypedS) |- in(v, term)) by Restate
-                case f: FunctionType =>
-                  have((subsetST, in(v, f.getOrElse(s))) |- in(v, f.getOrElse(t))) by Cut(f.monotonicity of (y := s, z := t), subsetElim of (x := f.getOrElse(s), y := f.getOrElse(t), z := v))
-                  thenHave((subsetST, varsWellTypedS) |- in(v, f.getOrElse(t))) by Weakening
-              
-              
-          val expandingDomain = have((subsetST, varsWellTypedS) |- varsWellTypedT) by RightAnd(andSeq*)
-          val weakeningLabelEq = have(labelEq |- labelEq) by Hypothesis
-          have((subsetST, varsWellTypedS, labelEq) |- varsWellTypedT /\ labelEq) by RightAnd(expandingDomain, weakeningLabelEq)
+  private val functionImageClassFunction = Lemma(
+    classFunctionTwoArgs(lambda((x, s, z), isFunctionImage(s)(z)))
+  ) {
+    have(isFunctionImage(s)(z) |- isFunctionImage(s)(z)) by Hypothesis
+    thenHave(isFunctionImage(s)(z) |- y ∈ z <=> isInIntroductionFunctionImage(s)(y)) by InstantiateForall(y)
+    have((isFunctionImage(s)(z), isFunctionImage(s)(w)) |- y ∈ z <=> y ∈ w) by Substitution.ApplyRules(lastStep of (z := w))(lastStep)
+    thenHave((isFunctionImage(s)(z), isFunctionImage(s)(w)) |- ∀(y, y ∈ z <=> y ∈ w)) by RightForall
+    have((isFunctionImage(s)(z), isFunctionImage(s)(w)) |- z === w) by Cut(lastStep, equalityIntro of (x := z, y := w))
+    thenHave((isFunctionImage(s)(z) /\ isFunctionImage(s)(w)) ==> (z === w)) by Restate
+    thenHave(∀(w, (isFunctionImage(s)(z) /\ isFunctionImage(s)(w)) ==> (z === w))) by RightForall
+    thenHave(∀(z, ∀(w, (isFunctionImage(s)(z) /\ isFunctionImage(s)(w)) ==> (z === w)))) by RightForall
+    have(∃(z, isFunctionImage(s)(z)) |- ∃!(z, isFunctionImage(s)(z))) by Cut(lastStep, existenceAndUniqueness of (P := lambda(z, isFunctionImage(s)(z))))
+    have(∃!(z, isFunctionImage(s)(z))) by Cut(functionImageExistence, lastStep)
+    thenHave(∀(s, ∃!(z, isFunctionImage(s)(z)))) by RightForall
+    thenHave(thesis) by RightForall
+  }
 
-          // STEP 2.2: Prove that x stays an instance of this constructor if we expand the domain of the variables
-          thenHave((subsetST, varsWellTypedS, labelEq) |- isConstructorCXT) by QuantifiersIntro(c.variables2)
-          thenHave((subsetST, varsWellTypedS /\ labelEq) |- isConstructorCXT) by LeftAnd
-          thenHave((subsetST, isConstructorCXS) |- isConstructorCXT) by QuantifiersIntro(c.variables2)
-
-          // STEP 2.3: Weaken the conclusion to some constructor instead of a specific one
-          thenHave((subsetST, isConstructorCXS) |- isConstructorXT) by Weakening
-
-    // STEP 3: Prove that this holds for any constructor
-    // ? Steps 2 and 3 can be merged and optimized through the repeated use of an external theorem like [[ADTHelperTheorems.unionPreimageMonotonic]]
-    if constructors.isEmpty then have((subsetST, isConstructorXS) |- isConstructorXT) by Restate
-    else have((subsetST, isConstructorXS) |- isConstructorXT) by LeftOr(isConstructorXSImpliesT*)
-
-    // STEP 4: Prove the thesis by showing that making the union with the function argument does not change the monotonicity
-    thenHave(subsetST |- isConstructorXS ==> isConstructorXT) by RightImplies
-    have(s ⊆ t |- isInIntroductionFunctionImage(s)(x) ==> isInIntroductionFunctionImage(t)(x)) by Cut(lastStep, unionPreimageMonotonic of (P := lambda(s, isConstructorXS)))
-    thenHave(s ⊆ t |- forall(x, isInIntroductionFunctionImage(s)(x) ==> isInIntroductionFunctionImage(t)(x))) by RightForall
-    thenHave(s ⊆ t ==> forall(x, isInIntroductionFunctionImage(s)(x) ==> isInIntroductionFunctionImage(t)(x))) by RightImplies
-    thenHave(forall(t, s ⊆ t ==> forall(x, isInIntroductionFunctionImage(s)(x) ==> isInIntroductionFunctionImage(t)(x)))) by RightForall
-    thenHave(forall(s, forall(t, s ⊆ t ==> forall(x, isInIntroductionFunctionImage(s)(x) ==> isInIntroductionFunctionImage(t)(x))))) by RightForall
-  })
-
-  private val introductionFunctionCumulative = benchmark(Lemma(classFunctionCumulative(P2).substitute(P2 := lambda((x, s), isInIntroductionFunctionImage(s)(x)))) {
-    have(in(x, s) ==> isInIntroductionFunctionImage(s)(x)) by Restate
-    thenHave(forall(x, in(x, s) ==> isInIntroductionFunctionImage(s)(x))) by RightForall
-    thenHave(forall(s, forall(x, in(x, s) ==> isInIntroductionFunctionImage(s)(x)))) by RightForall
-  })
+  private val introductionFunctionCumulative = Lemma(
+    classFunctionCumulative(lambda((x, s, z), isFunctionImage(s)(z)))
+  ) {
+    have(isFunctionImage(s)(z) |- isFunctionImage(s)(z)) by Hypothesis
+    thenHave(isFunctionImage(s)(z) |- y ∈ z <=> isInIntroductionFunctionImage(s)(y)) by InstantiateForall(y)
+    thenHave(isFunctionImage(s)(z) |- y ∈ s ==> y ∈ z) by Weakening
+    thenHave(isFunctionImage(s)(z) |- ∀(y, y ∈ s ==> y ∈ z)) by RightForall
+    have(isFunctionImage(s)(z) |- s ⊆ z) by Cut(lastStep, subsetIntro of (x := s, y := z))
+    thenHave(isFunctionImage(s)(z) ==> s ⊆ z) by RightImplies
+    thenHave(∀(z, isFunctionImage(s)(z) ==> s ⊆ z)) by RightForall
+    thenHave(∀(s, ∀(z, isFunctionImage(s)(z) ==> s ⊆ z))) by RightForall
+    thenHave(∀(x, ∀(s, ∀(z, isFunctionImage(s)(z) ==> s ⊆ z)))) by RightForall
+    // thenHave(classFunctionCumulative(lambda((x, s, z), isFunctionImage(s)(z)))) by RightForall
+  }
 
   /**
    * Lemma --- Every constructor is in the image of the introduction function.
    *
    *      `For every c ∈ constructors, xi ∈ s, ..., xj ∈ s |- c(x1, ..., xn) ∈ introductionFunction(s)`
    */
-  private val constructorIsInIntroductionFunction = benchmark(constructors
+  private val constructorIsInIntroductionFunction = constructors
     .map(c =>
       // Caching
       val constructorVarsInDomainCS = constructorVarsInDomain(c, s)
@@ -435,7 +408,7 @@ private class SyntacticADT[N <: Arity](using line: sourcecode.Line, file: source
         thenHave(constructorVarsInDomainCS |- isInIntroductionFunctionImage(s)(c.term)) by Weakening
       }
     )
-    .toMap)
+    .toMap
 
   // *******************
   // * HEIGHT FUNCTION *
@@ -453,9 +426,8 @@ private class SyntacticADT[N <: Arity](using line: sourcecode.Line, file: source
    *
    * @return a formula that is true if and only if g is the height function
    */
-  private def isTheHeightFunction(h: Term): Formula = fixpointClassFunctionWithDomain(h)(P2)(N).substitute(P2 := lambda((x, s), isInIntroductionFunctionImage(s)(x)))
+  private def isTheHeightFunction(h: Term): Formula = fixpointClassFunction(h, N)(lambda((x, s, z), isFunctionImage(s)(z)))
 
-  private val heightDomainLimit = Axiom(nonsuccessorOrdinal(N))
 
   // Caching
   private val fIsTheHeightFunction: Formula = isTheHeightFunction(f)
@@ -468,7 +440,8 @@ private class SyntacticADT[N <: Arity](using line: sourcecode.Line, file: source
    *     `∃h. h = height`
    */
   private val heightFunctionExistence = Lemma(∃(h, hIsTheHeightFunction)) {
-    have(thesis) by Cut(domainIsOrdinal, fixpointClassFunctionWithDomainExistence of (P2 := lambda((x, s), isInIntroductionFunctionImage(s)(x)), d := N))
+    have(limitOrdinal(N) |- ∃(h, hIsTheHeightFunction)) by Cut(functionImageClassFunction, fixpointClassFunctionExistence of (S := lambda((x, s, z), isFunctionImage(s)(z)), n := N))
+    have(thesis) by Cut(heightDomainLimit, lastStep)
   }
 
   /**
@@ -477,50 +450,54 @@ private class SyntacticADT[N <: Arity](using line: sourcecode.Line, file: source
    *     `f = height /\ h = height => f = h`
    */
   private val heightFunctionUniqueness2 = Lemma((fIsTheHeightFunction, hIsTheHeightFunction) |- f === h) {
-    have(thesis) by Restate.from(fixpointClassFunctionWithDomainUniqueness2 of (P2 := lambda((x, s), isInIntroductionFunctionImage(s)(x)), d := N))
+    have((limitOrdinal(N), fIsTheHeightFunction, hIsTheHeightFunction) |- f === h) by Cut(functionImageClassFunction, fixpointClassFunctionUniqueness of (S := lambda((x, s, z), isFunctionImage(s)(z)), n := N, g := h))
+    have(thesis) by Cut(heightDomainLimit, lastStep)
+  }
+
+  private val heightFunctionDomain = Lemma(hIsTheHeightFunction |- dom(h) === N) {
+    have(thesis) by Weakening(functionalOverDomain of (f := h, x := N))
   }
 
   /**
    * Lemma --- The height function is monotonic
    *
    *     `n <= m => height(n) ⊆ height(m)`
-   *
-   * TODO: Try to pull out
    */
-  private val heightMonotonic = benchmark(Lemma((hIsTheHeightFunction, in(n, N), in(m, N), m ⊆ n) |- subset(app(h, m), app(h, n))) {
-    have((introductionFunctionMonotonic.statement.right.head, introductionFunctionCumulative.statement.right.head, hIsTheHeightFunction, n ∈ dom(h), in(m, dom(h)), m ⊆ n) |- subset(app(h, m), app(h, n))) by Weakening(fixpointFunctionMonotonicity of (P2 := lambda((x, s), isInIntroductionFunctionImage(s)(x))))
-    have((introductionFunctionCumulative.statement.right.head, hIsTheHeightFunction, n ∈ dom(h), in(m, dom(h)), m ⊆ n) |- subset(app(h, m), app(h, n))) by 
-      Cut(introductionFunctionMonotonic, lastStep)
-    have((hIsTheHeightFunction, n ∈ dom(h), in(m, dom(h)), m ⊆ n) |- subset(app(h, m), app(h, n))) by 
-      Cut(introductionFunctionCumulative, lastStep)
-    thenHave((hIsTheHeightFunction, in(n, N), in(m, dom(h)), m ⊆ n, dom(h) === N) |- subset(app(h, m), app(h, n))) by LeftSubstEq.withParametersSimple(
-      List((dom(h), N)),
-      lambda(d, in(n, d))
-    )
-    thenHave((hIsTheHeightFunction, in(n, N), in(m, N), m ⊆ n, dom(h) === N) |- subset(app(h, m), app(h, n))) by LeftSubstEq.withParametersSimple(
-      List((dom(h), N)),
-      lambda(d, in(m, d))
-    )
-  })
+  private val heightMonotonic = Lemma(
+    (hIsTheHeightFunction, n < N, m < N, m ⊆ n) |- app(h, m) ⊆ app(h, n)
+  ) {
+    have((limitOrdinal(N), hIsTheHeightFunction) |- monotonic(h)) by 
+      Cut(introductionFunctionCumulative, fixpointFunctionMonotonicity of (S := lambda((x, s, z), isFunctionImage(s)(z)), n := N, f := h))
+    have(hIsTheHeightFunction |- monotonic(h)) by 
+      Cut(heightDomainLimit, lastStep)
+    have((hIsTheHeightFunction, n < dom(h), m < dom(h), m ⊆ n) |- app(h, m) ⊆ app(h, n)) by Cut(lastStep, monotonicElim of (f := h))
+    thenHave(thesis) by Substitution.ApplyRules(heightFunctionDomain)
+  }
+
+  private val heightSubsetSuccessor = Lemma(
+    (hIsTheHeightFunction, n < N) |- app(h, n) ⊆ app(h, successor(n))
+  ) {
+    have((hIsTheHeightFunction, n < N, limitOrdinal(N)) |- app(h, n) ⊆ app(h, successor(n))) by Cut(introductionFunctionCumulative, cumulativeFixpointClassFunctionSubsetSuccessor of (f := h, m := n, n := N, S := lambda((x, s, z), isFunctionImage(s)(z))))
+    have(thesis) by Cut(heightDomainLimit, lastStep)
+  }
 
   /**
    * Lemma --- The set of elements of height n + 1 is the set of elements of height n to which the introduction function is applied.
    *
    *     `height(n + 1) = introductionFunction(height(n))`
    */
-  private val heightSuccessorWeak = benchmark(Lemma((hIsTheHeightFunction, in(n, N)) |- in(x, app(h, successor(n))) <=> isInIntroductionFunctionImage(app(h, n))(x)) {
-    have((introductionFunctionMonotonic.statement.right.head, introductionFunctionCumulative.statement.right.head, hIsTheHeightFunction, in(successor(n), dom(h))) |- in(x, app(h, successor(n))) <=> isInIntroductionFunctionImage(app(h, n))(x)) by Weakening(fixpointFunctionSuccessor of (P2 := lambda((x, s), isInIntroductionFunctionImage(s)(x))))
-    have((introductionFunctionCumulative.statement.right.head, hIsTheHeightFunction, in(successor(n), dom(h))) |- in(x, app(h, successor(n))) <=> isInIntroductionFunctionImage(app(h, n))(x)) by 
-      Cut(introductionFunctionMonotonic, lastStep)
-    have((hIsTheHeightFunction, in(successor(n), dom(h))) |- in(x, app(h, successor(n))) <=> isInIntroductionFunctionImage(app(h, n))(x)) by 
-      Cut(introductionFunctionCumulative, lastStep)
-    thenHave((hIsTheHeightFunction, in(successor(n), N), dom(h) === N) |- in(x, app(h, successor(n))) <=> isInIntroductionFunctionImage(app(h, n))(x)) by LeftSubstEq.withParametersSimple(
-      List((dom(h), N)),
-      lambda(d, in(successor(n), d))
-    )
-    have((hIsTheHeightFunction, nonsuccessorOrdinal(N), in(n, N), dom(h) === N) |- in(x, app(h, successor(n))) <=> isInIntroductionFunctionImage(app(h, n))(x)) by Cut(nonsuccessorOrdinalIsInductive of (b := n, a := N), lastStep)
-    have((hIsTheHeightFunction, in(n, N), dom(h) === N) |- in(x, app(h, successor(n))) <=> isInIntroductionFunctionImage(app(h, n))(x)) by Cut(heightDomainLimit, lastStep)
-  })
+  private val heightSuccessor = Lemma((hIsTheHeightFunction, n < N) |- x ∈ app(h, successor(n)) <=> isInIntroductionFunctionImage(app(h, n))(x)) {
+    have((hIsTheHeightFunction, n < N) |- isFunctionImage(app(h, n))(app(h, successor(n)))) by Cut (heightDomainLimit, fixpointClassFunctionSuccessorUnfold of (f := h, n := N, S := lambda((x, s, z), isFunctionImage(s)(z)), m := n))
+    thenHave(thesis) by InstantiateForall(x)
+  }
+
+  private val heightZero = Lemma(hIsTheHeightFunction |- app(h, ∅) === ∅) {
+    have(thesis) by Cut(heightDomainLimit, fixpointClassFunctionZeroUnfold of (f := h, n := N, S := lambda((x, s, z), isFunctionImage(s)(z))))
+  }
+
+  private val heightLimit = Lemma((hIsTheHeightFunction, n < N, limitOrdinal(n)) |- app(h, n) === uran(h ↾ n)) {
+    have(thesis) by Cut(heightDomainLimit, fixpointClassFunctionLimitUnfold of (f := h, n := N, S := lambda((x, s, z), isFunctionImage(s)(z)), m := n))
+  }
 
   // ********
   // * TERM *
@@ -534,16 +511,17 @@ private class SyntacticADT[N <: Arity](using line: sourcecode.Line, file: source
    *
    * @param adt the set chracterizing this ADT
    */
-  private def termDescription(adt: Term): Formula = forall(t, in(t, adt) <=> forall(h, hIsTheHeightFunction ==> in(t, uran(h))))
+  private def termDescription(adt: Term): Formula = fixpointDescription(N)(lambda((x, s, z), isFunctionImage(s)(z)))(adt)
 
   /**
    * Lemma --- There exists a unique set satisfying the definition of this ADT
    *
    *     `∃!z. z = ADT
    */
-  private val termExistence = benchmark(Lemma(existsOne(z, termDescription(z))) {
-    have(thesis) by Cut(domainIsOrdinal, fixpointUniqueness of (P2 := lambda((x, s), isInIntroductionFunctionImage(s)(x)), d := N))
-  })
+  private val termExistence = Lemma(∃!(z, termDescription(z))) {
+    have(limitOrdinal(N) |- ∃!(z, termDescription(z))) by Cut(functionImageClassFunction, fixpointUniqueness of (S := lambda((x, s, z), isFunctionImage(s)(z)), n := N))
+    have(thesis) by Cut(heightDomainLimit, lastStep)
+  }
 
   /**
    * Class function defining the ADT. Takes as parameters the type variables of the ADT and return the set of all its instances.
@@ -555,43 +533,11 @@ private class SyntacticADT[N <: Arity](using line: sourcecode.Line, file: source
    */
   val term = polymorphicTerm.applySeq(typeVariablesSeq)
 
-  private val termDef = Lemma(hIsTheHeightFunction |- term === uran(h)) {
-
-      // STEP 0 : Instantiate the definition of this ADT and recover the forward and backward implications
-      have(termDescription(term)) by InstantiateForall(term)(polymorphicTerm.definition)
-      val termDescr = thenHave(in(x, term) <=> forall(h, hIsTheHeightFunction ==> in(x, uran(h)))) by InstantiateForall(x)
-      val termDescrForward = have(in(x, term) |- forall(h, hIsTheHeightFunction ==> in(x, uran(h)))) by Cut(
-        termDescr,
-        equivalenceApply of (p1 := in(x, term), p2 := forall(h, hIsTheHeightFunction ==> in(x, uran(h))))
-      )
-      val termDescrBackward = have(forall(h, hIsTheHeightFunction ==> in(x, uran(h))) |- in(x, term)) by Cut(
-        termDescr,
-        equivalenceRevApply of (p2 := in(x, term), p1 := forall(h, hIsTheHeightFunction ==> in(x, uran(h))))
-      )
-
-      // STEP 1.1 : Forward implication
-      have(forall(h, hIsTheHeightFunction ==> in(x, uran(h))) |- forall(h, hIsTheHeightFunction ==> in(x, uran(h)))) by Hypothesis
-      thenHave((forall(h, hIsTheHeightFunction ==> in(x, uran(h))), hIsTheHeightFunction) |- in(x, uran(h))) by InstantiateForall(h)
-      have((hIsTheHeightFunction, in(x, term)) |- in(x, uran(h))) by Cut(termDescrForward, lastStep)
-      val forward = thenHave(hIsTheHeightFunction |- in(x, term) ==> in(x, uran(h))) by RightImplies
-
-      // STEP 1.2 : Backward implication, follows from uniqueness of the height function
-      have(in(x, uran(h)) |- in(x, uran(h))) by Hypothesis
-      thenHave((f === h, in(x, uran(h))) |- in(x, uran(f))) by RightSubstEq.withParametersSimple(List((f, h)), lambda(h, in(x, uran(h))))
-      have((fIsTheHeightFunction, hIsTheHeightFunction, in(x, uran(h))) |- in(x, uran(f))) by Cut(heightFunctionUniqueness2, lastStep)
-      thenHave((hIsTheHeightFunction, in(x, uran(h))) |- fIsTheHeightFunction ==> in(x, uran(f))) by RightImplies
-      thenHave((hIsTheHeightFunction, in(x, uran(h))) |- forall(f, fIsTheHeightFunction ==> in(x, uran(f)))) by RightForall
-      have((hIsTheHeightFunction, in(x, uran(h))) |- in(x, term)) by Cut(lastStep, termDescrBackward)
-      val backward = thenHave(hIsTheHeightFunction |- in(x, uran(h)) ==> in(x, term)) by RightImplies
-
-      have(hIsTheHeightFunction |- in(x, term) <=> in(x, uran(h))) by RightIff(forward, backward)
-      thenHave(hIsTheHeightFunction |- forall(x, in(x, term) <=> in(x, uran(h)))) by RightForall
-      thenHave((hIsTheHeightFunction, (term === uran(h)) <=> forall(x, in(x, term) <=> in(x, uran(h)))) |- term === uran(h)) by RightSubstIff.withParametersSimple(
-        List((term === uran(h), forall(x, in(x, term) <=> in(x, uran(h))))),
-        lambda(p, p)
-      )
-      have(thesis) by Cut(extensionalityAxiom of (x := term, y := uran(h)), lastStep)
-    }
+  private val termDef = Lemma(
+    termDescription(term)
+  ) {
+    have(thesis) by InstantiateForall(term)(polymorphicTerm.definition)
+  }
 
   // *************************
   // * TYPING / INTRODUCTION *
@@ -601,128 +547,180 @@ private class SyntacticADT[N <: Arity](using line: sourcecode.Line, file: source
    * Lemma --- Every element of this ADT has a height. Conversely, if an element has a height, it is in this ADT.
    *
    *     ` x ∈ ADT <=> ∃n ∈ N. x ∈ height(n)`
+   *
    */
-  private val termHasHeight = benchmark(Lemma(hIsTheHeightFunction |- in(x, term) <=> ∃(n, in(n, N) /\ x ∈ app(h, n))) {
-    have((functional(h), dom(h) === N) |- in(x, uran(h)) <=> ∃(n, in(n, N) /\ x ∈ app(h, n))) by RightSubstEq.withParametersSimple(
-      List((dom(h), N)),
-      lambda(z, in(x, uran(h)) <=> ∃(n, in(n, z) /\ x ∈ app(h, n)))
-    )(unionRangeMembership of (z := x))
-    thenHave(hIsTheHeightFunction |- in(x, uran(h)) <=> ∃(n, in(n, N) /\ x ∈ app(h, n))) by Weakening
-    thenHave((hIsTheHeightFunction, term === uran(h)) |- in(x, term) <=> ∃(n, in(n, N) /\ x ∈ app(h, n))) by RightSubstEq.withParametersSimple(
-      List((term, uran(h))),
-      lambda(z, x ∈ z <=> ∃(n, in(n, N) /\ x ∈ app(h, n)))
-    )
-    have(thesis) by Cut(termDef, lastStep)
-  })
+  private val termHasHeight = Lemma(
+    hIsTheHeightFunction |- x ∈ term <=> ∃(n, (n < N) /\ x ∈ app(h, n))
+  ) {
+    have((limitOrdinal(N), classFunctionTwoArgs(lambda((x, s, z), isFunctionImage(s)(z))), hIsTheHeightFunction) |- x ∈ term <=> ∃(n, n ∈ N /\ x ∈ app(h, n))) by Cut(termDef, fixpointDescriptionMembership of (S := lambda((x, s, z), isFunctionImage(s)(z)), n := N, f := h, z := term))
+    have((limitOrdinal(N), hIsTheHeightFunction) |- x ∈ term <=> ∃(n, n ∈ N /\ x ∈ app(h, n))) by Cut(functionImageClassFunction, lastStep)
+    have(thesis) by Cut(heightDomainLimit, lastStep)
+  }
 
-  private val termHasHeightBackward = benchmark(Lemma((hIsTheHeightFunction, in(n, N), x ∈ app(h, n)) |- in(x, term)) {
-    have((in(n, N), x ∈ app(h, n)) |- in(n, N) /\ x ∈ app(h, n)) by Restate
-    thenHave((in(n, N), x ∈ app(h, n)) |- ∃(m, in(m, N) /\ in(x, app(h, m)))) by RightExists
-    have(thesis) by Apply(equivalenceRevApply).on(lastStep, termHasHeight.asInstanceOf)
-  })
+  private val termHasHeightIntro = Lemma(
+    (hIsTheHeightFunction, n < N, x ∈ app(h, n)) |- x ∈ term
+  ) {
+    have((limitOrdinal(N), classFunctionTwoArgs(lambda((x, s, z), isFunctionImage(s)(z))), hIsTheHeightFunction, n ∈ N, x ∈ app(h, n)) |- x ∈ term) by Cut(termDef, fixpointDescriptionIntro of (S := lambda((x, s, z), isFunctionImage(s)(z)), n := N, f := h, z := term, m := n))
+    have((limitOrdinal(N), hIsTheHeightFunction, n ∈ N, x ∈ app(h, n)) |- x ∈ term) by Cut(functionImageClassFunction, lastStep)
+    have(thesis) by Cut(heightDomainLimit, lastStep)
+  }
 
-  private val heightSubsetTerm = benchmark(Lemma((hIsTheHeightFunction, in(n, N)) |- subset(app(h, n), term)) {
-    have((hIsTheHeightFunction, in(n, N)) |- x ∈ app(h, n) ==> in(x, term)) by RightImplies(termHasHeightBackward)
-    thenHave((hIsTheHeightFunction, in(n, N)) |- forall(x, x ∈ app(h, n) ==> in(x, term))) by RightForall
-    have(thesis) by Cut(lastStep, subsetIntro of (x := app(h, n), y := term))
-  })
+  private val heightSubsetTerm = Lemma(
+    (hIsTheHeightFunction, n < N) |- app(h, n) ⊆ term
+  ) {
+    have((limitOrdinal(N), classFunctionTwoArgs(lambda((x, s, z), isFunctionImage(s)(z))), hIsTheHeightFunction, n ∈ N) |- app(h, n) ⊆ term) by Cut(termDef, fixpointFunctionSubsetFixpoint of (S := lambda((x, s, z), isFunctionImage(s)(z)), n := N, f := h, z := term, m := n))
+    have((limitOrdinal(N), hIsTheHeightFunction, n ∈ N) |- app(h, n) ⊆ term) by Cut(functionImageClassFunction, lastStep)
+    have(thesis) by Cut(heightDomainLimit, lastStep)
+  }
+
+  private def getOrElseMonotonic(ty : ConstructorArgument): THM = Lemma(
+    (hIsTheHeightFunction, n < N, m < N, m ⊆ n) |- ty.getOrElse(app(h, m)) ⊆ ty.getOrElse(app(h, n))
+  ) {
+    ty match 
+      case GroundType(t) => have(thesis) by Weakening(subsetReflexivity of (x := t))
+      case Self => have(thesis) by Restate.from(heightMonotonic)
+      case FunctionType(from, to) => 
+        have(thesis) by Cut(getOrElseMonotonic(to), setOfFunctionsRightMonotonic of (x := from, y := to.getOrElse(app(h, m)), z := to.getOrElse(app(h, n))))
+  }
+
+  private def getOrElseHeightSubsetTerm(ty : ConstructorArgument): THM = Lemma(
+    (hIsTheHeightFunction, n < N) |- ty.getOrElse(app(h, n)) ⊆ ty.getOrElse(term)
+  ) {
+    ty match 
+      case GroundType(t) => have(thesis) by Weakening(subsetReflexivity of (x := t))
+      case Self => have(thesis) by Restate.from(heightSubsetTerm)
+      case FunctionType(from, to) => 
+        have(thesis) by Cut(getOrElseHeightSubsetTerm(to), setOfFunctionsRightMonotonic of (x := from, y := to.getOrElse(app(h, n)), z := to.getOrElse(term)))
+  }
+
+  private def getOrElseHasHeightFunctionType(from : Term, to : ConstructorArgument) = Axiom(
+    hIsTheHeightFunction ==> (x ∈ (from |=> to.getOrElse(term)) <=> ∃(n, (n < N) /\ x ∈ (from |=> to.getOrElse(app(h, n)))))
+  )
+
+  private def getOrElseHasHeight(ty : ConstructorArgument) = Lemma(
+    hIsTheHeightFunction |- x ∈ ty.getOrElse(term) <=> ∃(n, (n < N) /\ x ∈ ty.getOrElse(app(h, n)))
+  ) {
+    ty match 
+      case GroundType(t) => 
+        have(∃(n, n < N) |- x ∈ t <=> ∃(n, (n < N) /\ x ∈ t)) by Tableau
+        have(x ∈ t <=> ∃(n, (n < N) /\ x ∈ t)) by Cut(heightDomainHasElement, lastStep)
+        thenHave(thesis) by Weakening
+      case Self => have(thesis) by Restate.from(termHasHeight)
+      case FunctionType(from, to) => have(thesis) by Restate.from(getOrElseHasHeightFunctionType(from, to))
+  }
 
   /**
    * Lemma --- Every element of this ADT has a height. Conversely, if an element has a height, it is in this ADT.
    *
    *     ` xi, ..., xj ∈ ADT <=> ∃n ∈ N. xi, ..., xj ∈ height(n)`
    *
-   * TODO: Work this out
-   * TODO: Split into two lemmas
    */
-  private val termsHaveHeight = benchmark(constructors
-    .map(c =>
-      c -> Lemma(hIsTheHeightFunction |- (constructorVarsInDomain(c, term) <=> ∃(n, in(n, N) /\ constructorVarsInDomain(c, app(h, n))))) {
-
-        if c.variables.isEmpty then have(thesis) by Weakening(existsNat)
+  private val getOrElseHaveHeight = constructors
+    .map(co =>
+      co -> Lemma(hIsTheHeightFunction |- (constructorVarsInDomain(co, term) <=> ∃(n, (n < N) /\ constructorVarsInDomain(co, app(h, n))))) {
+        if co.variables.isEmpty then 
+          have(thesis) by Weakening(heightDomainHasElement)
         else
 
-          // STEP 1: Backward implication
+          val forward = have(hIsTheHeightFunction |- constructorVarsInDomain(co, term) ==> ∃(n, (n < N) /\ constructorVarsInDomain(co, app(h, n)))) subproof {
 
-          val backward = have(hIsTheHeightFunction |- ∃(n, in(n, N) /\ constructorVarsInDomain(c, app(h, n))) ==> constructorVarsInDomain(c, term)) subproof {
-            val andSeq = for (v, ty) <- c.signature yield 
-              ty match
-                case Self =>
-                  have((hIsTheHeightFunction, in(n, N) /\ constructorVarsInDomain(c, app(h, n))) |- in(v, term)) by Weakening(termHasHeightBackward of (x := v))
-                case GroundType(t) =>
-                  have((hIsTheHeightFunction, in(n, N) /\ constructorVarsInDomain(c, app(h, n))) |- in(v, t)) by Restate
-                case f: FunctionType =>
-                  have((hIsTheHeightFunction, in(n, N)) |- subset(f.getOrElse(app(h, n)), f.getOrElse(term))) by Cut(heightSubsetTerm, f.monotonicity of (y := app(h, n), z := term))
-                  have((hIsTheHeightFunction, in(n, N), in(v, f.getOrElse(app(h, n)))) |- in(v, f.getOrElse(term))) by Cut(
-                    lastStep, subsetElim of (z := v, x := f.getOrElse(app(h, n)), y := f.getOrElse(term))
-                  )
-                  thenHave((hIsTheHeightFunction, in(n, N) /\ constructorVarsInDomain(c, app(h, n))) |- in(v, f.getOrElse(term))) by Weakening
+            val si = co.specification.size
 
-            have((hIsTheHeightFunction, in(n, N) /\ constructorVarsInDomain(c, app(h, n))) |- constructorVarsInDomain(c, term)) by RightAnd(andSeq*)
-            thenHave((hIsTheHeightFunction, ∃(n, in(n, N) /\ constructorVarsInDomain(c, app(h, n)))) |- constructorVarsInDomain(c, term)) by LeftExists
+            have(∅ < N) by Restate.from(zeroInHeightDomain)
+
+            val (unionNi, niInN) = 
+              Range(0, si).foldLeft[(Term, Set[Formula])]((∅, Set()))((acc, i) =>
+                val (un, assumptions) = acc
+                val ni = Variable(s"n${i}")
+                val newUn = un ∪ ni
+
+                have(assumptions + (ni < N) + (ordinal(N)) |- newUn < N) by Cut(lastStep, unionOrdinalMembership of (a := un, b := ni, c := N))
+
+                (newUn, assumptions + (ni < N) + (ordinal(N)))
+              )
+
+            val unionNiInN = have(niInN |- unionNi < N) by Cut(heightDomainOrdinal, lastStep)
+
+            val operands = for (typeInd, zi) <- co.specification.zipWithIndex.zip(co.variables) yield
+
+              val (ty, i) = typeInd
+              val ni = Variable(s"n${i}")
+
+              // ni ⊆ unionNi
+              Range(0, si).foldLeft[Term](∅)((acc, j) =>
+                val nj = Variable(s"n${j}")
+                val newAcc = acc ∪ nj
+
+                if i == j then
+                  have(ni ⊆ newAcc) by Restate.from(setUnionRightSubset of (a := acc, b := nj))
+                else if j > i then
+                  have(acc ⊆ newAcc |- ni ⊆ newAcc) by Cut(lastStep, subsetTransitivity of (x := ni, y := acc, z := newAcc))
+                  have(ni ⊆ newAcc) by Cut(setUnionLeftSubset of (a := acc, b := nj), lastStep)
+
+                newAcc
+              )
+              
+              have((hIsTheHeightFunction, unionNi < N, ni < N) |- ty.getOrElse(app(h, ni)) ⊆ ty.getOrElse(app(h, unionNi))) by Cut(lastStep, getOrElseMonotonic(ty) of (m := ni, n := unionNi))
+              have(niInN + hIsTheHeightFunction |- ty.getOrElse(app(h, ni)) ⊆ ty.getOrElse(app(h, unionNi))) by Cut(unionNiInN, lastStep)
+              have((niInN + hIsTheHeightFunction + zi ∈ ty.getOrElse(app(h, ni))) |- zi ∈ ty.getOrElse(app(h, unionNi))) by Cut(lastStep, subsetElim of (z := zi, x := ty.getOrElse(app(h, ni)), y := ty.getOrElse(app(h, unionNi))))
+
+
+            val constructorVarsInDomainHNSplit = co.specification.zipWithIndex.zip(co.variables).map((typeInd, zi) => zi ∈ typeInd._1.getOrElse(app(h, Variable(s"n${typeInd._2}"))))
+
+            have(niInN ++ constructorVarsInDomainHNSplit + hIsTheHeightFunction |- constructorVarsInDomain(co, app(h, unionNi))) by RightAnd(operands*)
+            have(niInN ++ constructorVarsInDomainHNSplit + hIsTheHeightFunction |- (unionNi < N) /\ constructorVarsInDomain(co, app(h, unionNi))) by RightAnd(lastStep, unionNiInN)
+            thenHave(niInN ++ constructorVarsInDomainHNSplit + hIsTheHeightFunction |- ∃(n, (n < N) /\ constructorVarsInDomain(co, app(h, n)))) by RightExists
+
+            val constructorVarsInDomainHNSplitWithBound = (co.specification.zipWithIndex.zip(co.variables).map((typeInd, zi) => (Variable(s"n${typeInd._2}") < N) /\ zi ∈ typeInd._1.getOrElse(app(h, Variable(s"n${typeInd._2}"))))).toSet
+
+            thenHave(constructorVarsInDomainHNSplitWithBound + ordinal(N) + hIsTheHeightFunction |- ∃(n, (n < N) /\ constructorVarsInDomain(co, app(h, n)))) by Restate
+            have(constructorVarsInDomainHNSplitWithBound + hIsTheHeightFunction |- ∃(n, (n < N) /\ constructorVarsInDomain(co, app(h, n)))) by Cut(heightDomainOrdinal, lastStep)
+
+
+            co.specification.zipWithIndex.zip(co.variables).foldLeft(constructorVarsInDomainHNSplitWithBound.toSet)((acc, el) => 
+              val ((ty, i), zi) = el
+              val ni = Variable(s"n${i}") 
+              val varInDomain = (ni < N) /\ zi ∈ ty.getOrElse(app(h, ni))
+              val newAcc = acc - varInDomain + ∃(ni, varInDomain)
+              thenHave(newAcc + hIsTheHeightFunction |- ∃(n, (n < N) /\ constructorVarsInDomain(co, app(h, n)))) by LeftExists
+              newAcc
+            )
+            
+
+            val exConstructorVarsInDomainHN: Seq[Formula] = (co.specification.zip(co.variables).map((ty, zi) => ∃(n, (n < N) /\ zi ∈ ty.getOrElse(app(h, n)))))
+            thenHave((/\+(exConstructorVarsInDomainHN), hIsTheHeightFunction) |- ∃(n, (n < N) /\ constructorVarsInDomain(co, app(h, n)))) by Weakening
+
+            val formVars = co.specification.zipWithIndex.map((ty, i) => VariableFormula(s"form${i}"))
+            val constructorVarsInTerm = co.specification.zip(co.variables).map((ty, zi) => zi ∈ ty.getOrElse(term))
+            val zipConstructorVars = exConstructorVarsInDomainHN.zip(constructorVarsInTerm)
+
+            thenHave(
+              zipConstructorVars.map(_ <=> _).toSet +
+              constructorVarsInDomain(co, term) + hIsTheHeightFunction |- ∃(n, (n < N) /\ constructorVarsInDomain(co, app(h, n)))
+            ) by 
+              LeftSubstIff.withParametersSimple(zipConstructorVars.toList, lambda(formVars, /\+ (formVars)))
+
+            co.specification.zip(co.variables).foldLeft(zipConstructorVars.map(_ <=> _))((acc, el) => 
+              val (ty, zi) = el
+              val tailAcc = acc.tail
+              have(tailAcc.toSet + constructorVarsInDomain(co, term) + hIsTheHeightFunction |- ∃(n, (n < N) /\ constructorVarsInDomain(co, app(h, n)))) by Cut(getOrElseHasHeight(ty) of (x := zi), lastStep)
+              tailAcc
+            )
           }
 
-          // STEP 2: Forward implication
-
-          val forward = have(hIsTheHeightFunction |- constructorVarsInDomain(c, term) ==> ∃(n, in(n, N) /\ constructorVarsInDomain(c, app(h, n)))) subproof {
-            val nSeq: Seq[Variable] = (0 until c.variables.size).map(i => Variable(s"n$i"))
-
-            val niInN = /\+(nSeq.map(ni => in(ni, N)))
-            val constructorVarsInHNi = /\+(c.signature.zip(nSeq).map((p, ni) => in(p._1, p._2.getOrElse(app(h, ni)))))
-            val constructorVarsInHNiAndN = c.signature.zip(nSeq).map((p, ni) => in(ni, N) /\ in(p._1, p._2.getOrElse(app(h, ni))))
-
-            val max = if c.arity == 0 then ∅ else nSeq.reduce[Term](_ ∪ _)
-            val maxInN = have(niInN |- in(max, N)) by Sorry
-
-            val andSeq = for ((v, ty), ni) <- c.signature.zip(nSeq) yield
-              val niInMax = have(subset(ni, max)) by Sorry
-
-              ty match
-                case Self =>
-                  have((hIsTheHeightFunction, in(ni, N), in(max, N)) |- subset(app(h, ni), app(h, max))) by 
-                    Cut(niInMax, heightMonotonic of (m := ni, n := max))
-                  have((hIsTheHeightFunction, in(ni, N), in(max, N), in(v, app(h, ni))) |- in(v, app(h, max))) by 
-                    Cut(lastStep, subsetElim of (z := v, x := app(h, ni), y := app(h, max)))
-                case GroundType(t) =>
-                  have((hIsTheHeightFunction, in(max, N), in(v, t)) |- in(v, t)) by Restate
-                case f: FunctionType => 
-                  have((hIsTheHeightFunction, in(ni, N), in(max, N)) |- subset(app(h, ni), app(h, max))) by 
-                    Cut(niInMax, heightMonotonic of (m := ni, n := max))
-                  have((hIsTheHeightFunction, in(ni, N), in(max, N)) |- subset(f.getOrElse(app(h, ni)), f.getOrElse(app(h, max)))) by 
-                    Cut(lastStep, f.monotonicity of (y := app(h, ni), z := app(h, max)))
-                  have((hIsTheHeightFunction, in(ni, N), in(max, N), in(v, f.getOrElse(app(h, ni)))) |- in(v, f.getOrElse(app(h, max)))) by 
-                    Cut(lastStep, subsetElim of (z := v, x := f.getOrElse(app(h, ni)), y := f.getOrElse(app(h, max))))
-            
-              thenHave((hIsTheHeightFunction, in(max, N), niInN, constructorVarsInHNi) |- in(v, ty.getOrElse(app(h, max)))) by Weakening
-            
-            have((hIsTheHeightFunction, in(max, N), niInN, constructorVarsInHNi) |- constructorVarsInDomain(c, app(h, max))) by RightAnd(andSeq*)
-            have((hIsTheHeightFunction, niInN, constructorVarsInHNi) |- constructorVarsInDomain(c, app(h, max))) by Cut(maxInN, lastStep)
-            have((hIsTheHeightFunction, niInN, constructorVarsInHNi) |- in(max, N) /\ constructorVarsInDomain(c, app(h, max))) by RightAnd(maxInN, lastStep)
-            thenHave((hIsTheHeightFunction, niInN, constructorVarsInHNi) |- ∃(n, in(n, N) /\ constructorVarsInDomain(c, app(h, n)))) by RightExists
-            thenHave(constructorVarsInHNiAndN.toSet + hIsTheHeightFunction |- ∃(n, in(n, N) /\ constructorVarsInDomain(c, app(h, n)))) by Restate
-
-            
-
-
-            // c.signature.zip(nSeq).foldLeft((Seq[Formula](), constructorVarsInHNiAndN.toList))( (p, el) => 
-            //   val ((v, ty), ni) = el
-            //   val (processedFormulas, remainingFormulas) = p
-            //   val (processedFormulasSet, remainingFormulasSet) = (processedFormulas.toSet, remainingFormulas.tail.toSet)
-
-            //   thenHave((processedFormulasSet + ∃(ni, in(ni, N) /\ in(v, ty.getOrElse(app(h, ni))))) ++ remainingFormulas) by LeftExists
-            //   thenHave((processedFormulasSet + ) ++ remainingFormulas) by LeftExists
-
-            //   (processedFormulas, remainingFormulas.tail)
-            // )
-
-            sorry
+          val backward = have(hIsTheHeightFunction |- ∃(n, (n < N) /\ constructorVarsInDomain(co, app(h, n))) ==> constructorVarsInDomain(co, term)) subproof {
+            val operands = co.specification.zip(co.variables).map( (ty, zi) => 
+              have((hIsTheHeightFunction, (n < N), zi ∈ ty.getOrElse(app(h, n))) |- zi ∈ ty.getOrElse(term)) by Cut(getOrElseHeightSubsetTerm(ty), subsetElim of (z := zi, x := ty.getOrElse(app(h, n)), y := ty.getOrElse(term)))
+              thenHave((hIsTheHeightFunction, (n < N) /\ constructorVarsInDomain(co, app(h, n))) |- zi ∈ ty.getOrElse(term)) by Weakening
+              thenHave((hIsTheHeightFunction, ∃(n, (n < N) /\ constructorVarsInDomain(co, app(h, n)))) |- zi ∈ ty.getOrElse(term)) by LeftExists
+            )
+            have((hIsTheHeightFunction, ∃(n, (n < N) /\ constructorVarsInDomain(co, app(h, n)))) |- constructorVarsInDomain(co, term)) by RightAnd(operands*)
           }
 
-          // STEP 3: Conclude
-          have(thesis) by RightIff(forward, backward)
+          have(hIsTheHeightFunction |- constructorVarsInDomain(co, term) <=> ∃(n, (n < N) /\ constructorVarsInDomain(co, app(h, n)))) by RightIff(forward, backward)
       }
     )
-    .toMap)
+    .toMap
 
   /**
    * Lemma --- If all inductive arguments of a constructor have height below n then the instance of
@@ -732,17 +730,8 @@ private class SyntacticADT[N <: Arity](using line: sourcecode.Line, file: source
    */
   private val heightConstructor = benchmark(constructors
     .map(c =>
-      c -> Lemma((hIsTheHeightFunction, in(n, N), constructorVarsInDomain(c, app(h, n))) |- in(c.term, app(h, successor(n)))) {
-
-        // Caching
-        val constructorInIntroFunHeight = isInIntroductionFunctionImage(app(h, n))(c.term)
-
-        // Chaining the lemma on the elements of height n + 1 and the one on constructors being in the image of the introduction function
-        have((hIsTheHeightFunction, in(n, N), constructorInIntroFunHeight) |- in(c.term, app(h, successor(n)))) by Cut(
-          heightSuccessorWeak of (x := c.term),
-          equivalenceRevApply of (p1 := constructorInIntroFunHeight, p2 := in(c.term, app(h, successor(n))))
-        )
-        have((hIsTheHeightFunction, in(n, N), constructorVarsInDomain(c, app(h, n))) |- in(c.term, app(h, successor(n)))) by Cut(constructorIsInIntroductionFunction(c) of (s := app(h, n)), lastStep)
+      c -> Lemma((hIsTheHeightFunction, n < N, constructorVarsInDomain(c, app(h, n))) |- c.term ∈ app(h, successor(n))) {
+        have((hIsTheHeightFunction, n < N, constructorVarsInDomain(c, app(h, n))) |- c.term ∈ app(h, successor(n))) by Substitution.ApplyRules(heightSuccessor of (x := c.term))(constructorIsInIntroductionFunction(c) of (s := app(h, n)))
       }
     )
     .toMap)
@@ -756,28 +745,23 @@ private class SyntacticADT[N <: Arity](using line: sourcecode.Line, file: source
   val intro = benchmark(constructors
     .map(c => {
       c ->
-        Lemma(simplify(constructorVarsInDomain(c, term)) |- simplify(in(c.term, term))) {
-          // STEP 0: Instantiate the forward direction of termsHaveHeight.
-          val termsHaveHeightForward = have((hIsTheHeightFunction, constructorVarsInDomain(c, term)) |- ∃(n, in(n, N) /\ constructorVarsInDomain(c, app(h, n)))) by Cut(
-            termsHaveHeight(c),
-            equivalenceApply of (p1 := constructorVarsInDomain(c, term), p2 := ∃(n, in(n, N) /\ constructorVarsInDomain(c, app(h, n))))
-          )
+        Lemma(simplify(constructorVarsInDomain(c, term)) |- simplify(c.term ∈ term)) {
 
           // STEP 1: Prove that if an instance of a constructor has height n + 1 then it is in this ADT.
-          have((hIsTheHeightFunction, in(n, N), in(c.term, app(h, successor(n)))) |- in(c.term, term)) by Cut(successorIsNat, termHasHeightBackward of (n := successor(n), x := c.term))
+          have((hIsTheHeightFunction, n < N, c.term ∈ app(h, successor(n))) |- c.term ∈ term) by Cut(successorIsInHeightDomain, termHasHeightIntro of (n := successor(n), x := c.term))
 
           // STEP 2: Prove that if the inductive arguments of the constructor have height then the instance of the constructor is in the ADT.
-          have((hIsTheHeightFunction, in(n, N), constructorVarsInDomain(c, app(h, n))) |- in(c.term, term)) by Cut(heightConstructor(c), lastStep)
+          have((hIsTheHeightFunction, n < N, constructorVarsInDomain(c, app(h, n))) |- c.term ∈ term) by Cut(heightConstructor(c), lastStep)
 
           // STEP 3: Prove that if the inductive arguments of the constructor are in the ADT then they have a height and therefore
           // the instance of the constructor is in the ADT.
-          thenHave((hIsTheHeightFunction, in(n, N) /\ constructorVarsInDomain(c, app(h, n))) |- in(c.term, term)) by LeftAnd
-          thenHave((hIsTheHeightFunction, ∃(n, in(n, N) /\ constructorVarsInDomain(c, app(h, n)))) |- in(c.term, term)) by LeftExists
-          have((hIsTheHeightFunction, constructorVarsInDomain(c, term)) |- in(c.term, term)) by Cut(termsHaveHeightForward, lastStep)
+          thenHave((hIsTheHeightFunction, (n < N) /\ constructorVarsInDomain(c, app(h, n))) |- c.term ∈ term) by LeftAnd
+          thenHave((hIsTheHeightFunction, ∃(n, (n < N) /\ constructorVarsInDomain(c, app(h, n)))) |- c.term ∈ term) by LeftExists
+          thenHave((hIsTheHeightFunction, constructorVarsInDomain(c, term)) |- c.term ∈ term) by Substitution.ApplyRules(getOrElseHaveHeight(c))
 
           // STEP 4: Remove lingering assumptions
-          thenHave((∃(h, hIsTheHeightFunction), constructorVarsInDomain(c, term)) |- in(c.term, term)) by LeftExists
-          have(constructorVarsInDomain(c, term) |- in(c.term, term)) by Cut(heightFunctionExistence, lastStep)
+          thenHave((∃(h, hIsTheHeightFunction), constructorVarsInDomain(c, term)) |- c.term ∈ term) by LeftExists
+          have(constructorVarsInDomain(c, term) |- c.term ∈ term) by Cut(heightFunctionExistence, lastStep)
         }
     })
     .toMap)
@@ -785,121 +769,6 @@ private class SyntacticADT[N <: Arity](using line: sourcecode.Line, file: source
   // ************************
   // * STRUCTURAL INDUCTION *
   // ************************
-
-  /**
-   * Lemma --- An element has height n + 1 if and only if it is the instance of some constructor with inductive arguments of height n.
-   *
-   *    ` x ∈ height(n + 1) <=> x = c(x1, ..., xn) for some c and xi, ..., xj ∈ height(n)`
-   */
-  private lazy val heightSuccessorStrong = benchmark(Lemma((hIsTheHeightFunction, in(n, N)) |- in(x, app(h, successor(n))) <=> isConstructor(x, app(h, n))) {
-
-    // STEP 0: Caching
-    val isIntroductionFunImageHN = isInIntroductionFunctionImage(app(h, n))(x)
-    val isConstructorXHN = isConstructor(x, app(h, n))
-
-    // STEP 1: Prove the forward implication
-    val forward = have((hIsTheHeightFunction, in(n, N)) |- isIntroductionFunImageHN ==> isConstructorXHN) subproof {
-
-      def inductionFormulaN: Formula = isIntroductionFunImageHN ==> isConstructorXHN
-      val inductionFormulaSuccN: Formula = inductionFormulaN.substitute(n := successor(n))
-
-      // STEP 1.1 : Base case
-      val isContructorXHEmptySet = isConstructor(x, app(h, ∅))
-      val baseCaseLeft = have(isContructorXHEmptySet |- isContructorXHEmptySet) by Hypothesis
-      val baseCaseRight = have((hIsTheHeightFunction, in(x, app(h, ∅))) |- ()) by Sorry //Restate.from(heightZero)
-      have((hIsTheHeightFunction, isInIntroductionFunctionImage(app(h, ∅))(x)) |- isContructorXHEmptySet) by LeftOr(baseCaseLeft, baseCaseRight)
-      thenHave(hIsTheHeightFunction |- isInIntroductionFunctionImage(app(h, ∅))(x) ==> isContructorXHEmptySet) by RightImplies
-      val inductiveCaseRemaining = have((hIsTheHeightFunction, forall(n, in(n, N) ==> (inductionFormulaN ==> inductionFormulaSuccN))) |- forall(n, in(n, N) ==> inductionFormulaN)) by 
-      Sorry
-      // Cut(
-      //   lastStep,
-      //   natInduction of (P := lambda(n, inductionFormulaN))
-      // )
-
-      // STEP 1.2 : Use monotonicity to prove that y ∈ height(n) => y ∈ height(n + 1)
-      have((hIsTheHeightFunction, in(n, N), subset(n, successor(n))) |- subset(app(h, n), app(h, successor(n)))) by Cut(successorIsNat, heightMonotonic of (n := successor(n), m := n))
-      val heightSubsetSucc = have((hIsTheHeightFunction, in(n, N)) |- subset(app(h, n), app(h, successor(n)))) by Cut(subsetSuccessor of (a := n), lastStep)
-      val liftHeight = have((hIsTheHeightFunction, in(n, N), in(z, app(h, n))) |- in(z, app(h, successor(n)))) by Cut(lastStep, subsetElim of (x := app(h, n), y := app(h, successor(n))))
-
-      // STEP 1.3 : Generalize the above result to show that if for some c, x = c(x1, ..., xn) with xi, ..., xj ∈ height(n)
-      // then for some c', x = c'(x1, ..., xn) with xi, ..., xj ∈ height(n + 1).
-
-      // Caching
-      val isConstructorXHSuccN = isConstructor(x, app(h, successor(n)))
-      val liftConstructorHeight =
-        if constructors.size == 0 then have((hIsTheHeightFunction, in(n, N), isConstructorXHN) |- isConstructorXHSuccN) by Restate
-        else
-          val liftConstructorHeightOrSequence =
-            for c <- constructors yield
-
-              // Caching
-              val isConstructorCXHN = isConstructor(c, x, app(h, n))
-              val isConstructorCXHSuccN = isConstructor(c, x, app(h, successor(n)))
-              val constructorVarsInHN = constructorVarsInDomain(c, app(h, n))
-              val constructorVarsInHSuccN = constructorVarsInDomain(c, app(h, successor(n)))
-
-              if c.arity == 0 then have((hIsTheHeightFunction, in(n, N), isConstructorCXHN) |- isConstructorCXHSuccN) by Restate
-              else
-                val liftHeightAndSequence =
-                  for (v, ty) <- c.signature yield 
-                    ty match
-                      case Self => 
-                        have((hIsTheHeightFunction, in(n, N), constructorVarsInHN) |- in(v, app(h, successor(n)))) by Weakening(liftHeight of (z := v))
-                      case GroundType(t) =>
-                        have((hIsTheHeightFunction, in(n, N), constructorVarsInHN) |- in(v, t)) by Restate
-                      case f: FunctionType =>
-                        have((hIsTheHeightFunction, in(n, N)) |- subset(f.getOrElse(app(h, n)), f.getOrElse(app(h, successor(n))))) by Cut(heightSubsetSucc, f.monotonicity of (y := app(h, n), z := app(h, successor(n))))
-                        have((hIsTheHeightFunction, in(n, N), in(v, f.getOrElse(app(h, n)))) |- in(v, f.getOrElse(app(h, successor(n))))) by Cut(lastStep, subsetElim of (x := f.getOrElse(app(h, n)), y := f.getOrElse(app(h, successor(n))), z := v))
-                        thenHave((hIsTheHeightFunction, in(n, N), constructorVarsInHN) |- in(v, f.getOrElse(app(h, successor(n))))) by Weakening
-
-                val left = have((hIsTheHeightFunction, in(n, N), constructorVarsInHN) |- constructorVarsInHSuccN) by RightAnd(liftHeightAndSequence*)
-                val right = have(x === c.term |- x === c.term) by Hypothesis
-
-                have((hIsTheHeightFunction, in(n, N), constructorVarsInHN, (x === c.term)) |- constructorVarsInHSuccN /\ (x === c.term )) by RightAnd(
-                  left,
-                  right
-                )
-                thenHave((hIsTheHeightFunction, in(n, N), constructorVarsInHN /\ (x === c.term)) |- constructorVarsInHSuccN /\ (x === c.term)) by LeftAnd
-                thenHave((hIsTheHeightFunction, in(n, N), constructorVarsInHN /\ (x === c.term)) |- isConstructorCXHSuccN) by QuantifiersIntro(c.variables)
-                thenHave((hIsTheHeightFunction, in(n, N), isConstructorCXHN) |- isConstructorCXHSuccN) by QuantifiersIntro(c.variables)
-
-              thenHave((hIsTheHeightFunction, in(n, N), isConstructorCXHN) |- isConstructorXHSuccN) by Weakening
-
-          have((hIsTheHeightFunction, in(n, N), isConstructorXHN) |- isConstructorXHSuccN) by LeftOr(liftConstructorHeightOrSequence*)
-
-      // STEP 1.4: Show that x ∈ introductionFunction(height(n + 1)) => for some c, x = c(x1, ..., xn)
-      // with xi, ..., xj ∈ height(n + 1).
-      val heightSuccessorWeakForward = have((hIsTheHeightFunction, in(n, N), in(x, app(h, successor(n)))) |- isIntroductionFunImageHN) by Cut(
-        heightSuccessorWeak,
-        equivalenceApply of (p1 := in(x, app(h, successor(n))), p2 := isIntroductionFunImageHN)
-      )
-      have((inductionFormulaN, isIntroductionFunImageHN) |- isConstructorXHN) by Restate
-      have((hIsTheHeightFunction, in(n, N), in(x, app(h, successor(n))), inductionFormulaN) |- isConstructorXHN) by Cut(heightSuccessorWeakForward, lastStep)
-      val right = have((hIsTheHeightFunction, in(n, N), in(x, app(h, successor(n))), inductionFormulaN) |- isConstructorXHSuccN) by Cut(lastStep, liftConstructorHeight)
-      val left = have(isConstructorXHSuccN |- isConstructorXHSuccN) by Hypothesis
-      have((hIsTheHeightFunction, in(n, N), inductionFormulaN, isInIntroductionFunctionImage(app(h, successor(n)))(x)) |- isConstructorXHSuccN) by LeftOr(left, right)
-
-      // STEP 1.5: Conclude
-      thenHave((hIsTheHeightFunction, in(n, N), inductionFormulaN) |- inductionFormulaSuccN) by RightImplies
-      thenHave((hIsTheHeightFunction, in(n, N)) |- inductionFormulaN ==> inductionFormulaSuccN) by RightImplies
-      thenHave(hIsTheHeightFunction |- in(n, N) ==> (inductionFormulaN ==> inductionFormulaSuccN)) by RightImplies
-      thenHave(hIsTheHeightFunction |- forall(n, in(n, N) ==> (inductionFormulaN ==> inductionFormulaSuccN))) by RightForall
-      have(hIsTheHeightFunction |- forall(n, in(n, N) ==> inductionFormulaN)) by Cut(lastStep, inductiveCaseRemaining)
-      thenHave(hIsTheHeightFunction |- in(n, N) ==> inductionFormulaN) by InstantiateForall(n)
-    }
-
-    // STEP 2: Prove the backward implication
-    val backward = have((hIsTheHeightFunction, in(n, N)) |- isConstructorXHN ==> isIntroductionFunImageHN) by Restate
-
-    // STEP 3: Conclude
-    have((hIsTheHeightFunction, in(n, N)) |- isIntroductionFunImageHN <=> isConstructorXHN) by RightIff(forward, backward)
-    
-    thenHave((hIsTheHeightFunction, in(n, N), isIntroductionFunImageHN <=> in(x, app(h, successor(n)))) |- in(x, app(h, successor(n))) <=> isConstructorXHN) by RightSubstIff.withParametersSimple(
-      List((isIntroductionFunImageHN, in(x, app(h, successor(n))))),
-      lambda(p, p <=> isConstructorXHN)
-    )
-    have(thesis) by Cut(heightSuccessorWeak, lastStep)
-  })
 
   /**
    * Generates the structural inductive case for a given constructor.
@@ -911,10 +780,10 @@ private class SyntacticADT[N <: Arity](using line: sourcecode.Line, file: source
       c -> c.signature.foldRight[Formula](P(c.term))((el, fc) =>
         val (v, ty) = el
         ty match
-          case Self => forall(v, in(v, term) ==> (P(v) ==> fc))
-          case GroundType(t) => forall(v, in(v, t) ==> fc)
+          case Self => ∀(v, v ∈ term ==> (P(v) ==> fc))
+          case GroundType(t) => ∀(v, v ∈ t ==> (True ==> fc))
           case f : FunctionType => 
-            forall(v, in(v, f.getOrElse(term)) ==> (forallSeq(f.variables, f.wellTypedDomains ==>  P(appSeq(v)(f.variables))) ==> fc))
+            ∀(v, v ∈ f.getOrElse(term) ==> (forallSeq(f.variables, f.wellTypedDomains ==>  P(appSeq(v)(f.variables))) ==> fc))
       )
     )
     .toMap
@@ -922,362 +791,100 @@ private class SyntacticADT[N <: Arity](using line: sourcecode.Line, file: source
   /**
    * Lemma --- Structural induction principle for this ADT.
    *
-   *    `base cases => inductive cases => ∀x ∈ ADT. P(x)`
+   *    `inductive cases => ∀x ∈ ADT. P(x)`
    */
-  lazy val induction = benchmark(Lemma(constructors.foldRight[Formula](forall(x, in(x, term) ==> P(x)))((c, f) => inductiveCase(c) ==> f)) {
+  lazy val induction = benchmark(Lemma(constructors.foldRight[Formula](∀(x, x ∈ term ==> P(x)))((c, f) => inductiveCase(c) ==> f)) {
 
     // List of cases to prove for structural induction to hold
     val structuralInductionPreconditions: Formula = /\+(constructors.map(inductiveCase))
 
     // We want to prove the claim by induction on the height of n, i.e. prove that for any
     // n in N, P holds.
-    def inductionFormula(n: Term): Formula = forall(x, x ∈ app(h, n) ==> P(x))
-    val inductionFormulaN: Formula = inductionFormula(n)
-    val inductionFormulaSuccN: Formula = inductionFormula(successor(n))
+    def inductionFormula(n: Term): Formula = ∀(x, x ∈ app(h, n) ==> P(x))
 
     // STEP 1: Prove the base case
-    have(hIsTheHeightFunction |- in(x, app(h, ∅)) ==> P(x)) by Sorry //Weakening(heightZero)
-    val zeroCase = thenHave(hIsTheHeightFunction |- inductionFormula(∅)) by RightForall
-
-    val inductiveCaseRemaining = have((hIsTheHeightFunction, forall(n, in(n, N) ==> (inductionFormulaN ==> inductionFormulaSuccN))) |- forall(n, in(n, N) ==> inductionFormulaN)) by 
-    Sorry
-    // Cut(
-    //   zeroCase,
-    //   natInduction of (P := lambda(n, inductionFormulaN))
-    // )
+    have(hIsTheHeightFunction |- x ∉ app(h, ∅)) by Cut(heightZero, emptySetHasNoElements of (x := app(h, ∅), y := x))
+    thenHave((hIsTheHeightFunction, n === ∅) |- x ∉ app(h, n)) by Substitution.ApplyRules(n === ∅)
+    val zeroCase = thenHave((hIsTheHeightFunction, n === ∅) |- x ∈ app(h, n) ==> P(x)) by Weakening
 
     // STEP 2: Prove the inductive case
-    val succCase = have((hIsTheHeightFunction, structuralInductionPreconditions) |- forall(n, in(n, N) ==> (inductionFormulaN ==> inductionFormulaSuccN))) subproof {
+    val succCase = have((structuralInductionPreconditions, hIsTheHeightFunction, successorOrdinal(n), ordinal(N), n < N, ∀(m, (m < n) ==> inductionFormula(m))) |- x ∈ app(h, n) ==> P(x)) subproof {
 
-      // STEP 2.1 : Prove that if the x = c(x1, ..., xn) for some c and xi, ..., xj ∈ height(n) then P(x) holds.
-      val isConstructorImpliesP = have((hIsTheHeightFunction, structuralInductionPreconditions, in(n, N), inductionFormulaN, isConstructor(x, app(h, n))) |- P(x)) subproof {
+      val ih = ∀(m, (m < successor(a)) ==> inductionFormula(m))
 
-        if constructors.isEmpty then have(thesis) by Restate
-        else
-          val orSeq =
-            (for c <- constructors yield
+      have(ih |- ih) by Hypothesis
+      thenHave((a < successor(a), ih) |- ∀(x, x ∈ app(h, a) ==> P(x))) by InstantiateForall(a)
+      have(ih |- ∀(x, x ∈ app(h, a) ==> P(x))) by Cut(inSuccessor, lastStep)
+      val proofP = thenHave((ih, x ∈ app(h, a)) |- P(x)) by InstantiateForall(x)
 
-              // Caching
-              val constructorPrecondition = inductiveCase(c)
-              val constructorVarsInHN = constructorVarsInDomain(c, app(h, n))
-              val constructorVarsInHNEx = ∃(n, in(n, N) /\ constructorVarsInDomain(c, app(h, n)))
-              val constructorVarsInTerm = constructorVarsInDomain(c, term)
+      val operands = 
+        for c <- constructors yield
 
-              // STEP 2.1.1: Prove that if xi, ..., xj ∈ height(n) then xi, ..., xj ∈ ADT.
-              val constructorQuantVarsInHNToTerm = have((hIsTheHeightFunction, in(n, N), constructorVarsInHN) |- constructorVarsInTerm) subproof {
-                have((hIsTheHeightFunction, in(n, N), constructorVarsInHN) |- in(n, N) /\ constructorVarsInHN) by Restate
-                val consVarL = thenHave((hIsTheHeightFunction, in(n, N), constructorVarsInHN) |- constructorVarsInHNEx) by RightExists
-                have((constructorVarsInTerm <=> constructorVarsInHNEx, constructorVarsInHNEx) |- constructorVarsInTerm) by Restate.from(
-                  equivalenceRevApply of (p1 := constructorVarsInTerm, p2 := constructorVarsInHNEx)
-                )
-                have((hIsTheHeightFunction, constructorVarsInHNEx) |- constructorVarsInTerm) by Cut(
-                  termsHaveHeight(c),
-                  lastStep
-                )
-                have(thesis) by Cut(consVarL, lastStep)
-              }
+          have((ih, inductiveCase(c)) |- inductiveCase(c)) by Restate
 
+          c.signature.foldLeft[(Formula, Set[Formula])]((inductiveCase(c), Set(ih, hIsTheHeightFunction, inductiveCase(c), a < N)))((acc, el) => 
+            val (v, ty) = el
+            val (remCases, vars) = acc
+            val newVars = vars + v ∈ ty.getOrElse(app(h, a))
+            
+            (remCases match
+              case Forall(bindVar, Implies(typedVar, Implies(precond, core))) =>
+                thenHave(vars + v ∈ ty.getOrElse(term) + precond |- core) by InstantiateForall(v)
+                have(newVars + ty.getOrElse(app(h, a)) ⊆ ty.getOrElse(term) + precond |- core) by Cut(subsetElim of (z := v, x := ty.getOrElse(app(h, a)), y := ty.getOrElse(term)), lastStep)
+                val precondToProve = have(newVars + precond |- core) by Cut(getOrElseHeightSubsetTerm(ty) of (n := a), lastStep)
+                ty match
+                  case Self => have(newVars |- core) by Cut(proofP of (x := v), lastStep)
+                  case f : FunctionType => have(newVars |- core) by Sorry
+                  case GroundType(_) => thenHave(newVars  |- core) by Weakening
+                core
+              case _ => throw UnreachableException
+            , newVars) 
+          )
 
-              // STEP 2.1.2: Prove that if xi, ..., xj ∈ height(n) then P(c(x1, ..., xn)).
-              have((hIsTheHeightFunction, constructorPrecondition, in(n, N), inductionFormulaN, constructorVarsInHN) |- constructorPrecondition) by Restate
+          thenHave((constructorVarsInDomain(c, app(h, a)), ih, hIsTheHeightFunction, inductiveCase(c), a < N) |- P(c.term)) by Restate
+          thenHave((constructorVarsInDomain(c, app(h, a)), x === c.term, ih, hIsTheHeightFunction, inductiveCase(c), a < N) |- P(x)) by Substitution.ApplyRules(x === c.term)
+          thenHave((constructorVarsInDomain(c, app(h, a)) /\ (x === c.term), ih, hIsTheHeightFunction, inductiveCase(c), a < N) |- P(x)) by LeftAnd
+          thenHave((existsSeq(c.variables, constructorVarsInDomain(c, app(h, a)) /\ (x === c.term)), a < N, ih, hIsTheHeightFunction, inductiveCase(c)) |- P(x)) by QuantifiersIntro(c.variables)
 
-              c.signature
-                .foldLeft(lastStep)((fact, el) =>
-                  val (v, ty) = el
+      val preconditionsSet = constructors.map(inductiveCase).toSet + hIsTheHeightFunction
 
-                  fact.statement.right.head match
-                    case Forall(_, factCclWithoutForall) =>
-                      thenHave((hIsTheHeightFunction, constructorPrecondition, in(n, N), inductionFormulaN, constructorVarsInHN) |- factCclWithoutForall) by InstantiateForall(v)
-
-                      factCclWithoutForall match
-                        case Implies(membership, subformula) =>
-                          ty match
-                            case Self =>
-                              subformula match
-                                case Implies(hypothesis, subSubFormula) =>
-                                  val proofSubSubFormula = thenHave(
-                                    (hIsTheHeightFunction, constructorPrecondition, in(n, N), inductionFormulaN, constructorVarsInTerm, constructorVarsInHN, P(v)) |- subSubFormula
-                                  ) by Weakening
-
-                                  have(inductionFormulaN |- inductionFormulaN) by Hypothesis
-                                  thenHave(inductionFormulaN |- in(v, app(h, n)) ==> P(v)) by InstantiateForall(v)
-                                  thenHave((inductionFormulaN, constructorVarsInHN) |- P(v)) by Weakening
-
-                                  have((hIsTheHeightFunction, constructorPrecondition, in(n, N), inductionFormulaN, constructorVarsInTerm, constructorVarsInHN) |- subSubFormula) by Cut(
-                                    lastStep,
-                                    proofSubSubFormula
-                                  )
-                                  have((hIsTheHeightFunction, constructorPrecondition, in(n, N), inductionFormulaN, constructorVarsInHN) |- subSubFormula) by Cut(
-                                    constructorQuantVarsInHNToTerm,
-                                    lastStep
-                                  )
-
-                                case _ => throw UnreachableException
-
-                            case GroundType(t) =>
-                              thenHave((hIsTheHeightFunction, constructorPrecondition, in(n, N), inductionFormulaN, constructorVarsInHN) |- subformula) by Restate
-
-                            case fn: FunctionType => 
-                              subformula match
-                                case Implies(hypothesis, subSubFormula) =>
-                                  val proofSubSubFormula = thenHave(
-                                    (hIsTheHeightFunction, constructorPrecondition, in(n, N), inductionFormulaN, constructorVarsInTerm, constructorVarsInHN, hypothesis) |- subSubFormula
-                                  ) by Weakening
-
-                                  val appliedFun = appSeq(v)(fn.variables)
-
-                                  val appVZInHN = have((in(v, fn.getOrElse(app(h, n))), fn.wellTypedDomains) |- in(appliedFun, app(h, n))) by TypeChecker.prove
-
-                                  have(inductionFormulaN |- inductionFormulaN) by Hypothesis
-                                  thenHave((inductionFormulaN, in(appliedFun, app(h, n))) |- P(appliedFun)) by InstantiateForall(appliedFun)
-                                  have((inductionFormulaN, in(v, fn.getOrElse(app(h, n))), fn.wellTypedDomains) |- P(appliedFun)) by Cut(appVZInHN, lastStep)
-                                  thenHave((inductionFormulaN, in(v, fn.getOrElse(app(h, n)))) |- fn.wellTypedDomains ==>
-                                  P(appliedFun)) by RightImplies
-                                  thenHave((inductionFormulaN, in(v, fn.getOrElse(app(h, n)))) |- forallSeq(fn.variables, fn.wellTypedDomains ==> P(appliedFun))) by QuantifiersIntro(fn.variables)
-                                  thenHave((inductionFormulaN, constructorVarsInHN) |- forallSeq(fn.variables, fn.wellTypedDomains ==> P(appliedFun))) by Weakening
-
-                                  have((hIsTheHeightFunction, constructorPrecondition, in(n, N), inductionFormulaN, constructorVarsInTerm, constructorVarsInHN) |- subSubFormula) by Cut(
-                                    lastStep,
-                                    proofSubSubFormula
-                                  )
-                                  have((hIsTheHeightFunction, constructorPrecondition, in(n, N), inductionFormulaN, constructorVarsInHN) |- subSubFormula) by Cut(
-                                    constructorQuantVarsInHNToTerm,
-                                    lastStep
-                                  )
-                                
-                                case _ => throw UnreachableException
-
-                        case _ => throw UnreachableException
-                    case _ => throw UnreachableException
-                )
-
-              thenHave((hIsTheHeightFunction, constructorPrecondition, in(n, N), inductionFormulaN, constructorVarsInHN) |- P(c.term)) by Restate
-
-              // STEP 2.1.3: Prove that if xi, ..., xj ∈ height(n) then P(x).
-              thenHave((hIsTheHeightFunction, constructorPrecondition, in(n, N), inductionFormulaN, constructorVarsInHN, x === c.term) |- P(x)) by RightSubstEq
-                .withParametersSimple(List((x, c.term)), lambda(x, P(x)))
-
-              thenHave((hIsTheHeightFunction, constructorPrecondition, in(n, N), inductionFormulaN, constructorVarsInHN /\ (x === c.term)) |- P(x)) by LeftAnd
-
-              thenHave((hIsTheHeightFunction, constructorPrecondition, in(n, N), inductionFormulaN, isConstructor(c, x, app(h, n))) |- P(x)) by QuantifiersIntro(c.variables)
-              thenHave((hIsTheHeightFunction, structuralInductionPreconditions, in(n, N), inductionFormulaN, isConstructor(c, x, app(h, n))) |- P(x)) by Weakening
-            ).toSeq
-
-
-          have((hIsTheHeightFunction, structuralInductionPreconditions, in(n, N), inductionFormulaN, isConstructor(x, app(h, n))) |- P(x)) by LeftOr(orSeq*)
-      }
-
-      // STEP 2.2: Prove that if x ∈ height(n + 1) then P(x) holds.
-      have((hIsTheHeightFunction, in(n, N), in(x, app(h, successor(n)))) |- isConstructor(x, app(h, n))) by Cut(
-        heightSuccessorStrong,
-        equivalenceApply of (p1 := in(x, app(h, successor(n))), p2 := isConstructor(x, app(h, n)))
-      )
-      have((hIsTheHeightFunction, structuralInductionPreconditions, in(n, N), inductionFormulaN, in(x, app(h, successor(n)))) |- P(x)) by Cut(lastStep, isConstructorImpliesP)
-
-      // STEP 2.3: Conclude
-      thenHave((hIsTheHeightFunction, structuralInductionPreconditions, in(n, N), inductionFormulaN) |- in(x, app(h, successor(n))) ==> P(x)) by RightImplies
-
-      thenHave((hIsTheHeightFunction, structuralInductionPreconditions, in(n, N), inductionFormulaN) |- inductionFormulaSuccN) by RightForall
-      thenHave((hIsTheHeightFunction, structuralInductionPreconditions, in(n, N)) |- inductionFormulaN ==> inductionFormulaSuccN) by RightImplies
-      thenHave((hIsTheHeightFunction, structuralInductionPreconditions) |- in(n, N) ==> (inductionFormulaN ==> inductionFormulaSuccN)) by RightImplies
-      thenHave(thesis) by RightForall
+      have((preconditionsSet + isConstructor(x, app(h, a)) + (a < N) + ih) |- P(x)) by LeftOr(operands*)
+      have((preconditionsSet + isInIntroductionFunctionImage(app(h, a))(x) + (a < N) + ih) |- P(x)) by LeftOr(lastStep, proofP)
+      thenHave((preconditionsSet + x ∈ app(h, successor(a)) + (a < N) + ih) |- P(x)) by Substitution.ApplyRules(heightSuccessor)
+      have((preconditionsSet + x ∈ app(h, successor(a)) + ordinal(N) + (a < successor(a)) + (successor(a) < N) + ih) |- P(x)) by Cut(ordinalTransitive of (b := successor(a), c := N), lastStep)
+      have((preconditionsSet + x ∈ app(h, successor(a)) + ordinal(N) + (successor(a) < N) + ih + hIsTheHeightFunction) |- P(x)) by Cut(inSuccessor, lastStep)
+      thenHave((preconditionsSet + (n === successor(a)) + x ∈ app(h, n) + ordinal(N) + (n < N) + ∀(m, (m < n) ==> inductionFormula(m)) + hIsTheHeightFunction) |- P(x)) by Substitution.ApplyRules(n === successor(a))
+      thenHave((preconditionsSet + ∃(a, n === successor(a)) + x ∈ app(h, n) + ordinal(N) + (n < N) + ∀(m, (m < n) ==> inductionFormula(m)) + hIsTheHeightFunction) |- P(x)) by LeftExists
+      thenHave((structuralInductionPreconditions, hIsTheHeightFunction, ordinal(n) /\ ∃(a, n === successor(a)), ordinal(N), n < N, ∀(m, (m < n) ==> inductionFormula(m))) |- x ∈ app(h, n) ==> P(x)) by Weakening
+      thenHave((structuralInductionPreconditions, hIsTheHeightFunction, successorOrdinal(n), ordinal(N), n < N, ∀(m, (m < n) ==> inductionFormula(m))) |- x ∈ app(h, n) ==> P(x)) by Substitution.ApplyRules(successorOrdinal.definition)
     }
 
-    // STEP 3: Conclude
+    // STEP 3: Prove the limit case
+    val limitCase = have((hIsTheHeightFunction, limitOrdinal(n), ordinal(N), n < N, ∀(m, (m < n) ==> inductionFormula(m))) |- x ∈ app(h, n) ==> P(x)) subproof {
+      have(∀(m, (m < n) ==> inductionFormula(m)) |- ∀(m, (m < n) ==> inductionFormula(m))) by Hypothesis
+      thenHave((m < n, ∀(m, (m < n) ==> inductionFormula(m))) |- inductionFormula(m)) by InstantiateForall(m)
+      thenHave(((m < n) /\ x ∈ app(h, m), ∀(m, (m < n) ==> inductionFormula(m))) |- P(x)) by InstantiateForall(x)
+      thenHave((ordinal(N), n < N, (m < (N ∩ n)) /\ x ∈ app(h, m), ∀(m, (m < n) ==> inductionFormula(m))) |- P(x)) by Substitution.ApplyRules(intersectionInOrdinal of (a := N, b := n))
+      thenHave((hIsTheHeightFunction, ordinal(N), n < N, (m < (dom(h) ∩ n)) /\ x ∈ app(h, m), ∀(m, (m < n) ==> inductionFormula(m))) |- P(x)) by Substitution.ApplyRules(heightFunctionDomain) 
+      thenHave((hIsTheHeightFunction, ordinal(N), n < N, ∃(m, (m < (dom(h) ∩ n)) /\ x ∈ app(h, m)), ∀(m, (m < n) ==> inductionFormula(m))) |- P(x)) by LeftExists 
+      have((hIsTheHeightFunction, ordinal(N), n < N, functional(h), x ∈ uran(h ↾ n), ∀(m, (m < n) ==> inductionFormula(m))) |- P(x)) by Cut(unionRangeRestrElim of (f := h, d := n, z := x), lastStep)
+      have((hIsTheHeightFunction, ordinal(N), n < N, functionalOver(h, N), x ∈ uran(h ↾ n), ∀(m, (m < n) ==> inductionFormula(m))) |- P(x)) by Cut(functionalOverIsFunctional of (f := h, x := N), lastStep)
+      thenHave((hIsTheHeightFunction, ordinal(N), n < N, limitOrdinal(n), functionalOver(h, N), x ∈ app(h, n), ∀(m, (m < n) ==> inductionFormula(m))) |- P(x)) by Substitution.ApplyRules(heightLimit)
+    }
 
-    have((hIsTheHeightFunction, structuralInductionPreconditions) |- forall(n, in(n, N) ==> inductionFormulaN)) by Cut(lastStep, inductiveCaseRemaining)
-    thenHave((hIsTheHeightFunction, structuralInductionPreconditions, in(n, N)) |- inductionFormulaN) by InstantiateForall(n)
-    thenHave((hIsTheHeightFunction, structuralInductionPreconditions, in(n, N) /\ x ∈ app(h, n)) |- P(x)) by InstantiateForall(x)
-    val exImpliesP = thenHave((hIsTheHeightFunction, structuralInductionPreconditions, ∃(n, in(n, N) /\ x ∈ app(h, n))) |- P(x)) by LeftExists
-    have((hIsTheHeightFunction, in(x, term)) |- ∃(n, in(n, N) /\ x ∈ app(h, n))) by Cut(termHasHeight, equivalenceApply of (p1 := in(x, term), p2 := ∃(n, in(n, N) /\ x ∈ app(h, n))))
-
-    have((hIsTheHeightFunction, structuralInductionPreconditions, in(x, term)) |- P(x)) by Cut(lastStep, exImpliesP)
-    thenHave((∃(h, hIsTheHeightFunction), structuralInductionPreconditions, in(x, term)) |- P(x)) by LeftExists
-    have((structuralInductionPreconditions, in(x, term)) |- P(x)) by Cut(heightFunctionExistence, lastStep)
-    thenHave(structuralInductionPreconditions |- in(x, term) ==> P(x)) by RightImplies
-    thenHave(structuralInductionPreconditions |- forall(x, in(x, term) ==> P(x))) by RightForall
+    have((structuralInductionPreconditions, hIsTheHeightFunction, limitOrdinal(n) \/ successorOrdinal(n), ordinal(N), n < N, ∀(m, (m < n) ==> inductionFormula(m))) |- x ∈ app(h, n) ==> P(x)) by LeftOr(succCase, limitCase)
+    have((structuralInductionPreconditions, hIsTheHeightFunction, (n === ∅) \/ limitOrdinal(n) \/ successorOrdinal(n), ordinal(N), n < N, ∀(m, (m < n) ==> inductionFormula(m))) |- x ∈ app(h, n) ==> P(x)) by LeftOr(zeroCase, lastStep)
+    have((structuralInductionPreconditions, hIsTheHeightFunction, ordinal(n), ordinal(N), n < N, ∀(m, (m < n) ==> inductionFormula(m))) |- x ∈ app(h, n) ==> P(x)) by Cut(successorOrNonsuccessorOrdinal of (a := n), lastStep)
+    thenHave((structuralInductionPreconditions, hIsTheHeightFunction, ordinal(n), ordinal(N), n < N, ∀(m, (m < n) ==> inductionFormula(m))) |- inductionFormula(n)) by RightForall
+    have((structuralInductionPreconditions, hIsTheHeightFunction, ordinal(N), n < N, ∀(m, (m < n) ==> inductionFormula(m))) |- inductionFormula(n)) by Cut(elementsOfOrdinalsAreOrdinals of (b := n, a := N), lastStep)
+    thenHave((structuralInductionPreconditions, hIsTheHeightFunction, ordinal(N), n < N) |- ∀(m, (m < n) ==> inductionFormula(m)) ==> inductionFormula(n)) by RightImplies
+    
+    thenHave((structuralInductionPreconditions, hIsTheHeightFunction, ordinal(N)) |- (n < N) ==> (∀(m, (m < n) ==> inductionFormula(m)) ==> inductionFormula(n))) by RightImplies
+    thenHave((structuralInductionPreconditions, hIsTheHeightFunction, ordinal(N)) |- ∀(n, (n < N) ==> (∀(m, (m < n) ==> inductionFormula(m)) ==> inductionFormula(n)))) by RightForall
+    have((structuralInductionPreconditions, hIsTheHeightFunction, ordinal(N)) |- ∀(n, (n < N) ==> inductionFormula(n))) by Cut(lastStep, transfiniteInductionOnOrdinal of (x := N, P := lambda(n, inductionFormula(n))))
+    thenHave((structuralInductionPreconditions, hIsTheHeightFunction, ordinal(N), n < N) |- inductionFormula(n)) by InstantiateForall(n)
+    sorry
   })
-
-
-  // /**
-  //  * Lemma --- Structural induction principle for this ADT.
-  //  *
-  //  *    `base cases => inductive cases => ∀x ∈ ADT. P(x)`
-  //  */
-  // lazy val induction = benchmark(Lemma(constructors.foldRight[Formula](forall(x, in(x, term) ==> P(x)))((c, f) => inductiveCase(c) ==> f)) {
-
-  //   // List of cases to prove for structural induction to hold
-  //   val structuralInductionPreconditions: Formula = /\+(constructors.map(inductiveCase))
-
-  //   // We want to prove the claim by induction on the height of n, i.e. prove that for any
-  //   // n in N, P holds.
-  //   def inductionFormula = (t: Term) => forall(x, in(x, app(h, t)) ==> P(x))
-  //   val inductionFormulaM: Formula = inductionFormula(m)
-  //   val inductionFormulaN: Formula = inductionFormula(n)
-
-  //   // STEP 2: Prove the inductive case
-  //   val inductiveStep = have((hIsTheHeightFunction, structuralInductionPreconditions) |- forall(n, in(n, N) ==> (forall(m, in(m, n) ==> inductionFormulaM) ==> inductionFormulaN))) subproof {
-
-  //     have(hIsTheHeightFunction |- in(x, app(h, ∅)) ==> P(x)) by Weakening(heightZero)
-  //     thenHave(hIsTheHeightFunction |- inductionFormula(∅)) by RightForall
-  //     val zeroCase = thenHave((hIsTheHeightFunction, n === ∅) |- inductionFormulaN) by RightSubstEq.withParametersSimple(
-  //       List((n, ∅)), lambda(n, inductionFormulaN)
-  //     )
-
-  //     // STEP 2.1 : Prove that if the x = c(x1, ..., xn) for some c and xi, ..., xj ∈ height(n) then P(x) holds.
-  //     val isConstructorImpliesP = have((hIsTheHeightFunction, structuralInductionPreconditions, inductionFormulaM, in(m, N), isConstructor(x, app(h, m))) |- P(x)) subproof {
-
-  //       if constructors.isEmpty then have(thesis) by Restate
-  //       else
-  //         val orSeq =
-  //           (for c <- constructors yield
-
-  //             // Caching
-  //             val constructorPrecondition = inductiveCase(c)
-  //             val constructorVarsInHM = constructorVarsInDomain(c, app(h, m))
-  //             val constructorVarsInHMEx = ∃(m, in(m, N) /\ constructorVarsInDomain(c, app(h, m)))
-  //             val constructorVarsInTerm = constructorVarsInDomain(c, term)
-
-  //             // STEP 2.1.1: Prove that if xi, ..., xj ∈ height(n) then xi, ..., xj ∈ ADT.
-  //             val constructorQuantVarsInHNToTerm = have((hIsTheHeightFunction, in(m, N), constructorVarsInHM) |- constructorVarsInTerm) subproof {
-  //               have((hIsTheHeightFunction, in(m, N), constructorVarsInHM) |- in(m, N) /\ constructorVarsInHM) by Restate
-  //               val consVarL = thenHave((hIsTheHeightFunction, in(m, N), constructorVarsInHM) |- constructorVarsInHMEx) by RightExists
-  //               have((constructorVarsInTerm <=> constructorVarsInHMEx, constructorVarsInHMEx) |- constructorVarsInTerm) by Restate.from(
-  //                 equivalenceRevApply of (p1 := constructorVarsInTerm, p2 := constructorVarsInHMEx)
-  //               )
-  //               have((hIsTheHeightFunction, constructorVarsInHMEx) |- constructorVarsInTerm) by Cut(
-  //                 termsHaveHeight(c),
-  //                 lastStep
-  //               )
-  //               have(thesis) by Cut(consVarL, lastStep)
-  //             }
-
-
-  //             // STEP 2.1.2: Prove that if xi, ..., xj ∈ height(n) then P(c(x1, ..., xn)).
-  //             have((hIsTheHeightFunction, constructorPrecondition, in(m, N), inductionFormulaM, constructorVarsInHM) |- constructorPrecondition) by Restate
-
-  //             c.signature
-  //               .foldLeft(lastStep)((fact, el) =>
-  //                 val (v, ty) = el
-
-  //                 fact.statement.right.head match
-  //                   case Forall(_, factCclWithoutForall) =>
-  //                     thenHave((hIsTheHeightFunction, constructorPrecondition, in(m, N), inductionFormulaM, constructorVarsInHM) |- factCclWithoutForall) by InstantiateForall(v)
-
-  //                     factCclWithoutForall match
-  //                       case Implies(membership, subformula) =>
-  //                         ty match
-  //                           case Self =>
-  //                             subformula match
-  //                               case Implies(hypothesis, subSubFormula) =>
-  //                                 val proofSubSubFormula = thenHave(
-  //                                   (hIsTheHeightFunction, constructorPrecondition, in(m, N), inductionFormulaM, constructorVarsInTerm, constructorVarsInHM, P(v)) |- subSubFormula
-  //                                 ) by Weakening
-  //                                 have(inductionFormulaM |- inductionFormulaM) by Hypothesis
-  //                                 thenHave(inductionFormulaM |- in(v, app(h, m)) ==> P(v)) by InstantiateForall(v)
-  //                                 thenHave((inductionFormulaM, constructorVarsInHM) |- P(v)) by Weakening
-
-  //                                 have((hIsTheHeightFunction, constructorPrecondition, in(m, N), inductionFormulaM, constructorVarsInTerm, constructorVarsInHM) |- subSubFormula) by Cut(
-  //                                   lastStep,
-  //                                   proofSubSubFormula
-  //                                 )
-  //                                 have((hIsTheHeightFunction, constructorPrecondition, in(m, N), inductionFormulaM, constructorVarsInHM) |- subSubFormula) by Cut(
-  //                                   constructorQuantVarsInHNToTerm,
-  //                                   lastStep
-  //                                 )
-
-  //                               case _ => throw UnreachableException
-
-  //                           case GroundType(t) =>
-  //                             thenHave((hIsTheHeightFunction, constructorPrecondition, in(m, N), inductionFormulaM, constructorVarsInHM) |- subformula) by Restate
-
-  //                           case fn: FunctionType => 
-  //                             subformula match
-  //                               case Implies(hypothesis, subSubFormula) =>
-  //                                 val proofSubSubFormula = thenHave(
-  //                                   (hIsTheHeightFunction, constructorPrecondition, in(m, N), inductionFormulaM, constructorVarsInTerm, constructorVarsInHM, hypothesis) |- subSubFormula
-  //                                 ) by Weakening
-
-  //                                 val appliedFun = appSeq(v)(fn.variables)
-
-  //                                 val appVZInHN = have((in(v, fn.getOrElse(app(h, m))), fn.wellTypedDomains) |- in(appliedFun, app(h, m))) by TypeChecker.prove
-
-  //                                 have(inductionFormulaM |- inductionFormulaM) by Hypothesis
-  //                                 thenHave(inductionFormulaM |- in(appliedFun, app(h, m)) ==> P(appliedFun)) by InstantiateForall(appliedFun)
-  //                                 thenHave((inductionFormulaM, in(appliedFun, app(h, m))) |- P(appliedFun)) by Restate
-  //                                 have((inductionFormulaM, in(v, fn.getOrElse(app(h, m))), fn.wellTypedDomains) |- P(appliedFun)) by Cut(appVZInHN, lastStep)
-  //                                 thenHave((inductionFormulaM, in(v, fn.getOrElse(app(h, m)))) |- fn.wellTypedDomains ==>
-  //                                 P(appliedFun)) by RightImplies
-  //                                 thenHave((inductionFormulaM, in(v, fn.getOrElse(app(h, m)))) |- forallSeq(fn.variables, fn.wellTypedDomains ==> P(appliedFun))) by QuantifiersIntro(fn.variables)
-  //                                 thenHave((inductionFormulaM, constructorVarsInHM) |- forallSeq(fn.variables, fn.wellTypedDomains ==> P(appliedFun))) by Weakening
-
-  //                                 have((hIsTheHeightFunction, constructorPrecondition, in(m, N), inductionFormulaM, constructorVarsInTerm, constructorVarsInHM) |- subSubFormula) by Cut(
-  //                                   lastStep,
-  //                                   proofSubSubFormula
-  //                                 )
-  //                                 have((hIsTheHeightFunction, constructorPrecondition, in(m, N), inductionFormulaM, constructorVarsInHM) |- subSubFormula) by Cut(
-  //                                   constructorQuantVarsInHNToTerm,
-  //                                   lastStep
-  //                                 )
-
-  //                               case _ => throw UnreachableException
-
-  //                       case _ => throw UnreachableException
-  //                   case _ => throw UnreachableException
-  //               )
-
-  //             thenHave((hIsTheHeightFunction, constructorPrecondition, in(m, N), inductionFormulaM, constructorVarsInHM) |- P(c.term)) by Restate
-
-  //             // STEP 2.1.3: Prove that if xi, ..., xj ∈ height(m) then P(x).
-  //             thenHave((hIsTheHeightFunction, constructorPrecondition, in(m, N), inductionFormulaM, constructorVarsInHM, x === c.term) |- P(x)) by RightSubstEq
-  //               .withParametersSimple(List((x, c.term)), lambda(x, P(x)))
-
-  //             thenHave((hIsTheHeightFunction, constructorPrecondition, in(m, N), inductionFormulaM, constructorVarsInHM /\ (x === c.term)) |- P(x)) by LeftAnd
-
-  //             thenHave((hIsTheHeightFunction, constructorPrecondition, in(m, N), inductionFormulaM, isConstructor(c, x, app(h, m))) |- P(x)) by QuantifiersIntro(c.variables)
-  //             thenHave((hIsTheHeightFunction, structuralInductionPreconditions, in(m, N), inductionFormulaM, isConstructor(c, x, app(h, m))) |- P(x)) by Weakening
-  //           ).toSeq
-
-
-  //         have((hIsTheHeightFunction, structuralInductionPreconditions, in(m, N), inductionFormulaM, isConstructor(x, app(h, m))) |- P(x)) by LeftOr(orSeq*)
-  //     }
-
-  //     // STEP 2.2: Prove that if x ∈ height(n + 1) then P(x) holds.
-  //     have((hIsTheHeightFunction, structuralInductionPreconditions, in(n, N), inductionFormulaM, in(m, n), isConstructor(x, app(h, m))) |- P(x)) by Cut(
-  //       natTransitivity of (a := m, b := n), lastStep
-  //     )
-  //     have((hIsTheHeightFunction, structuralInductionPreconditions, in(n, N), in(m, n) ==> inductionFormulaM, in(m, n) /\ isConstructor(x, app(h, m))) |- P(x)) by Sorry
-  //     thenHave((hIsTheHeightFunction, structuralInductionPreconditions, in(n, N), forall(m, in(m, n) ==> inductionFormulaM), in(m, n) /\ isConstructor(x, app(h, m))) |- P(x)) by LeftForall
-  //     thenHave((hIsTheHeightFunction, structuralInductionPreconditions, in(n, N), forall(m, in(m, n) ==> inductionFormulaM), ∃(m, in(m, n) /\ isConstructor(x, app(h, m)))) |- P(x)) by LeftExists
-  //     have((hIsTheHeightFunction, structuralInductionPreconditions, !(n === ∅), in(n, N), forall(m, in(m, n) ==> inductionFormulaM), x ∈ app(h, n)) |- P(x)) by Cut(
-  //       heightSuccessorStrong, lastStep
-  //     )
-
-  //     // STEP 2.3: Conclude
-  //     thenHave((hIsTheHeightFunction, structuralInductionPreconditions, !(n === ∅), in(n, N), forall(m, in(m, n) ==> inductionFormulaM)) |- x ∈ app(h, n) ==> P(x)) by RightImplies
-  //     thenHave((hIsTheHeightFunction, structuralInductionPreconditions, !(n === ∅), in(n, N), forall(m, in(m, n) ==> inductionFormulaM)) |- inductionFormulaN) by RightForall
-  //     have((hIsTheHeightFunction, structuralInductionPreconditions, (n === ∅) \/ !(n === ∅), in(n, N), forall(m, in(m, n) ==> inductionFormulaM)) |- inductionFormulaN) by LeftOr(zeroCase, lastStep)
-  //     thenHave((hIsTheHeightFunction, structuralInductionPreconditions) |- in(n, N) ==> (forall(m, in(m, n) ==> inductionFormulaM) ==> inductionFormulaN)) by Restate
-  //     thenHave(thesis) by RightForall
-  //   }
-
-  //   // STEP 3: Conclude
-
-  //   have((hIsTheHeightFunction, structuralInductionPreconditions) |- forall(n, in(n, N) ==> inductionFormulaN)) by Cut(lastStep, natInduction of (P := lambda(n, inductionFormulaN)))
-  //   thenHave((hIsTheHeightFunction, structuralInductionPreconditions) |- in(n, N) ==> inductionFormulaN) by InstantiateForall(n)
-  //   thenHave((hIsTheHeightFunction, structuralInductionPreconditions, in(n, N)) |- inductionFormulaN) by Restate
-  //   thenHave((hIsTheHeightFunction, structuralInductionPreconditions, in(n, N)) |- x ∈ app(h, n) ==> P(x)) by InstantiateForall(x)
-  //   thenHave((hIsTheHeightFunction, structuralInductionPreconditions, in(n, N) /\ x ∈ app(h, n)) |- P(x)) by Restate
-  //   val exImpliesP = thenHave((hIsTheHeightFunction, structuralInductionPreconditions, ∃(n, in(n, N) /\ x ∈ app(h, n))) |- P(x)) by LeftExists
-  //   have((hIsTheHeightFunction, in(x, term)) |- ∃(n, in(n, N) /\ x ∈ app(h, n))) by Cut(termHasHeight, equivalenceApply of (p1 := in(x, term), p2 := ∃(n, in(n, N) /\ x ∈ app(h, n))))
-
-  //   have((hIsTheHeightFunction, structuralInductionPreconditions, in(x, term)) |- P(x)) by Cut(lastStep, exImpliesP)
-  //   thenHave((∃(h, hIsTheHeightFunction), structuralInductionPreconditions, in(x, term)) |- P(x)) by LeftExists
-  //   have((structuralInductionPreconditions, in(x, term)) |- P(x)) by Cut(heightFunctionExistence, lastStep)
-  //   thenHave(structuralInductionPreconditions |- in(x, term) ==> P(x)) by RightImplies
-  //   thenHave(structuralInductionPreconditions |- forall(x, in(x, term) ==> P(x))) by RightForall
-  // })
-
 
 }
 
@@ -1417,7 +1024,7 @@ private class SemanticConstructor[N <: Arity](using line: sourcecode.Line, file:
      *
      *     ` ∃!c. c ∈ T1 -> ... -> Tn -> ADT /\ ∀x1, ..., xn. c * x1 * ...* xn = (tagc, (x1, (..., (xn, ∅)...))`
      */
-    private val uniqueness = Axiom(existsOne(c, untypedDefinition))
+    private val uniqueness = Axiom(∃!(c, untypedDefinition))
 
     /**
      * Class function representing this constructor
@@ -1470,7 +1077,7 @@ private class SemanticConstructor[N <: Arity](using line: sourcecode.Line, file:
      *     `∀x1, ..., xn. c * x1 * ... * xn = (tagc, (x1, (..., (xn, ∅)...))`
      */
     val shortDefinition = Lemma(forallSeq(variables, wellTypedFormula(semanticSignature) ==> (appliedTerm === structuralTerm))) {
-      have(forall(c, (term === c) <=> untypedDefinition)) by Exact(classFunction.definition)
+      have(∀(c, (term === c) <=> untypedDefinition)) by Exact(classFunction.definition)
       thenHave((term === term) <=> ((term :: typ) /\ forallSeq(variables, wellTypedFormula(semanticSignature) ==> (appliedTerm === structuralTerm)))) by InstantiateForall(term)
       thenHave(thesis) by Weakening
     }
@@ -1485,7 +1092,7 @@ private class SemanticConstructor[N <: Arity](using line: sourcecode.Line, file:
      * e.g. `∀T. nil(T) ∈ list(T)` and  `∀T. cons(T) ∈ T -> list(T) -> list(T)`
      */
     val intro = Lemma(forallSeq(typeVariablesSeq, term :: typ)) {
-      have(forall(c, (term === c) <=> untypedDefinition)) by Exact(classFunction.definition)
+      have(∀(c, (term === c) <=> untypedDefinition)) by Exact(classFunction.definition)
       thenHave((term === term) <=> ((term :: typ) /\ forallSeq(variables, wellTypedFormula(semanticSignature) ==> (appliedTerm === structuralTerm)))) by InstantiateForall(term)
       thenHave(term :: typ) by Weakening
       thenHave(thesis) by QuantifiersIntro(typeVariablesSeq)
@@ -1543,11 +1150,8 @@ private class SemanticConstructor[N <: Arity](using line: sourcecode.Line, file:
           val backward = thenHave(vars1WellTyped ++ vars2WellTyped |- (structuralTerm1 === structuralTerm2) ==> (appliedTerm1 === appliedTerm2)) by RightImplies
 
           val definitionUnfolding = have(vars1WellTyped ++ vars2WellTyped |- (appliedTerm1 === appliedTerm2) <=> (structuralTerm1 === structuralTerm2)) by RightIff(forward, backward)
-          have((appliedTerm1 === appliedTerm2) <=> (structuralTerm1 === structuralTerm2) |- (appliedTerm1 === appliedTerm2) <=> /\+(variables1.zip(variables2).map(_ === _))) by Cut(
-            underlying.injectivity,
-            equivalenceRewriting of (p1 := (appliedTerm1 === appliedTerm2), p2 := (structuralTerm1 === structuralTerm2), p3 := /\+ (variables1.zip(variables2).map(_ === _)))
-          )
-          have(thesis) by Cut(definitionUnfolding, lastStep)
+
+          thenHave(thesis) by Substitution.ApplyRules(underlying.injectivity)
         }
 
     
@@ -1559,9 +1163,9 @@ private class SemanticConstructor[N <: Arity](using line: sourcecode.Line, file:
         ((el, fc) =>
           val (v, typ) = el
           typ match
-            case Self => forall(v, v :: adt.term ==> (P(v) ==> fc))
-            case GroundType(t) => forall(v, v :: t ==> fc)
-            case f: FunctionType => forall(v, v :: f.getOrElse(adt.term) ==> (forallSeq(f.variables, f.wellTypedDomains ==> P(appSeq(v)(f.variables))) ==> fc))
+            case Self => ∀(v, v :: adt.term ==> (P(v) ==> fc))
+            case GroundType(t) => ∀(v, v :: t ==> fc)
+            case f: FunctionType => ∀(v, v :: f.getOrElse(adt.term) ==> (forallSeq(f.variables, f.wellTypedDomains ==> P(appSeq(v)(f.variables))) ==> fc))
         )  
 }
 
@@ -1671,9 +1275,9 @@ private class SemanticConstructor[N <: Arity](using line: sourcecode.Line, file:
      *
      *    `base cases => inductive cases => ∀x ∈ ADT. P(x)`
      */
-    lazy val induction = Lemma(constructors.foldRight[Formula](forall(x, x :: term ==> P(x)))((c, f) => c.inductiveCase ==> f)) { sp ?=>
+    lazy val induction = Lemma(constructors.foldRight[Formula](∀(x, x :: term ==> P(x)))((c, f) => c.inductiveCase ==> f)) { sp ?=>
       constructors.foldRight[(Formula, Formula, sp.Fact)] {
-        val prop = forall(x, x :: term ==> P(x))
+        val prop = ∀(x, x :: term ==> P(x))
         (prop, prop, have(prop <=> prop) by Restate)
       }((c, acc) =>
         val (oldBefore, oldAfter, fact) = acc
@@ -1714,21 +1318,21 @@ private class SemanticConstructor[N <: Arity](using line: sourcecode.Line, file:
                     lastStep,
                     leftImpliesEquivalenceStrong of (p := wellTypedV, p1 := P(v) ==> fc1, p2 := P(v) ==> fc2)
                   )
-                  thenHave(wellTypedVars.init |- forall(v, (wellTypedV ==> (P(v) ==> fc1)) <=> (wellTypedV ==> (P(v) ==> fc2)))) by RightForall
-                  have(wellTypedVars.init |- forall(v, (wellTypedV ==> (P(v) ==> fc1))) <=> forall(v, (wellTypedV ==> (P(v) ==> fc2)))) by Cut(
+                  thenHave(wellTypedVars.init |- ∀(v, (wellTypedV ==> (P(v) ==> fc1)) <=> (wellTypedV ==> (P(v) ==> fc2)))) by RightForall
+                  have(wellTypedVars.init |- ∀(v, (wellTypedV ==> (P(v) ==> fc1))) <=> ∀(v, (wellTypedV ==> (P(v) ==> fc2)))) by Cut(
                     lastStep,
                     universalEquivalenceDistribution of (P := lambda(v, wellTypedV ==> (P(v) ==> fc1)), Q := lambda(v, wellTypedV ==> (P(v) ==> fc2)))
                   )
-                  (forall(v, wellTypedV ==> (P(v) ==> fc1)), forall(v, wellTypedV ==> (P(v) ==> fc2)), wellTypedVars.init)
+                  (∀(v, wellTypedV ==> (P(v) ==> fc1)), ∀(v, wellTypedV ==> (P(v) ==> fc2)), wellTypedVars.init)
                 case GroundType(t) =>
                   thenHave(wellTypedVars.init |- v :: t ==> (fc1 <=> fc2)) by RightImplies
-                  have(wellTypedVars.init |- (in(v, t) ==> fc1) <=> (v :: t ==> fc2)) by Cut(lastStep, leftImpliesEquivalenceStrong of (p := in(v, t), p1 := fc1, p2 := fc2))
-                  thenHave(wellTypedVars.init |- forall(v, (in(v, t) ==> fc1) <=> (v :: t ==> fc2))) by RightForall
-                  have(wellTypedVars.init |- forall(v, (in(v, t) ==> fc1)) <=> forall(v, (v :: t ==> fc2))) by Cut(
+                  have(wellTypedVars.init |- (v ∈ t ==> fc1) <=> (v :: t ==> fc2)) by Cut(lastStep, leftImpliesEquivalenceStrong of (p := v ∈ t, p1 := fc1, p2 := fc2))
+                  thenHave(wellTypedVars.init |- ∀(v, (v ∈ t ==> fc1) <=> (v :: t ==> fc2))) by RightForall
+                  have(wellTypedVars.init |- ∀(v, (v ∈ t ==> fc1)) <=> ∀(v, (v :: t ==> fc2))) by Cut(
                     lastStep,
-                    universalEquivalenceDistribution of (P := lambda(v, in(v, t) ==> fc1), Q := lambda(v, v :: t ==> fc2))
+                    universalEquivalenceDistribution of (P := lambda(v, v ∈ t ==> fc1), Q := lambda(v, v :: t ==> fc2))
                   )
-                  (forall(v, (in(v, t) ==> fc1)), forall(v, (v :: t ==> fc2)), wellTypedVars.init)
+                  (∀(v, (v ∈ t ==> fc1)), ∀(v, (v :: t ==> fc2)), wellTypedVars.init)
                 case f: FunctionType =>
                   val indHypothesis: Formula = forallSeq(f.variables, f.wellTypedDomains ==> P(appSeq(v)(f.variables)))
                   val wellTypedV: Formula = v :: f.getOrElse(term)
@@ -1738,12 +1342,12 @@ private class SemanticConstructor[N <: Arity](using line: sourcecode.Line, file:
                     lastStep,
                     leftImpliesEquivalenceStrong of (p := wellTypedV, p1 := indHypothesis ==> fc1, p2 := indHypothesis ==> fc2)
                   )
-                  thenHave(wellTypedVars.init |- forall(v, (wellTypedV ==> (indHypothesis ==> fc1)) <=> (wellTypedV ==> (indHypothesis ==> fc2)))) by RightForall
-                  have(wellTypedVars.init |- forall(v, (wellTypedV ==> (indHypothesis ==> fc1))) <=> forall(v, (wellTypedV ==> (indHypothesis ==> fc2)))) by Cut(
+                  thenHave(wellTypedVars.init |- ∀(v, (wellTypedV ==> (indHypothesis ==> fc1)) <=> (wellTypedV ==> (indHypothesis ==> fc2)))) by RightForall
+                  have(wellTypedVars.init |- ∀(v, (wellTypedV ==> (indHypothesis ==> fc1))) <=> ∀(v, (wellTypedV ==> (indHypothesis ==> fc2)))) by Cut(
                     lastStep,
                     universalEquivalenceDistribution of (P := lambda(v, wellTypedV ==> (indHypothesis ==> fc1)), Q := lambda(v, wellTypedV ==> (indHypothesis ==> fc2)))
                   )
-                  (forall(v, wellTypedV ==> (indHypothesis ==> fc1)), forall(v, wellTypedV ==> (indHypothesis ==> fc2)), wellTypedVars.init)
+                  (∀(v, wellTypedV ==> (indHypothesis ==> fc1)), ∀(v, wellTypedV ==> (indHypothesis ==> fc2)), wellTypedVars.init)
             )
         }
         (newBefore, newAfter, have(newBefore <=> newAfter) by Apply(impliesEquivalence).on(lastStep, fact))
@@ -1816,8 +1420,8 @@ private class SemanticConstructor[N <: Arity](using line: sourcecode.Line, file:
                         thenHave((x =/= v) /\ left |- right) by Weakening
                       case _ => ()
 
-                    val weakr = thenHave(in(v, ty.getOrElse(term)) /\ left |- right) by Weakening
-                    val weakl = have(in(v, ty.getOrElse(term)) /\ left |- in(v, ty.getOrElse(term))) by Restate
+                    val weakr = thenHave(v ∈ ty.getOrElse(term) /\ left |- right) by Weakening
+                    val weakl = have(v ∈ ty.getOrElse(term) /\ left |- v ∈ ty.getOrElse(term)) by Restate
 
                     have((v :: ty.getOrElse(term)) /\ left |- (v :: ty.getOrElse(term)) /\ right) by RightAnd(weakl, weakr)
                     thenHave((v :: ty.getOrElse(term)) /\ left |- ∃(v, (v :: ty.getOrElse(term)) /\ right)) by RightExists
@@ -1836,7 +1440,7 @@ private class SemanticConstructor[N <: Arity](using line: sourcecode.Line, file:
       }
 
       // STEP 2: Conclude
-      have(inductionPreconditionsIneq |- forall(z, z :: term ==> !(x === z))) by Restate.from(induction of (P := lambda(z, !(x === z))))
+      have(inductionPreconditionsIneq |- ∀(z, z :: term ==> !(x === z))) by Restate.from(induction of (P := lambda(z, !(x === z))))
       val ind = thenHave(x :: term |- !inductionPreconditionsIneq) by InstantiateForall(x)
       have(x :: term |- isConstructor) by Cut(lastStep, strengtheningOfInductionPreconditions)
     }

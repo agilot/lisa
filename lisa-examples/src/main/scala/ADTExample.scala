@@ -9,6 +9,7 @@ object ADTExample extends lisa.Main {
   // variable declarations
   val a = variable
   val b = variable
+  val gen = variable
 
   val n = variable
   val l = variable
@@ -31,13 +32,13 @@ object ADTExample extends lisa.Main {
   val define(nat: ADT[0], constructors(zero, succ)) = () | nat
 
   // Option
-  val define(option: ADT[1], constructors(none, some)) = a --> () | nat
+  val define(option: ADT[1], constructors(none, some)) = gen --> () | nat
 
   // List
-  val define(list: ADT[1], constructors(nil, cons)) = a --> () | (a, list)
+  val define(list: ADT[1], constructors(nil, cons)) = gen --> () | (gen, list)
 
   // Infinite Trees
-  val define(tree: ADT[1], constructors(leaf, node)) = a --> a | (a, nat |=> tree)
+  val define(tree: ADT[1], constructors(leaf, node)) = gen --> gen | (gen, nat |=> tree)
 
   // Nothing
   val define(nothing, constructors()) = |
@@ -149,29 +150,29 @@ object ADTExample extends lisa.Main {
   /**
     * Theorem --- Every list is different from its tail
     * 
-    *   `l :: list(a), x :: a |- l != cons(a) x l`
+    *   `l :: list(gen), x :: gen |- l != cons(gen) x l`
     */
-  val consInj = Theorem((l :: list(a), x :: a) |- !(l === cons(a) * x * l)) {
+  val consInj = Theorem((l :: list(gen), x :: gen) |- !(l === cons(gen) * x * l)) {
 
-    val typeNil = have(nil(a) :: list(a)) by TypeChecker.prove
-    val typeCons = have((y :: a, l :: list(a)) |- cons(a) * y * l :: list(a)) by TypeChecker.prove
+    val typeNil = have(nil(gen) :: list(gen)) by TypeChecker.prove
+    val typeCons = have((y :: gen, l :: list(gen)) |- cons(gen) * y * l :: list(gen)) by TypeChecker.prove
 
-    have(l :: list(a) |- forall(x, x :: a ==> !(l === cons(a) * x * l))) by Induction(){
+    have(l :: list(gen) |- forall(x, x :: gen ==> !(l === cons(gen) * x * l))) by Induction(){
       Case(nil) subproof {
-        have(x :: a ==> !(nil(a) === cons(a) * x * nil(a))) by Tautology.from(list.injectivity(nil, cons) of (y0 := x, y1 := nil(a)), typeNil)
-        thenHave(forall(x, x :: a ==> !(nil(a) === cons(a) * x * nil(a)))) by RightForall
+        have(x :: gen ==> !(nil(gen) === cons(gen) * x * nil(gen))) by Tautology.from(list.injectivity(nil, cons) of (y0 := x, y1 := nil(gen)), typeNil)
+        thenHave(forall(x, x :: gen ==> !(nil(gen) === cons(gen) * x * nil(gen)))) by RightForall
       }
       Case(cons, y, l) subproof {
-        have((y :: a ==> !(l === cons(a) * y * l), y :: a, l :: list(a)) |- x :: a ==> !(cons(a) * y * l === cons(a) * x * (cons(a) * y * l))) by Tautology.from(
-             cons.injectivity of (x0 := y, x1 := l, y0 := x, y1 := cons(a) * y * l),
+        have((y :: gen ==> !(l === cons(gen) * y * l), y :: gen, l :: list(gen)) |- x :: gen ==> !(cons(gen) * y * l === cons(gen) * x * (cons(gen) * y * l))) by Tautology.from(
+             cons.injectivity of (x0 := y, x1 := l, y0 := x, y1 := cons(gen) * y * l),
              typeCons
            )
-        thenHave((y :: a ==> !(l === cons(a) * y * l), y :: a, l :: list(a)) |- forall(x, x :: a ==> !(cons(a) * y * l === cons(a) * x * (cons(a) * y * l)))) by RightForall
-        thenHave((forall(x, x :: a ==> !(l === cons(a) * x * l)), y :: a, l :: list(a)) |- forall(x, x :: a ==> !(cons(a) * y * l === cons(a) * x * (cons(a) * y * l)))) by LeftForall
+        thenHave((y :: gen ==> !(l === cons(gen) * y * l), y :: gen, l :: list(gen)) |- forall(x, x :: gen ==> !(cons(gen) * y * l === cons(gen) * x * (cons(gen) * y * l)))) by RightForall
+        thenHave((forall(x, x :: gen ==> !(l === cons(gen) * x * l)), y :: gen, l :: list(gen)) |- forall(x, x :: gen ==> !(cons(gen) * y * l === cons(gen) * x * (cons(gen) * y * l)))) by LeftForall
       }
     }
 
-    thenHave(l :: list(a) |- x :: a ==> !(l === cons(a) * x * l)) by InstantiateForall(x)
+    thenHave(l :: list(gen) |- x :: gen ==> !(l === cons(gen) * x * l)) by InstantiateForall(x)
   }
 
   summon[OutputManager].output("Thank you for running this example!", Console.MAGENTA)

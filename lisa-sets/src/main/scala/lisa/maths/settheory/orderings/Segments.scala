@@ -352,12 +352,12 @@ object Segments extends lisa.Main {
   ) {
     val forward = have((surjective(f, x, y), nonIdentitySet(f, x) === ∅) |- a ∈ x ==> a ∈ y) subproof {
       have((functionFrom(f, x, y), a ∉ nonIdentitySet(f, x), a ∈ x) |- a ∈ y) by Substitution.ApplyRules(notInNonIdentitySetElim of (t := a))(functionFromAppInCodomain)
-      have((functionFrom(f, x, y), a ∈ x, nonIdentitySet(f, x) === ∅) |- a ∈ y) by Cut(setEmptyHasNoElements of (x := nonIdentitySet(f, x), y := a), lastStep)
+      have((functionFrom(f, x, y), a ∈ x, nonIdentitySet(f, x) === ∅) |- a ∈ y) by Cut(emptySetHasNoElements of (x := nonIdentitySet(f, x), y := a), lastStep)
       have((surjective(f, x, y), a ∈ x, nonIdentitySet(f, x) === ∅) |- a ∈ y) by Cut(surjectiveIsFunctionFrom, lastStep)
     } 
 
     val backward = have((nonIdentitySet(f, x) === ∅, surjective(f, x, y)) |- b ∈ y ==> b ∈ x) subproof {
-      have((nonIdentitySet(f, x) === ∅, a ∈ x) |- app(f, a) === a) by Cut(setEmptyHasNoElements of (x := nonIdentitySet(f, x), y := a), notInNonIdentitySetElim of (t := a))
+      have((nonIdentitySet(f, x) === ∅, a ∈ x) |- app(f, a) === a) by Cut(emptySetHasNoElements of (x := nonIdentitySet(f, x), y := a), notInNonIdentitySetElim of (t := a))
       thenHave(nonIdentitySet(f, x) === ∅ |- a ∈ x ==> (app(f, a) === a)) by RightImplies
       val emptyIdSetProp = thenHave(nonIdentitySet(f, x) === ∅ |- ∀(a, a ∈ x ==> (app(f, a) === a))) by RightForall
 
